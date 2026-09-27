@@ -84,6 +84,14 @@ async function initWeb(){
   store.db = null;
   store.add = e => L.collection('entries').add(e);
   store.remove = id => L.collection('entries').doc(id).delete();
+  store.addMany = async (list, onProgress) => {
+    for(let i = 0; i < list.length; i += 400){
+      const b = fs.batch();
+      for(const {id, ...e} of list.slice(i, i + 400)) b.set(L.collection('entries').doc(id), e);
+      await b.commit();
+      onProgress && onProgress(Math.min(i + 400, list.length));
+    }
+  };
   store.clearAll = async () => {
     const ids = entries.map(e => e.id);
     for(let i = 0; i < ids.length; i += 400){

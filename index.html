@@ -139,6 +139,23 @@ input:focus-visible,button:focus-visible{outline:2px solid var(--accent);outline
 .settings{display:grid;gap:14px}
 .settings .row{align-items:end}
 .hint{font-size:12px;color:var(--muted);margin:0}
+/* log import */
+.logintro{display:grid;gap:10px}
+code{font-family:var(--f-mono);font-size:12px;background:var(--surface-2);border:1px solid var(--line);border-radius:3px;padding:0 4px}
+#logStatus{margin-top:10px}
+#logResult{display:grid;gap:10px;margin-top:10px}
+.logbar{display:flex;flex-wrap:wrap;gap:8px 12px;align-items:center;justify-content:space-between}
+.logtable{max-height:440px;overflow:auto;border:1px solid var(--line);border-radius:4px}
+.logtable table{width:100%;border-collapse:collapse;font-size:13px}
+.logtable th{position:sticky;top:0;background:var(--surface-2);text-align:left;font-weight:500;font-size:11px;letter-spacing:.06em;color:var(--muted);padding:6px 8px;border-bottom:1px solid var(--line)}
+.logtable td{padding:5px 8px;border-bottom:1px solid var(--line);vertical-align:middle}
+.logtable tr.done td{opacity:.45}
+.logtable tr.warn td{background:color-mix(in srgb, var(--neg) 7%, transparent)}
+.logtable td.amt{text-align:right;white-space:nowrap}
+.logtable td.when{white-space:nowrap;font-family:var(--f-mono);font-size:12px;color:var(--muted)}
+.logtable td.what{overflow-wrap:anywhere;min-width:12em}
+.logtable select{font:inherit;font-size:12px;background:var(--surface-2);border:1px solid var(--line);border-radius:3px;padding:2px 4px;color:var(--ink)}
+.logtable .note{display:block;font-size:11px;color:var(--muted)}
 .danger{border-top:1px solid var(--line);padding-top:14px;display:grid;gap:10px}
 .danger-btn{color:var(--neg);justify-self:start}
 .confirm{border:1px solid var(--neg);border-radius:6px;padding:12px;display:grid;gap:10px;font-size:13px}
@@ -217,6 +234,32 @@ input:focus-visible,button:focus-visible{outline:2px solid var(--accent);outline
   <section class="panel">
     <h2>所持金の推移 <span class="range" id="range2"></span></h2>
     <div class="chart" id="chart"></div>
+  </section>
+
+  <section class="panel" id="logPanel">
+    <h2>ゲームのログから取り込む</h2>
+    <div class="logintro">
+      <p class="hint">Star Citizen の <code>Game.log</code> から、契約の報酬・ショップでの購入・貨物の売却を拾って記録候補にします。過去のログは <code>logbackups</code> フォルダにあり、まとめて選べます。ファイルはこのブラウザの中で読むだけで、どこにも送りません。</p>
+      <div class="row" style="align-items:center">
+        <input type="text" id="logPath" readonly value="C:\Program Files\Roberts Space Industries\StarCitizen\LIVE" style="flex:1 1 280px">
+        <button class="btn ghost" type="button" id="copyLogPath">場所をコピー</button>
+        <label class="btn" for="logFiles" style="display:inline-block">ログファイルを選ぶ</label>
+        <input type="file" id="logFiles" accept=".log,.txt" multiple hidden>
+      </div>
+      <p class="hint">ファイル選択の画面で、上の場所を貼り付けて開いてください。<code>Game.log</code>（今のログ）と、<code>logbackups</code> 内のファイル（Ctrl+A で全選択）を選べます。</p>
+    </div>
+    <div id="logStatus" class="hint" role="status"></div>
+    <div id="logResult" hidden>
+      <div class="logbar">
+        <span class="range" id="logFilters"></span>
+        <span class="range"><button type="button" id="logAll">すべて選択</button><button type="button" id="logNone">選択を解除</button></span>
+      </div>
+      <div class="logtable" id="logTable"></div>
+      <div class="logbar">
+        <span id="logSum" class="num"></span>
+        <span class="row"><button class="btn ghost" type="button" id="logClose">閉じる</button><button class="btn" type="button" id="logImport">選んだ記録を取り込む</button></span>
+      </div>
+    </div>
   </section>
 
   <div class="grid2">
@@ -318,6 +361,25 @@ const store = {
   async remove(id){
     if(this.db){ await this.db.doc('entries/'+id).delete(); return; }
     entries = entries.filter(x=>x.id!==id); this.saveLocal(); render();
+  },
+  // まとめて追加（ログ取り込み用）。docId を固定するので再試行しても二重にならない
+  async addMany(list, onProgress){
+    if(this.db){
+      let i = 0;
+      for(const {id, ...e} of list){
+        for(let t = 0; ; t++){
+          try{ await this.db.collection('entries').doc(id).set(e); break; }
+          catch(err){
+            if(t < 5 && ['resource_exhausted','unavailable'].includes(err && err.code)){ await new Promise(r=>setTimeout(r, 1200*(t+1) + Math.random()*600)); continue; }
+            throw err;
+          }
+        }
+        onProgress && onProgress(++i);
+      }
+      return;
+    }
+    for(const e of list) if(!entries.some(x=>x.id===e.id)) entries.push(e);
+    this.saveLocal(); render(); onProgress && onProgress(list.length);
   },
   async clearAll(){
     if(this.db){ for(const e of [...entries]) await this.db.doc('entries/'+e.id).delete(); return; }
@@ -591,6 +653,183 @@ $('ship').addEventListener('change', ()=>{
     toast(`${s.n} のゲーム内最安値 ${fmt(s.b)} aUEC を入れました（UEX調べ）`);
   }
 });
+
+/* ---------- Game.log import ---------- */
+/* 書式は 4.x 日本語クライアントで確認: 報酬は「Added notification "報酬 N aUEC"」、契約名は同じ秒の「契約完了：名前」。
+   報酬行の MissionId は常に 0 なので、同じ秒の報酬と契約完了をひとまとめにする。 */
+let logCands = [], logFilter = 'all';
+const LOG_KIND = {reward:'契約報酬', sell:'売却', buy:'購入', rent:'レンタル'};
+
+function classifyContract(s){
+  if(/配達|Delivery/i.test(s)) return 'delivery';
+  if(/輸送|貨物|直送便|Cargo|Haul/i.test(s)) return 'hauling';
+  if(/サルベージ|Salvage/i.test(s)) return 'salvage';
+  if(/採掘|Mining/i.test(s)) return 'mining';
+  if(/賞金|Bounty/i.test(s)) return 'bounty';
+  if(/調査|回収|Recover|Investigat/i.test(s)) return 'recovery';
+  if(/護衛|防衛|排除|暗殺|撃破|警備|Eliminate|Defend|Escort|Security|Assassin/i.test(s)) return 'combat';
+  return 'other_in';
+}
+const shopLabel = s => s.replace(/^SCShop_(Entity_)?/,'').replace(/[-_]0*\d+$/,'');
+const isConsumable = s => /drink|food|consumable|healing|medpen|burrito|bar_|sandwich|oxypen|ammo|_mag\b|mag$/i.test(s);
+
+function parseLogText(text, out){
+  const lines = text.split('\n');
+  const groups = new Map();     // 秒 -> {t, rewards:[]}
+  const dones = [];             // 契約完了 {t, name, used}
+  let lastBuy = null;
+  const pend = [];              // 売却・購入の要求（直後のエラーで失敗扱い）
+  const add = c => { if(!out.has(c.key)) out.set(c.key, c); };
+  for(const line of lines){
+    if(line.charCodeAt(0) !== 60) continue;
+    const notif = line.includes('Added notification "');
+    const req = !notif && line.includes('Request> Sending');
+    const err = !notif && !req && line.includes('Transaction Response Error');
+    if(!notif && !req && !err) continue;
+    const m = line.match(/^<(\d{4}-\d\d-\d\dT\d\d:\d\d:\d\d)/); if(!m) continue;
+    const sec = m[1], t = Date.parse(sec + 'Z');
+    if(notif){
+      let r = line.match(/Added notification "報酬 (\d+) aUEC/);
+      if(r){ const g = groups.get(sec) || {t, rewards:[]}; g.rewards.push(+r[1]); groups.set(sec, g); continue; }
+      r = line.match(/Added notification "契約完了[：:]\s*(.*?):\s*"/);
+      if(r) dones.push({t, name:r[1].split(' / ')[0].trim(), used:false});
+      continue;
+    }
+    if(err){
+      const r = line.match(/result\[(\w+)\] type\[(\w+)\]/);
+      const p = [...pend].reverse().find(p => !p.warn && t - p.t <= 15000 && t >= p.t);
+      if(r && p){ p.warn = '失敗の可能性（' + r[1] + '）'; p.checked = false; }
+      continue;
+    }
+    let r;
+    if((r = line.match(/Send(?:ShopBuy|StandardItemBuy)Request>.*?shopName\[([^\]]*)\].*?client_price\[([\d.]+)\].*?itemName\[([^\]]*)\](?:.*?quantity\[(\d+)\])?/))){
+      const [, shop, price, item, qty] = r, amt = Math.round(+price), q = +(qty||1);
+      if(!amt) continue;
+      if(lastBuy && lastBuy.shop === shop && t - lastBuy.tLast <= 120000){
+        lastBuy.amount -= amt; lastBuy.tLast = t;
+        lastBuy.items.set(item, (lastBuy.items.get(item)||0) + q);
+        if(!isConsumable(item)) lastBuy.type = 'purchase';
+        lastBuy.memo = '購入: ' + [...lastBuy.items].map(([k,v])=>k+(v>1?' ×'+v:'')).join('、') + '（' + shopLabel(shop) + '）';
+        continue;
+      }
+      lastBuy = {key:`log-buy-${sec}-${amt}`, t, tLast:t, shop, kind:'buy', amount:-amt, items:new Map([[item,q]]),
+        type: isConsumable(item) ? 'repair' : 'purchase', checked:true,
+        memo:'購入: ' + item + (q>1?' ×'+q:'') + '（' + shopLabel(shop) + '）'};
+      add(lastBuy); continue;
+    }
+    if((r = line.match(/SendRentalRequest>.*?shopName\[([^\]]*)\].*?client_price\[([\d.]+)\].*?itemName\[([^\]]*)\]/))){
+      const amt = Math.round(+r[2]); if(!amt) continue;
+      add({key:`log-rent-${sec}-${amt}`, t, kind:'rent', amount:-amt, type:'purchase', checked:true, memo:'レンタル: ' + r[3] + '（' + shopLabel(r[1]) + '）'});
+      continue;
+    }
+    if((r = line.match(/SendShopSellRequest>.*?shopName\[([^\]]*)\].*?client_price\[([\d.]+)\].*?itemName\[([^\]]*)\]/))){
+      const amt = Math.round(+r[2]); if(!amt) continue;
+      add({key:`log-sell-${sec}-${amt}`, t, kind:'sell', amount:amt, type:'other_in', checked:true, memo:'売却: ' + r[3] + '（' + shopLabel(r[1]) + '）'});
+      continue;
+    }
+    if((r = line.match(/SendCommodity(Sell|Buy)Request>.*?shopName\[([^\]]*)\].*?amount\[([\d.]+)\].*?quantity\[(\d+)\]/))){
+      const sell = r[1] === 'Sell', amt = Math.round(+r[3]); if(!amt) continue;
+      const c = {key:`log-com${sell?'sell':'buy'}-${sec}-${amt}`, t, kind: sell?'sell':'buy', amount: sell?amt:-amt, type:'trade', checked:true,
+        memo:(sell?'貨物売却: ':'貨物購入: ') + r[4] + ' 単位（' + shopLabel(r[2]) + '）'};
+      add(c); pend.push(out.get(c.key)); if(pend.length > 20) pend.shift();
+    }
+  }
+  for(const [sec, g] of groups){
+    // 報酬は契約完了と同じ秒か1〜2秒後に出る。前後3秒以内の未使用の契約完了を近い順に報酬の件数だけ結び付ける
+    g.names = dones.filter(d => !d.used && Math.abs(d.t - g.t) <= 3000)
+      .sort((a,b) => Math.abs(a.t-g.t) - Math.abs(b.t-g.t)).slice(0, g.rewards.length)
+      .map(d => { d.used = true; return d.name; });
+    const amt = g.rewards.reduce((a,b)=>a+b, 0);
+    const cnt = new Map(); for(const n of g.names) cnt.set(n, (cnt.get(n)||0) + 1);
+    const memo = cnt.size ? [...cnt].map(([k,v])=>k+(v>1?' ×'+v:'')).join('、') : '契約報酬';
+    add({key:`log-reward-${sec}-${amt}`, t:g.t, kind:'reward', amount:amt, type:classifyContract(g.names.join(' ')), checked:true,
+      memo: memo + (g.rewards.length>1 ? `（報酬${g.rewards.length}件）` : '')});
+  }
+}
+
+async function readLogs(files){
+  const out = new Map();
+  const list = [...files].sort((a,b)=>a.lastModified-b.lastModified);
+  $('logResult').hidden = true;
+  for(let i=0; i<list.length; i++){
+    $('logStatus').textContent = `読み込み中… ${i+1}/${list.length}　${list[i].name}`;
+    try{ parseLogText(await list[i].text(), out); }
+    catch(e){ toast(list[i].name + ' を読めませんでした'); }
+  }
+  const have = new Set(entries.map(e=>e.src).filter(Boolean));
+  logCands = [...out.values()].sort((a,b)=>a.t-b.t).map(c=>{
+    c.date = new Date(c.t).toLocaleDateString('sv-SE');
+    c.memo = c.memo.slice(0, 150);
+    if(have.has(c.key)){ c.done = true; c.checked = false; }
+    return c;
+  });
+  const done = logCands.filter(c=>c.done).length;
+  $('logStatus').textContent = logCands.length
+    ? `${list.length}個のファイルから ${logCands.length}件 見つかりました` + (done ? `（うち ${done}件は取り込み済み）` : '') + '。種別は必要に応じて変えられます。'
+    : `${list.length}個のファイルを読みましたが、取り込める記録は見つかりませんでした。`;
+  $('logResult').hidden = !logCands.length;
+  logFilter = 'all'; drawLog();
+}
+
+function drawLog(){
+  const kinds = ['reward','sell','buy','rent'].filter(k=>logCands.some(c=>c.kind===k));
+  $('logFilters').innerHTML = [['all','すべて']].concat(kinds.map(k=>[k,LOG_KIND[k]]))
+    .map(([v,l])=>`<button type="button" data-lf="${v}" aria-pressed="${logFilter===v}">${l} ${logCands.filter(c=>v==='all'||c.kind===v).length}</button>`).join('');
+  const opts = sel => TYPES.map(t=>`<option value="${t.id}"${t.id===sel?' selected':''}>${t.label}</option>`).join('');
+  const rows = logCands.map((c,i)=>({c,i})).filter(({c})=>logFilter==='all'||c.kind===logFilter);
+  $('logTable').innerHTML = `<table><thead><tr><th></th><th>日時</th><th>内容</th><th>種別</th><th style="text-align:right">金額</th></tr></thead><tbody>` +
+    rows.map(({c,i})=>`<tr class="${c.done?'done':c.warn?'warn':''}">
+      <td><input type="checkbox" data-lc="${i}" ${c.checked?'checked':''} ${c.done?'disabled':''} aria-label="取り込む"></td>
+      <td class="when">${c.date.slice(2).replace(/-/g,'/')} ${new Date(c.t).toTimeString().slice(0,5)}</td>
+      <td class="what">${esc(c.memo)}${c.done?'<span class="note">取り込み済み</span>':c.warn?`<span class="note neg">${esc(c.warn)}</span>`:''}</td>
+      <td><select data-lt="${i}" ${c.done?'disabled':''} aria-label="種別">${opts(c.type)}</select></td>
+      <td class="amt num ${cls(c.amount)}">${sfmt(c.amount)}</td></tr>`).join('') + '</tbody></table>';
+  drawLogSum();
+}
+function drawLogSum(){
+  const sel = logCands.filter(c=>c.checked && !c.done);
+  const tot = sel.reduce((a,c)=>a+c.amount, 0);
+  $('logSum').innerHTML = `選択中 ${fmt(sel.length)}件　合計 <span class="${cls(tot)}">${sfmt(tot)} aUEC</span>`;
+  $('logImport').disabled = !sel.length || readOnly;
+}
+$('logFiles').addEventListener('change', ev=>{ if(ev.target.files.length) readLogs(ev.target.files); ev.target.value = ''; });
+$('copyLogPath').onclick = async ()=>{
+  try{ await navigator.clipboard.writeText($('logPath').value); toast('場所をコピーしました'); }
+  catch(e){ $('logPath').select(); toast('選択したのでコピーしてください'); }
+};
+$('logTable').addEventListener('change', ev=>{
+  const cb = ev.target.closest('[data-lc]'); if(cb){ logCands[+cb.dataset.lc].checked = cb.checked; drawLogSum(); return; }
+  const st = ev.target.closest('[data-lt]'); if(st){ logCands[+st.dataset.lt].type = st.value; }
+});
+$('logFilters').addEventListener('click', ev=>{ const b = ev.target.closest('[data-lf]'); if(b){ logFilter = b.dataset.lf; drawLog(); } });
+const logVisible = () => logCands.filter(c=>!c.done && (logFilter==='all'||c.kind===logFilter));
+$('logAll').onclick = ()=>{ for(const c of logVisible()) c.checked = true; drawLog(); };
+$('logNone').onclick = ()=>{ for(const c of logVisible()) c.checked = false; drawLog(); };
+$('logClose').onclick = ()=>{ logCands = []; $('logResult').hidden = true; $('logStatus').textContent = ''; };
+$('logImport').onclick = async ()=>{
+  const sel = logCands.filter(c=>c.checked && !c.done);
+  if(!sel.length) return;
+  const list = sel.map(c=>{
+    const e = {id:c.key, date:c.date, type:c.type, amount:c.amount, memo:c.memo, src:c.key, createdAt:c.t};
+    if(SHARED && me) e.by = me;
+    return e;
+  });
+  $('logImport').disabled = true;
+  try{
+    await store.addMany(list, n => { $('logStatus').textContent = `取り込み中… ${n}/${list.length}`; });
+    for(const c of sel){ c.done = true; c.checked = false; }
+    $('logStatus').textContent = `${list.length}件を取り込みました。所持金がゲーム内とずれている場合は「実際の所持金に合わせる」で補正してください。`;
+    toast(`${list.length}件を取り込みました`);
+    drawLog();
+  }catch(err){
+    $('logStatus').textContent = (err && err.code === 'permission-denied')
+      ? '保存が拒否されました。Firebase の Firestore ルールが古い可能性があります（取り込み用の項目 src を許可する必要があります）。'
+      : '途中で止まりました（' + (err.code||err) + '）。もう一度「選んだ記録を取り込む」を押すと、残りから続けます。';
+    const have = new Set(entries.map(e=>e.src).filter(Boolean));
+    for(const c of logCands) if(have.has(c.key)){ c.done = true; c.checked = false; }
+    drawLog();
+  }
+};
 
 /* ---------- form ---------- */
 function renderChips(){
