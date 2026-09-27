@@ -328,8 +328,8 @@ code{font-family:var(--f-mono);font-size:12px;background:var(--surface-2);border
 /* 'solo' = 個人用, 'shared' = claude.ai で共有, 'web' = GitHub Pages + Firebase で共有（web_backend.js） */
 const MODE = 'web';
 /* 変更して公開するたびに上げる（表示はフッター） */
-const APP_VERSION = '1.1.0';
-const APP_UPDATED = '2026-09-27 18:41';   // 日本時間
+const APP_VERSION = '1.1.1';
+const APP_UPDATED = '2026-09-28 03:00';   // 日本時間
 const SHARED = MODE !== 'solo';
 
 const TYPES = [
@@ -536,7 +536,7 @@ function render(){
   periods = findPeriods(D.entries);
   renderPeriods();
   const inP = e => inPeriod(e.date);
-  if(period.kind === 'all'){
+  if(!periodRange()){
     $('tCountLabel').textContent = '記録件数';
     $('tCount').textContent = fmt(D.entries.length); $('tCount').className = 'v';
   } else {
@@ -554,9 +554,10 @@ function render(){
 
 /* ---------- 表示する期間 ----------
    記録の日付が30日以上あいた所で自動的に区切る（休止期間）。自由な日付範囲も選べる。選択はこのブラウザに覚える */
-const PERIOD_KEY = 'auec-ledger-period';
+const PERIOD_KEY = 'auec-ledger-period-v2';   // v1.1.1 で初期値を「最新の期」にしたので、以前の保存値は使わない
 const GAP_DAYS = 30;
-let periods = [], period = {kind:'all'};
+// 初期表示は「最新の期」（latest は常に一番新しい期を指すので、新しい期ができれば自動で移る）
+let periods = [], period = {kind:'latest'};
 try{ const p = JSON.parse(localStorage.getItem(PERIOD_KEY) || 'null'); if(p && p.kind) period = p; }catch(e){}
 function findPeriods(list){
   const ds = [...new Set(list.map(e=>e.date))].sort();
@@ -569,6 +570,7 @@ function findPeriods(list){
   return out;
 }
 function periodRange(){
+  if(period.kind === 'latest'){ const p = periods[periods.length-1]; return p && periods.length > 1 ? {from:p.from, to:''} : null; }
   if(period.kind === 'auto'){ const p = periods[period.i]; return p ? {from:p.from, to: period.i === periods.length-1 ? '' : p.to} : null; }
   if(period.kind === 'custom') return {from: period.from || '', to: period.to || ''};
   return null;
@@ -583,12 +585,14 @@ function setPeriod(p){
   render();
 }
 function renderPeriods(){
-  if(period.kind === 'auto' && !periods[period.i]) period = {kind:'all'};
+  if(period.kind === 'auto' && !periods[period.i]) period = {kind:'latest'};
+  if(period.kind === 'auto' && period.i === periods.length-1) period = {kind:'latest'};
   const md = s => s.slice(2).replace(/-/g,'/');
-  const chips = [`<button type="button" data-p="all" aria-pressed="${period.kind==='all'}">全期間</button>`];
+  const chips = [`<button type="button" data-p="all" aria-pressed="${period.kind==='all' || (period.kind==='latest' && periods.length < 2)}">全期間</button>`];
   if(periods.length > 1) periods.forEach((p,i)=>{
     const last = i === periods.length-1;
-    chips.push(`<button type="button" data-p="auto" data-pi="${i}" aria-pressed="${period.kind==='auto' && period.i===i}">第${i+1}期 ${md(p.from)}〜${last?'':md(p.to)}</button>`);
+    const on = last ? period.kind==='latest' : (period.kind==='auto' && period.i===i);
+    chips.push(`<button type="button" data-p="${last?'latest':'auto'}" data-pi="${i}" aria-pressed="${on}">第${i+1}期 ${md(p.from)}〜${last?'':md(p.to)}${last?'（最新）':''}</button>`);
   });
   chips.push(`<button type="button" data-p="custom" aria-pressed="${period.kind==='custom'}">日付を指定</button>`);
   $('periodChips').innerHTML = chips.join('');
@@ -600,7 +604,8 @@ function renderPeriods(){
 }
 $('periodChips').addEventListener('click', ev=>{
   const b = ev.target.closest('[data-p]'); if(!b) return;
-  if(b.dataset.p === 'auto') setPeriod({kind:'auto', i:+b.dataset.pi});
+  if(b.dataset.p === 'latest') setPeriod({kind:'latest'});
+  else if(b.dataset.p === 'auto') setPeriod({kind:'auto', i:+b.dataset.pi});
   else if(b.dataset.p === 'custom') setPeriod({kind:'custom', from: period.from || (periods.length ? periods[periods.length-1].from : today()), to: period.to || ''});
   else setPeriod({kind:'all'});
 });
