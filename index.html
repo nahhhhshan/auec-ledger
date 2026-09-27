@@ -306,6 +306,16 @@ code{font-family:var(--f-mono);font-size:12px;background:var(--surface-2);border
     <section class="panel settings">
       <h2>所持金の設定</h2>
       <label id="whoWrap" class="whowrap" hidden><span class="lab">対象の人</span><select id="who"></select></label>
+      <div class="persontools" id="personTools" hidden>
+        <div class="row" id="renameRow" hidden>
+          <label><span class="lab">この人の名前を付け替える</span><input type="text" id="newName" maxlength="20" placeholder="新しい名前"></label>
+          <button class="btn ghost" type="button" id="renamePerson">付け替える</button>
+        </div>
+        <div class="row" id="dropRow" hidden>
+          <span class="hint" id="dropMsg" style="flex:1 1 220px"></span>
+          <button class="btn ghost danger-btn" type="button" id="dropPerson">一覧から外す</button>
+        </div>
+      </div>
       <div class="row">
         <label><span class="lab" id="startLabel">記録開始時の所持金 (aUEC)</span><input type="text" id="startBal" inputmode="decimal" placeholder="0"></label>
         <button class="btn ghost" type="button" id="saveStart">保存</button>
@@ -339,14 +349,14 @@ code{font-family:var(--f-mono);font-size:12px;background:var(--surface-2);border
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
-<script src="config.js?v=1.2.3"></script>
-<script src="web_backend.js?v=1.2.3"></script>
+<script src="config.js?v=1.3.0"></script>
+<script src="web_backend.js?v=1.3.0"></script>
 <script>
 /* 'solo' = 個人用, 'shared' = claude.ai で共有, 'web' = GitHub Pages + Firebase で共有（web_backend.js） */
 const MODE = 'web';
 /* 変更して公開するたびに上げる（表示はフッター） */
-const APP_VERSION = '1.2.3';
-const APP_UPDATED = '2026-09-28 03:19';   // 日本時間
+const APP_VERSION = '1.3.0';
+const APP_UPDATED = '2026-09-28 03:24';   // 日本時間
 const SHARED = MODE !== 'solo';
 
 const TYPES = [
@@ -435,6 +445,19 @@ const store = {
     settings = {...settings, startBalance:v}; this.saveLocal(); render();
   },
   // 以前の共通の開始額を、指定した人の開始額に足して 0 にする（合計は変わらない）
+  // 人の名前の付け替え（記録の記録者と開始額をまとめて移す）。共有モード（claude.ai）は記録者がアカウントIDなので使わない
+  async renamePerson(from, to){
+    const starts = {...(settings.starts||{})};
+    if(from in starts){ starts[to] = (Number(starts[to])||0) + (Number(starts[from])||0); delete starts[from]; }
+    for(const e of entries) if(e.by === from) e.by = to;
+    settings = {...settings, starts}; this.saveLocal(); render();
+  },
+  // 記録のない人を一覧から外す（開始額の登録を消す）
+  async dropPerson(k){
+    const starts = {...(settings.starts||{})}; delete starts[k];
+    if(this.db){ await this.db.doc('settings/main').set({startBalance:settings.startBalance||0, starts}); return; }
+    settings = {...settings, starts}; this.saveLocal(); render();
+  },
   async moveLegacy(k){
     const starts = {...(settings.starts||{}), [k]:(Number((settings.starts||{})[k])||0) + (settings.startBalance||0)};
     if(this.db){ await this.db.doc('settings/main').set({startBalance:0, starts}); return; }
@@ -556,6 +579,12 @@ function renderPeople(){
   const sel = $('who'), cur = sel.value || me || ps[0] || '';
   sel.innerHTML = ps.map(p=>`<option value="${esc(p)}"${p===cur?' selected':''}>${esc(nameOf(p))}${p===me?'（あなた）':''}</option>`).join('');
   $('whoWrap').hidden = !ps.length;
+  // 名前の付け替え（Web 版のみ）と、一覧から外す（記録のない人のみ）
+  const target = sel.value, nEnt = entries.filter(e=>e.by===target).length;
+  $('personTools').hidden = !target;
+  $('renameRow').hidden = MODE !== 'web';
+  $('dropRow').hidden = !target || nEnt > 0 || target === me;
+  $('dropMsg').textContent = `「${nameOf(target)}」には記録がありません。一覧から外せます（開始額の登録も消えます）。`;
   const legacy = settings.startBalance||0;
   $('legacyRow').hidden = !legacy || !ps.length;
   $('legacyMsg').textContent = legacy ? `以前の共通の開始額 ${fmt(legacy)} aUEC が「未割り当て」になっています。上で選んだ人の開始額に移せます（合計は変わりません）。` : '';
@@ -1168,6 +1197,26 @@ $('saveStart').onclick = async ()=>{
 const saveErr = e => (e && (e.code==='permission-denied' || /permission/i.test(e.message||'')))
   ? '保存が拒否されました。Firebase の Firestore ルールの更新が必要です（startBalance と starts を許可）'
   : '保存できませんでした（'+((e&&e.code)||e)+'）';
+$('renamePerson').onclick = async ()=>{
+  const from = $('who').value, to = $('newName').value.trim();
+  if(!from) return;
+  if(!to){ toast('新しい名前を入力してください'); $('newName').focus(); return; }
+  if(to === from){ toast('今と同じ名前です'); return; }
+  const n = entries.filter(e=>e.by===from).length;
+  $('renamePerson').disabled = true; $('renamePerson').textContent = '付け替え中…';
+  try{
+    await store.renamePerson(from, to);
+    $('newName').value = '';
+    toast(`「${from}」を「${to}」に付け替えました（記録 ${fmt(n)}件）`);
+  }catch(e){ toast(saveErr(e)); }
+  finally{ $('renamePerson').disabled = false; $('renamePerson').textContent = '付け替える'; }
+};
+$('dropPerson').onclick = async ()=>{
+  const k = $('who').value; if(!k) return;
+  try{ await store.dropPerson(k); $('who').value = me || ''; toast(`「${nameOf(k)}」を一覧から外しました`); }
+  catch(e){ toast(saveErr(e)); }
+};
+$('who').addEventListener('change', ()=>renderPeople());
 $('moveLegacy').onclick = async ()=>{
   const who = $('who').value, v = settings.startBalance||0;
   if(!who || !v) return;

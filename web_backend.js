@@ -102,6 +102,28 @@ async function initWeb(){
   };
   store.setStart = v => L.set({startBalance:v}, {merge:true});
   store.setPersonStart = (k, v) => L.set({starts:{[k]:v}}, {merge:true});
+  // 名前の付け替え: ルールで記録の書き換えは禁止なので、新しい名前で複製 → 古い記録を削除の順（途中で止まっても記録は消えない）
+  store.renamePerson = async (from, to) => {
+    const olds = entries.filter(e => e.by === from);
+    const tag = Date.now().toString(36);
+    for(let i = 0; i < olds.length; i += 400){
+      const b = fs.batch();
+      for(const {id, ...e} of olds.slice(i, i + 400)) b.set(L.collection('entries').doc(id.split('~')[0] + '~' + tag), {...e, by: to});
+      await b.commit();
+    }
+    for(let i = 0; i < olds.length; i += 400){
+      const b = fs.batch();
+      for(const e of olds.slice(i, i + 400)) b.delete(L.collection('entries').doc(e.id));
+      await b.commit();
+    }
+    const st = settings.starts || {};
+    if(from in st){
+      const FP = firebase.firestore.FieldPath;
+      await L.update(new FP('starts', to), (Number(st[to])||0) + (Number(st[from])||0), new FP('starts', from), firebase.firestore.FieldValue.delete());
+    }
+    if(from === me){ lsSet(NAME_KEY, to); me = to; beat(); const rb = document.getElementById('renameBtn'); if(rb) rb.textContent = `名前を変更（${to}）`; }
+  };
+  store.dropPerson = k => L.update(new firebase.firestore.FieldPath('starts', k), firebase.firestore.FieldValue.delete());
   store.moveLegacy = k => L.set({startBalance:0, starts:{[k]:(Number((settings.starts||{})[k])||0) + (settings.startBalance||0)}}, {merge:true});
   $('storeNote').innerHTML = '保存先: <b>共有クラウド（Firebase）</b>';
   entries = []; render();
