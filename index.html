@@ -139,6 +139,11 @@ input:focus-visible,button:focus-visible{outline:2px solid var(--accent);outline
 .settings{display:grid;gap:14px}
 .settings .row{align-items:end}
 .hint{font-size:12px;color:var(--muted);margin:0}
+.danger{border-top:1px solid var(--line);padding-top:14px;display:grid;gap:10px}
+.danger-btn{color:var(--neg);justify-self:start}
+.confirm{border:1px solid var(--neg);border-radius:6px;padding:12px;display:grid;gap:10px;font-size:13px}
+.confirm p{margin:0}
+.danger-go{background:var(--neg)}
 .toast{position:fixed;left:50%;bottom:calc(20px + env(safe-area-inset-bottom,0px));transform:translateX(-50%);background:var(--ink);color:var(--bg);padding:8px 16px;border-radius:4px;font-size:13px;z-index:9;max-width:calc(100% - 32px)}
 @media (prefers-reduced-motion:no-preference){.fill{transition:width .3s ease}}
 </style>
@@ -233,6 +238,16 @@ input:focus-visible,button:focus-visible{outline:2px solid var(--accent);outline
         <button class="btn ghost" type="button" id="saveActual">補正を記録</button>
       </div>
       <p class="hint">記録し忘れや死亡時の損失などでズレたときに使います。差額を「残高補正」として今日の日付で記録します。</p>
+      <div class="danger">
+        <button class="btn ghost danger-btn" type="button" id="clearBtn">すべての記録を削除</button>
+        <div id="clearConfirm" class="confirm" hidden>
+          <p id="clearMsg"></p>
+          <div class="row">
+            <button class="btn danger-go" type="button" id="clearGo">削除する</button>
+            <button class="btn ghost" type="button" id="clearCancel">やめる</button>
+          </div>
+        </div>
+      </div>
     </section>
   </div>
 </div>
@@ -304,6 +319,10 @@ const store = {
   async remove(id){
     if(this.db){ await this.db.doc('entries/'+id).delete(); return; }
     entries = entries.filter(x=>x.id!==id); this.saveLocal(); render();
+  },
+  async clearAll(){
+    if(this.db){ for(const e of [...entries]) await this.db.doc('entries/'+e.id).delete(); return; }
+    entries = []; this.saveLocal(); render();
   },
   async setStart(v){
     if(this.db){ await this.db.doc('settings/main').set({startBalance:v}); return; }
@@ -661,6 +680,19 @@ $('saveActual').onclick = async ()=>{
   if(SHARED && me) e.by = me;
   try{ await store.add(e); $('actualBal').value=''; toast('差額 '+sfmt(diff)+' を補正として記録しました'); }
   catch(err){ toast('保存できませんでした（'+(err.code||err)+'）'); }
+};
+$('clearBtn').onclick = ()=>{
+  if(!entries.length){ toast('削除する記録はありません'); return; }
+  $('clearMsg').innerHTML = `<b>${fmt(entries.length)}件</b>の記録をすべて削除します。${SHARED?'共有している相手の画面からも消えます。':''}元に戻せないので、必要なら先に「CSVをコピー」で控えを取ってください。開始時の所持金の設定は残ります。`;
+  $('clearConfirm').hidden = false; $('clearBtn').hidden = true; $('clearCancel').focus();
+};
+$('clearCancel').onclick = ()=>{ $('clearConfirm').hidden = true; $('clearBtn').hidden = false; };
+$('clearGo').onclick = async ()=>{
+  const n = entries.length;
+  $('clearGo').disabled = true;
+  try{ await store.clearAll(); toast(`${fmt(n)}件の記録を削除しました`); $('clearCancel').onclick(); }
+  catch(e){ toast('削除できませんでした（'+(e.code||e)+'）'); }
+  finally{ $('clearGo').disabled = false; }
 };
 $('csvBtn').onclick = async ()=>{
   const {days} = compute(entries, settings.startBalance||0);

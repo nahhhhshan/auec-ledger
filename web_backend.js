@@ -84,6 +84,14 @@ async function initWeb(){
   store.db = null;
   store.add = e => L.collection('entries').add(e);
   store.remove = id => L.collection('entries').doc(id).delete();
+  store.clearAll = async () => {
+    const ids = entries.map(e => e.id);
+    for(let i = 0; i < ids.length; i += 400){
+      const b = fs.batch();
+      for(const id of ids.slice(i, i + 400)) b.delete(L.collection('entries').doc(id));
+      await b.commit();
+    }
+  };
   store.setStart = v => L.set({startBalance:v}, {merge:true});
   $('storeNote').innerHTML = '保存先: <b>共有クラウド（Firebase）</b>';
   entries = []; render();
