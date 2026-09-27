@@ -116,14 +116,21 @@ async function initWeb(){
       for(const e of olds.slice(i, i + 400)) b.delete(L.collection('entries').doc(e.id));
       await b.commit();
     }
-    const st = settings.starts || {};
-    if(from in st){
-      const FP = firebase.firestore.FieldPath;
-      await L.update(new FP('starts', to), (Number(st[to])||0) + (Number(st[from])||0), new FP('starts', from), firebase.firestore.FieldValue.delete());
+    // 開始額（通算の「名前」と、期ごとの「名前@日付」）をまとめて移す
+    const st = settings.starts || {}, FP = firebase.firestore.FieldPath, args = [];
+    for(const k of Object.keys(st)){
+      const [p, d] = splitKey(k); if(p !== from) continue;
+      const nk = d ? `${to}@${d}` : to;
+      args.push(new FP('starts', nk), (Number(st[nk])||0) + (Number(st[k])||0), new FP('starts', k), firebase.firestore.FieldValue.delete());
     }
+    if(args.length) await L.update(...args);
     if(from === me){ lsSet(NAME_KEY, to); me = to; beat(); const rb = document.getElementById('renameBtn'); if(rb) rb.textContent = `名前を変更（${to}）`; }
   };
-  store.dropPerson = k => L.update(new firebase.firestore.FieldPath('starts', k), firebase.firestore.FieldValue.delete());
+  store.dropPerson = k => {
+    const args = [];
+    for(const key of Object.keys(settings.starts || {})) if(splitKey(key)[0] === k) args.push(new firebase.firestore.FieldPath('starts', key), firebase.firestore.FieldValue.delete());
+    return args.length ? L.update(...args) : Promise.resolve();
+  };
   store.moveLegacy = k => L.set({startBalance:0, starts:{[k]:(Number((settings.starts||{})[k])||0) + (settings.startBalance||0)}}, {merge:true});
   $('storeNote').innerHTML = '保存先: <b>共有クラウド（Firebase）</b>';
   entries = []; render();

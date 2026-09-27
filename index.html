@@ -349,14 +349,14 @@ code{font-family:var(--f-mono);font-size:12px;background:var(--surface-2);border
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
-<script src="config.js?v=1.3.0"></script>
-<script src="web_backend.js?v=1.3.0"></script>
+<script src="config.js?v=1.4.0"></script>
+<script src="web_backend.js?v=1.4.0"></script>
 <script>
 /* 'solo' = 個人用, 'shared' = claude.ai で共有, 'web' = GitHub Pages + Firebase で共有（web_backend.js） */
 const MODE = 'web';
 /* 変更して公開するたびに上げる（表示はフッター） */
-const APP_VERSION = '1.3.0';
-const APP_UPDATED = '2026-09-28 03:24';   // 日本時間
+const APP_VERSION = '1.4.0';
+const APP_UPDATED = '2026-09-28 03:31';   // 日本時間
 const SHARED = MODE !== 'solo';
 
 const TYPES = [
@@ -448,13 +448,18 @@ const store = {
   // 人の名前の付け替え（記録の記録者と開始額をまとめて移す）。共有モード（claude.ai）は記録者がアカウントIDなので使わない
   async renamePerson(from, to){
     const starts = {...(settings.starts||{})};
-    if(from in starts){ starts[to] = (Number(starts[to])||0) + (Number(starts[from])||0); delete starts[from]; }
+    for(const k of Object.keys(starts)){
+      const [p, d] = splitKey(k); if(p !== from) continue;
+      const nk = d ? `${to}@${d}` : to;
+      starts[nk] = (Number(starts[nk])||0) + (Number(starts[k])||0); delete starts[k];
+    }
     for(const e of entries) if(e.by === from) e.by = to;
     settings = {...settings, starts}; this.saveLocal(); render();
   },
   // 記録のない人を一覧から外す（開始額の登録を消す）
   async dropPerson(k){
-    const starts = {...(settings.starts||{})}; delete starts[k];
+    const starts = {...(settings.starts||{})};
+    for(const key of Object.keys(starts)) if(splitKey(key)[0] === k) delete starts[key];
     if(this.db){ await this.db.doc('settings/main').set({startBalance:settings.startBalance||0, starts}); return; }
     settings = {...settings, starts}; this.saveLocal(); render();
   },
@@ -540,26 +545,60 @@ function colorOf(id){
    記録者のない記録と、以前の共通の開始額は「未割り当て」として合計にだけ入れる */
 function people(){
   const s = new Set(entries.map(e=>e.by).filter(Boolean));
-  for(const k of Object.keys(settings.starts||{})) s.add(k);
+  for(const k of Object.keys(settings.starts||{})){ const p = splitKey(k)[0]; if(p) s.add(p); }
   if(me) s.add(me);
   return [...s].sort();
 }
-function totalStart(){
-  return (settings.startBalance||0) + Object.values(settings.starts||{}).reduce((a,b)=>a+(Number(b)||0), 0);
+/* ---------- 所持金を計算する範囲（ワイプ対応） ----------
+   自動の期（第N期・最新）を選んでいるときは、その期の中だけで所持金を計算する（期の開始額 + 期の記録）。
+   全期間・日付指定のときは通算。期ごとの開始額は starts に「名前@その期の日付」で持つ（個人用は名前が空）。 */
+function splitKey(k){ const i = k.lastIndexOf('@'); return i < 0 ? [k, ''] : [k.slice(0, i), k.slice(i + 1)]; }
+function balScope(){ return (period.kind === 'latest' || period.kind === 'auto') ? periodRange() : null; }
+function inScope(sc, d){ return !sc || ((!sc.from || d >= sc.from) && (!sc.to || d <= sc.to)); }
+function scopeName(){
+  if(!balScope()) return '';
+  return '第' + (period.kind === 'latest' ? periods.length : period.i + 1) + '期';
 }
-function personBalances(){
-  const out = {}, st = settings.starts||{};
-  for(const p of people()) out[p] = Number(st[p])||0;
-  let un = settings.startBalance||0;
-  for(const e of entries){ if(e.by) out[e.by] = (out[e.by]||0) + e.amount; else un += e.amount; }
+/* 最初の期か（期の指定がない開始額＝記録開始時の所持金は、最初の期の開始額として使う） */
+function isFirstScope(sc){ return !!sc && periods.length > 0 && sc.from === periods[0].from; }
+/* その範囲の開始額 {名前: 額}。期の中の日付が付いた登録を使う（複数あれば新しい日付のもの） */
+function startsFor(sc){
+  const out = {}, best = {}, undated = {};
+  for(const [k, v] of Object.entries(settings.starts||{})){
+    const [p, d] = splitKey(k);
+    if(!d){ undated[p] = (undated[p]||0) + (Number(v)||0); if(!sc) out[p] = undated[p]; continue; }
+    if(sc && inScope(sc, d) && (best[p] === undefined || d > best[p])){ best[p] = d; out[p] = Number(v)||0; }
+  }
+  if(isFirstScope(sc)) for(const p of Object.keys(undated)) if(best[p] === undefined) out[p] = undated[p];
+  return out;
+}
+/* 以前の共通の開始額（未割り当て）を含めるか: 通算か最初の期のとき */
+function legacyFor(sc){ return (!sc || isFirstScope(sc)) ? (settings.startBalance||0) : 0; }
+/* 開始額を保存するキー（期の中に既存の登録があればそれを上書き） */
+function startKey(p, sc){
+  if(!sc) return p;
+  // 最初の期で、期付きの登録がまだなければ、期の指定がない登録（記録開始時の所持金）をそのまま使う
+  if(isFirstScope(sc) && !Object.keys(settings.starts||{}).some(k=>{ const [q, d] = splitKey(k); return q === p && d && inScope(sc, d); }) && (p in (settings.starts||{}))) return p;
+  let found = '';
+  for(const k of Object.keys(settings.starts||{})){ const [q, d] = splitKey(k); if(q === p && d && inScope(sc, d) && d > found) found = d; }
+  return `${p}@${found || sc.from}`;
+}
+function totalStart(sc){
+  return legacyFor(sc) + Object.values(startsFor(sc)).reduce((a,b)=>a+b, 0);
+}
+function personBalances(sc){
+  const out = {}, st = startsFor(sc);
+  for(const p of people()) out[p] = st[p]||0;
+  let un = legacyFor(sc);
+  for(const e of entries){ if(!inScope(sc, e.date)) continue; if(e.by) out[e.by] = (out[e.by]||0) + e.amount; else un += e.amount; }
   return {each:out, unassigned:un};
 }
 /* 日ごとの終了時の所持金を人ごとに（グラフ用）。戻り値: {date: {person: 残高}} と開始値 */
-function personDaily(){
-  const st = settings.starts||{}, run = {};
-  for(const p of people()) run[p] = Number(st[p])||0;
+function personDaily(sc){
+  const st = startsFor(sc), run = {};
+  for(const p of people()) run[p] = st[p]||0;
   const start = {...run}, byDate = {};
-  for(const e of sorted(entries)){
+  for(const e of sorted(entries.filter(e=>inScope(sc, e.date)))){
     if(e.by){ run[e.by] = (run[e.by]||0) + e.amount; }
     byDate[e.date] = {...run};
   }
@@ -568,13 +607,14 @@ function personDaily(){
 function renderPeople(){
   const bar = $('peopleBar');
   if(!SHARED){ bar.hidden = true; return; }
-  const {each, unassigned} = personBalances();
+  const sc = balScope();
+  const {each, unassigned} = personBalances(sc);
   const ps = people();
   bar.hidden = !ps.length;
   bar.innerHTML = ps.map(p=>`<div class="pcard" style="--pc:${colorOf(p)}">
       <span class="pname">${esc(nameOf(p))}${p===me?'<small>（あなた）</small>':''}</span>
       <span class="pbal num">${fmt(each[p]||0)}<span class="u">aUEC</span></span></div>`).join('')
-    + (unassigned ? `<div class="pcard" style="--pc:var(--line)"><span class="pname">未割り当て<small>（記録者なし・共通の開始額）</small></span><span class="pbal num">${fmt(unassigned)}<span class="u">aUEC</span></span></div>` : '');
+    + (unassigned ? `<div class="pcard" style="--pc:var(--line)"><span class="pname">未割り当て<small>（記録者なし${sc?'':'・共通の開始額'}）</small></span><span class="pbal num">${fmt(unassigned)}<span class="u">aUEC</span></span></div>` : '');
   // 設定欄の「対象の人」
   const sel = $('who'), cur = sel.value || me || ps[0] || '';
   sel.innerHTML = ps.map(p=>`<option value="${esc(p)}"${p===cur?' selected':''}>${esc(nameOf(p))}${p===me?'（あなた）':''}</option>`).join('');
@@ -588,7 +628,7 @@ function renderPeople(){
   const legacy = settings.startBalance||0;
   $('legacyRow').hidden = !legacy || !ps.length;
   $('legacyMsg').textContent = legacy ? `以前の共通の開始額 ${fmt(legacy)} aUEC が「未割り当て」になっています。上で選んだ人の開始額に移せます（合計は変わりません）。` : '';
-  if(document.activeElement!==$('startBal')){ const v = Number((settings.starts||{})[sel.value])||0; $('startBal').value = v ? fmt(v) : ''; }
+  if(document.activeElement!==$('startBal')){ const v = startsFor(sc)[sel.value]||0; $('startBal').value = v ? fmt(v) : ''; }
 }
 function applyReadOnly(){
   $('roNote').hidden = false;
@@ -631,7 +671,11 @@ function inRange(date){
 /* ---------- render ---------- */
 function render(){
   const D = {entries, settings};
-  const {balance, days} = compute(D.entries, totalStart());
+  periods = findPeriods(D.entries);
+  const sc = balScope(), sname = scopeName();
+  const {balance, days} = compute(D.entries.filter(e=>inScope(sc, e.date)), totalStart(sc));
+  $('tBalLabel').textContent = (SHARED ? '共有の所持金（二人の合計）' : '現在の所持金') + (sname ? `・${sname}` : '');
+  $('startLabel').textContent = sname ? `${sname}の開始時の所持金 (aUEC)` : '記録開始時の所持金 (aUEC)';
 
   $('tBal').innerHTML = fmt(balance)+'<span class="u">aUEC</span>';
   const td = days.find(d=>d.date===today());
@@ -639,7 +683,6 @@ function render(){
   const wk = D.entries.filter(e=>e.type!=='adjust' && dayNum(e.date)>dayNum(today())-7).reduce((a,b)=>a+b.amount,0);
   $('tToday').textContent = sfmt(tdNet); $('tToday').className='v '+cls(tdNet);
   $('tWeek').textContent = sfmt(wk); $('tWeek').className='v '+cls(wk);
-  periods = findPeriods(D.entries);
   renderPeriods();
   const inP = e => inPeriod(e.date);
   if(!periodRange()){
@@ -650,10 +693,10 @@ function render(){
     $('tCountLabel').textContent = '選んだ期間の収支';
     $('tCount').textContent = sfmt(net); $('tCount').className = 'v '+cls(net);
   }
-  if(!SHARED && document.activeElement!==$('startBal')) $('startBal').value = settings.startBalance ? fmt(settings.startBalance) : '';
+  if(!SHARED && document.activeElement!==$('startBal')){ const v = (sc && !isFirstScope(sc)) ? (startsFor(sc)['']||0) : (settings.startBalance||0); $('startBal').value = v ? fmt(v) : ''; }
 
   renderBars(D.entries.filter(e=>inRange(e.date) && inP(e)));
-  renderChart(days.filter(d=>inRange(d.date) && inPeriod(d.date)), totalStart(), days);
+  renderChart(days.filter(d=>inRange(d.date) && inPeriod(d.date)), totalStart(sc), days);
   renderDays(days.filter(d=>inPeriod(d.date)));
   renderTabs();
   renderPeople();
@@ -756,7 +799,7 @@ function renderChart(days, start, allDays){
   // 共有モード: 一人ひとりの線（合計の線と同じ日付に揃える）
   const series = [];
   if(SHARED && people().length > 1){
-    const pd = personDaily();
+    const pd = personDaily(balScope());
     const prev = firstIdx>0 ? pd.byDate[allDays[firstIdx-1].date] : pd.start;
     for(const p of people()){
       series.push({p, pts: [{x:pts[0].x, y:(prev||{})[p]||0}].concat(days.map(d=>({x:dayNum(d.date), y:(pd.byDate[d.date]||{})[p]||0})))});
@@ -1190,7 +1233,9 @@ $('saveStart').onclick = async ()=>{
   const who = SHARED ? $('who').value : '';
   if(SHARED && !who){ toast('対象の人がいません。先に名前を決めてください'); return; }
   try{
-    if(SHARED){ await store.setPersonStart(who, v); toast(nameOf(who)+' の開始時の所持金を '+fmt(v)+' aUEC にしました'); }
+    const sc = balScope(), sn = scopeName();
+    if(SHARED){ await store.setPersonStart(startKey(who, sc), v); toast(nameOf(who)+' の'+(sn?sn+'の':'')+'開始時の所持金を '+fmt(v)+' aUEC にしました'); }
+    else if(sc && !isFirstScope(sc)){ await store.setPersonStart(startKey('', sc), v); toast(sn+'の開始時の所持金を '+fmt(v)+' aUEC にしました'); }
     else { await store.setStart(v); toast('開始時の所持金を '+fmt(v)+' aUEC にしました'); }
   }catch(e){ toast(saveErr(e)); }
 };
@@ -1223,15 +1268,18 @@ $('moveLegacy').onclick = async ()=>{
   try{ await store.moveLegacy(who); toast(`${fmt(v)} aUEC を ${nameOf(who)} の開始額に移しました`); }
   catch(e){ toast(saveErr(e)); }
 };
-$('who').addEventListener('change', ()=>{ const v = Number((settings.starts||{})[$('who').value])||0; $('startBal').value = v ? fmt(v) : ''; });
+$('who').addEventListener('change', ()=>{ const v = startsFor(balScope())[$('who').value]||0; $('startBal').value = v ? fmt(v) : ''; });
 $('saveActual').onclick = async ()=>{
   const v = parseAmount($('actualBal').value);
   if(isNaN(v)){ toast('ゲーム内の現在額を入力してください'); return; }
   const who = SHARED ? $('who').value : '';
-  const cur = SHARED ? (personBalances().each[who]||0) : compute(entries, totalStart()).balance;
+  const sc = balScope();
+  const cur = SHARED ? (personBalances(sc).each[who]||0) : compute(entries.filter(e=>inScope(sc, e.date)), totalStart(sc)).balance;
   const diff = v - cur;
   if(diff===0){ toast('記録と一致しています'); return; }
-  const e = {date:today(), type:'adjust', amount:diff, memo:'残高補正', createdAt:Date.now()};
+  // 過去の期を見ているときは、その期の最終日に補正を入れる（今日に入れると別の期に入ってしまう）
+  const date = (sc && sc.to && sc.to < today()) ? sc.to : today();
+  const e = {date, type:'adjust', amount:diff, memo:'残高補正', createdAt:Date.now()};
   if(SHARED && who) e.by = who;
   try{ await store.add(e); $('actualBal').value=''; toast('差額 '+sfmt(diff)+' を補正として記録しました'); }
   catch(err){ toast('保存できませんでした（'+(err.code||err)+'）'); }
@@ -1266,8 +1314,6 @@ if(SHARED){
   document.title = 'aUEC 共有収支帳';
   $('brand').innerHTML = 'aUEC <span>SHARED LEDGER</span>';
   $('subtitle').textContent = 'STAR CITIZEN ・ 二人の共有財布';
-  $('tBalLabel').textContent = '共有の所持金（二人の合計）';
-  $('startLabel').textContent = '記録開始時の所持金 (aUEC)';
 }
 $('appFoot').innerHTML = `<span>aUEC Ledger <b class="num">v${APP_VERSION}</b>（${{solo:'個人用',shared:'共有用',web:'共有用・Web'}[MODE]}）</span><span>更新日時 <span class="num">${APP_UPDATED.replace(/-/g,'.')}</span></span>`;
 $('date').value = today();
