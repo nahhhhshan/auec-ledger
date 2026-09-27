@@ -669,7 +669,7 @@ $('ship').addEventListener('change', ()=>{
 /* 書式は 4.x 日本語クライアントで確認: 報酬は「Added notification "報酬 N aUEC"」、契約名は同じ秒の「契約完了：名前」。
    報酬行の MissionId は常に 0 なので、同じ秒の報酬と契約完了をひとまとめにする。 */
 let logCands = [], logFilter = 'all';
-const LOG_KIND = {reward:'契約報酬', xfer:'送金の受け取り', sell:'売却', buy:'購入', rent:'レンタル'};
+const LOG_KIND = {reward:'契約報酬', fee:'契約の費用', xfer:'送金の受け取り', sell:'売却', buy:'購入', rent:'レンタル'};
 
 function classifyContract(s){
   if(/配達|Delivery/i.test(s)) return 'delivery';
@@ -692,6 +692,8 @@ function parseLogText(text, out){
   const pend = [];              // 売却・購入の要求（直後のエラーで失敗扱い）
   const add = c => { if(!out.has(c.key)) out.set(c.key, c); };
   let xfer = null;              // 「○○ が以下の金額を送信しました：」の次の行に金額が出る
+  const accepts = [];           // 契約の受注 {t, sec, mid, name}（費用はログに出ないのでゲームデータの費用表で補う）
+  const contractOf = new Map(); // MissionId -> 内部契約名（目標マーカーの行に出る）
   for(const line of lines){
     if(line.charCodeAt(0) !== 60) continue;
     if(xfer){
@@ -705,12 +707,20 @@ function parseLogText(text, out){
     const notif = line.includes('Added notification "');
     const req = !notif && line.includes('Request> Sending');
     const err = !notif && !req && line.includes('Transaction Response Error');
-    if(!notif && !req && !err) continue;
+    if(!notif && !req && !err){
+      if(line.includes('CreateMarker> Creating objective marker')){
+        const k = line.match(/missionId \[([0-9a-f-]+)\].*?contract \[([^\]]+)\]/);
+        if(k && !contractOf.has(k[1])) contractOf.set(k[1], k[2]);
+      }
+      continue;
+    }
     const m = line.match(/^<(\d{4}-\d\d-\d\dT\d\d:\d\d:\d\d)/); if(!m) continue;
     const sec = m[1], t = Date.parse(sec + 'Z');
     if(notif){
       const x = line.match(/Added notification "(.+?) が以下の金額を送信しました/);
       if(x){ xfer = {t, sec, from:x[1]}; continue; }
+      const ac = line.match(/Added notification "契約が成立しました[：:]\s*(.*?):\s*".*?MissionId: \[([0-9a-f-]+)\]/);
+      if(ac){ accepts.push({t, sec, name:ac[1].split(' / ')[0].trim(), mid:ac[2]}); continue; }
       let r = line.match(/Added notification "報酬 (\d+) aUEC/);
       if(r){ const g = groups.get(sec) || {t, rewards:[]}; g.rewards.push(+r[1]); groups.set(sec, g); continue; }
       r = line.match(/Added notification "契約完了[：:]\s*(.*?):\s*"/);
@@ -756,6 +766,14 @@ function parseLogText(text, out){
       add(c); pend.push(out.get(c.key)); if(pend.length > 20) pend.shift();
     }
   }
+  const costs = SC.costs || {};
+  for(const a of accepts){
+    const dn = contractOf.get(a.mid); if(!dn) continue;
+    const cost = costs[dn] || costs[dn.replace(/_\d+$/, '')];
+    if(!cost) continue;
+    add({key:`log-fee-${a.sec}-${a.mid.slice(0,8)}`, t:a.t, kind:'fee', amount:-cost, type:classifyContract(a.name + ' ' + dn), checked:true,
+      memo:`契約の費用: ${a.name}`, note:'費用はゲームデータの値（ログに金額は出ません）'});
+  }
   for(const [sec, g] of groups){
     // 報酬は契約完了と同じ秒か1〜2秒後に出る。前後3秒以内の未使用の契約完了を近い順に報酬の件数だけ結び付ける
     g.names = dones.filter(d => !d.used && Math.abs(d.t - g.t) <= 3000)
@@ -773,6 +791,7 @@ async function readLogs(files){
   const out = new Map();
   const list = [...files].sort((a,b)=>a.lastModified-b.lastModified);
   $('logResult').hidden = true;
+  await scReady;
   for(let i=0; i<list.length; i++){
     $('logStatus').textContent = `読み込み中… ${i+1}/${list.length}　${list[i].name}`;
     try{ parseLogText(await list[i].text(), out); }
@@ -795,7 +814,7 @@ async function readLogs(files){
 }
 
 function drawLog(){
-  const kinds = ['reward','xfer','sell','buy','rent'].filter(k=>logCands.some(c=>c.kind===k));
+  const kinds = ['reward','fee','xfer','sell','buy','rent'].filter(k=>logCands.some(c=>c.kind===k));
   $('logFilters').innerHTML = [['all','すべて']].concat(kinds.map(k=>[k,LOG_KIND[k]]))
     .map(([v,l])=>`<button type="button" data-lf="${v}" aria-pressed="${logFilter===v}">${l} ${logCands.filter(c=>v==='all'||c.kind===v).length}</button>`).join('');
   const opts = sel => TYPES.map(t=>`<option value="${t.id}"${t.id===sel?' selected':''}>${t.label}</option>`).join('');
@@ -804,7 +823,7 @@ function drawLog(){
     rows.map(({c,i})=>`<tr class="${c.done?'done':c.warn?'warn':''}">
       <td><input type="checkbox" data-lc="${i}" ${c.checked?'checked':''} ${c.done?'disabled':''} aria-label="取り込む"></td>
       <td class="when">${c.date.slice(2).replace(/-/g,'/')} ${new Date(c.t).toTimeString().slice(0,5)}</td>
-      <td class="what">${esc(c.memo)}${c.done?'<span class="note">取り込み済み</span>':c.warn?`<span class="note neg">${esc(c.warn)}</span>`:''}</td>
+      <td class="what">${esc(c.memo)}${c.done?'<span class="note">取り込み済み</span>':c.warn?`<span class="note neg">${esc(c.warn)}</span>`:c.note?`<span class="note">${esc(c.note)}</span>`:''}</td>
       <td><select data-lt="${i}" ${c.done?'disabled':''} aria-label="種別">${opts(c.type)}</select></td>
       <td class="amt num ${cls(c.amount)}">${sfmt(c.amount)}</td></tr>`).join('') + '</tbody></table>';
   drawLogSum();
@@ -1000,7 +1019,7 @@ if(SHARED){
 }
 $('date').value = today();
 renderChips(); setDir(1);
-loadGameData();
+const scReady = loadGameData();
 initStore();
 </script>
 </body>
