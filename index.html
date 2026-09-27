@@ -49,6 +49,9 @@ header{display:flex;flex-wrap:wrap;align-items:flex-end;justify-content:space-be
 .peer{display:inline-flex;align-items:center;gap:5px;border:1px solid var(--line);background:var(--surface);border-radius:999px;padding:2px 9px 2px 7px;color:var(--ink)}
 .peer::before{content:"";width:7px;height:7px;border-radius:50%;background:var(--pos)}
 
+.periodbar{display:flex;flex-wrap:wrap;align-items:center;gap:8px 12px}
+.periodcustom{display:inline-flex;align-items:center;gap:6px;font-size:13px}
+.periodcustom input{width:auto;background:var(--surface-2);border:1px solid var(--line);border-radius:4px;padding:3px 6px;font-size:12px}
 .tiles{display:grid;grid-template-columns:2fr 1fr 1fr 1fr;gap:1px;background:var(--line);border:1px solid var(--line);border-radius:6px;overflow:hidden}
 .tile{background:var(--surface);padding:14px 16px;display:grid;gap:4px;align-content:start}
 .tile .k{font-size:11px;letter-spacing:.08em;color:var(--muted)}
@@ -190,11 +193,19 @@ code{font-family:var(--f-mono);font-size:12px;background:var(--surface-2);border
 
   <div class="demo" id="roNote" hidden>このアプリは閲覧のみの権限で開かれています。記録を追加するには、持ち主に「編集可能」以上で共有してもらってください。</div>
 
+  <section class="periodbar" aria-label="表示する期間">
+    <span class="lab">表示する期間</span>
+    <span class="range" id="periodChips"></span>
+    <span class="periodcustom" id="periodCustom" hidden>
+      <input type="date" id="pFrom" aria-label="開始日"> 〜 <input type="date" id="pTo" aria-label="終了日（空欄なら今日まで）">
+    </span>
+  </section>
+
   <section class="tiles" aria-label="概要">
     <div class="tile main"><div class="k" id="tBalLabel">現在の所持金</div><div class="v" id="tBal">0<span class="u">aUEC</span></div></div>
     <div class="tile"><div class="k">今日の収支</div><div class="v" id="tToday">0</div></div>
     <div class="tile"><div class="k">直近7日</div><div class="v" id="tWeek">0</div></div>
-    <div class="tile"><div class="k">記録件数</div><div class="v" id="tCount">0</div></div>
+    <div class="tile"><div class="k" id="tCountLabel">記録件数</div><div class="v" id="tCount">0</div></div>
   </section>
 
   <div class="grid2">
@@ -317,8 +328,8 @@ code{font-family:var(--f-mono);font-size:12px;background:var(--surface-2);border
 /* 'solo' = 個人用, 'shared' = claude.ai で共有, 'web' = GitHub Pages + Firebase で共有（web_backend.js） */
 const MODE = 'web';
 /* 変更して公開するたびに上げる（表示はフッター） */
-const APP_VERSION = '1.0.3';
-const APP_UPDATED = '2026-09-27 18:17';   // 日本時間
+const APP_VERSION = '1.1.0';
+const APP_UPDATED = '2026-09-27 18:41';   // 日本時間
 const SHARED = MODE !== 'solo';
 
 const TYPES = [
@@ -522,14 +533,78 @@ function render(){
   const wk = D.entries.filter(e=>e.type!=='adjust' && dayNum(e.date)>dayNum(today())-7).reduce((a,b)=>a+b.amount,0);
   $('tToday').textContent = sfmt(tdNet); $('tToday').className='v '+cls(tdNet);
   $('tWeek').textContent = sfmt(wk); $('tWeek').className='v '+cls(wk);
-  $('tCount').textContent = fmt(D.entries.length);
+  periods = findPeriods(D.entries);
+  renderPeriods();
+  const inP = e => inPeriod(e.date);
+  if(period.kind === 'all'){
+    $('tCountLabel').textContent = '記録件数';
+    $('tCount').textContent = fmt(D.entries.length); $('tCount').className = 'v';
+  } else {
+    const net = D.entries.filter(e=>inP(e) && e.type!=='adjust').reduce((a,b)=>a+b.amount,0);
+    $('tCountLabel').textContent = '選んだ期間の収支';
+    $('tCount').textContent = sfmt(net); $('tCount').className = 'v '+cls(net);
+  }
   if(document.activeElement!==$('startBal')) $('startBal').value = settings.startBalance ? fmt(settings.startBalance) : '';
 
-  renderBars(D.entries.filter(e=>inRange(e.date)));
-  renderChart(days.filter(d=>inRange(d.date)), D.settings.startBalance||0, days);
-  renderDays(days);
+  renderBars(D.entries.filter(e=>inRange(e.date) && inP(e)));
+  renderChart(days.filter(d=>inRange(d.date) && inPeriod(d.date)), D.settings.startBalance||0, days);
+  renderDays(days.filter(d=>inPeriod(d.date)));
   renderTabs();
 }
+
+/* ---------- 表示する期間 ----------
+   記録の日付が30日以上あいた所で自動的に区切る（休止期間）。自由な日付範囲も選べる。選択はこのブラウザに覚える */
+const PERIOD_KEY = 'auec-ledger-period';
+const GAP_DAYS = 30;
+let periods = [], period = {kind:'all'};
+try{ const p = JSON.parse(localStorage.getItem(PERIOD_KEY) || 'null'); if(p && p.kind) period = p; }catch(e){}
+function findPeriods(list){
+  const ds = [...new Set(list.map(e=>e.date))].sort();
+  const out = [];
+  for(const d of ds){
+    const last = out[out.length-1];
+    if(last && dayNum(d) - dayNum(last.to) <= GAP_DAYS) last.to = d;
+    else out.push({from:d, to:d});
+  }
+  return out;
+}
+function periodRange(){
+  if(period.kind === 'auto'){ const p = periods[period.i]; return p ? {from:p.from, to: period.i === periods.length-1 ? '' : p.to} : null; }
+  if(period.kind === 'custom') return {from: period.from || '', to: period.to || ''};
+  return null;
+}
+function inPeriod(date){
+  const r = periodRange(); if(!r) return true;
+  return (!r.from || date >= r.from) && (!r.to || date <= r.to);
+}
+function setPeriod(p){
+  period = p;
+  try{ localStorage.setItem(PERIOD_KEY, JSON.stringify(p)); }catch(e){}
+  render();
+}
+function renderPeriods(){
+  if(period.kind === 'auto' && !periods[period.i]) period = {kind:'all'};
+  const md = s => s.slice(2).replace(/-/g,'/');
+  const chips = [`<button type="button" data-p="all" aria-pressed="${period.kind==='all'}">全期間</button>`];
+  if(periods.length > 1) periods.forEach((p,i)=>{
+    const last = i === periods.length-1;
+    chips.push(`<button type="button" data-p="auto" data-pi="${i}" aria-pressed="${period.kind==='auto' && period.i===i}">第${i+1}期 ${md(p.from)}〜${last?'':md(p.to)}</button>`);
+  });
+  chips.push(`<button type="button" data-p="custom" aria-pressed="${period.kind==='custom'}">日付を指定</button>`);
+  $('periodChips').innerHTML = chips.join('');
+  $('periodCustom').hidden = period.kind !== 'custom';
+  if(period.kind === 'custom'){
+    if(document.activeElement !== $('pFrom')) $('pFrom').value = period.from || '';
+    if(document.activeElement !== $('pTo')) $('pTo').value = period.to || '';
+  }
+}
+$('periodChips').addEventListener('click', ev=>{
+  const b = ev.target.closest('[data-p]'); if(!b) return;
+  if(b.dataset.p === 'auto') setPeriod({kind:'auto', i:+b.dataset.pi});
+  else if(b.dataset.p === 'custom') setPeriod({kind:'custom', from: period.from || (periods.length ? periods[periods.length-1].from : today()), to: period.to || ''});
+  else setPeriod({kind:'all'});
+});
+for(const id of ['pFrom','pTo']) $(id).addEventListener('change', ()=>setPeriod({kind:'custom', from:$('pFrom').value, to:$('pTo').value}));
 
 function renderTabs(){
   for(const id of ['range1','range2']){
