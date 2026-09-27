@@ -49,6 +49,16 @@ header{display:flex;flex-wrap:wrap;align-items:flex-end;justify-content:space-be
 .peer{display:inline-flex;align-items:center;gap:5px;border:1px solid var(--line);background:var(--surface);border-radius:999px;padding:2px 9px 2px 7px;color:var(--ink)}
 .peer::before{content:"";width:7px;height:7px;border-radius:50%;background:var(--pos)}
 
+.peoplebar{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:10px}
+.pcard{background:var(--surface);border:1px solid var(--line);border-left:4px solid var(--pc);border-radius:6px;padding:10px 14px;display:grid;gap:2px}
+.pname{font-size:12px;color:var(--muted);letter-spacing:.04em}
+.pname small{font-size:11px;margin-left:4px}
+.pbal{font-size:22px;font-weight:500}
+.pbal .u{font-size:12px;color:var(--muted);margin-left:4px;font-family:var(--f-disp)}
+.whowrap{display:grid;gap:4px}
+.whowrap select{font:inherit;background:var(--surface-2);border:1px solid var(--line);border-radius:4px;padding:7px 8px;color:var(--ink)}
+.legend{display:flex;flex-wrap:wrap;gap:4px 14px;font-size:12px;color:var(--muted);margin-top:6px}
+.legend i{display:inline-block;width:14px;height:3px;border-radius:2px;margin-right:5px;vertical-align:middle}
 .periodbar{display:flex;flex-wrap:wrap;align-items:center;gap:8px 12px}
 .periodcustom{display:inline-flex;align-items:center;gap:6px;font-size:13px}
 .periodcustom input{width:auto;background:var(--surface-2);border:1px solid var(--line);border-radius:4px;padding:3px 6px;font-size:12px}
@@ -208,6 +218,8 @@ code{font-family:var(--f-mono);font-size:12px;background:var(--surface-2);border
     <div class="tile"><div class="k" id="tCountLabel">記録件数</div><div class="v" id="tCount">0</div></div>
   </section>
 
+  <section class="peoplebar" id="peopleBar" aria-label="一人ひとりの所持金" hidden></section>
+
   <div class="grid2">
     <section class="panel">
       <h2>記録を追加</h2>
@@ -293,6 +305,7 @@ code{font-family:var(--f-mono);font-size:12px;background:var(--surface-2);border
 
     <section class="panel settings">
       <h2>所持金の設定</h2>
+      <label id="whoWrap" class="whowrap" hidden><span class="lab">対象の人</span><select id="who"></select></label>
       <div class="row">
         <label><span class="lab" id="startLabel">記録開始時の所持金 (aUEC)</span><input type="text" id="startBal" inputmode="decimal" placeholder="0"></label>
         <button class="btn ghost" type="button" id="saveStart">保存</button>
@@ -328,8 +341,8 @@ code{font-family:var(--f-mono);font-size:12px;background:var(--surface-2);border
 /* 'solo' = 個人用, 'shared' = claude.ai で共有, 'web' = GitHub Pages + Firebase で共有（web_backend.js） */
 const MODE = 'web';
 /* 変更して公開するたびに上げる（表示はフッター） */
-const APP_VERSION = '1.1.1';
-const APP_UPDATED = '2026-09-28 03:00';   // 日本時間
+const APP_VERSION = '1.2.0';
+const APP_UPDATED = '2026-09-28 03:05';   // 日本時間
 const SHARED = MODE !== 'solo';
 
 const TYPES = [
@@ -414,8 +427,14 @@ const store = {
     entries = []; this.saveLocal(); render();
   },
   async setStart(v){
-    if(this.db){ await this.db.doc('settings/main').set({startBalance:v}); return; }
-    settings = {startBalance:v}; this.saveLocal(); render();
+    if(this.db){ await this.db.doc('settings/main').set({startBalance:v, starts:settings.starts||{}}); return; }
+    settings = {...settings, startBalance:v}; this.saveLocal(); render();
+  },
+  // 共有モード: 人ごとの開始時の所持金（キーは記録者 by と同じ）
+  async setPersonStart(k, v){
+    const starts = {...(settings.starts||{}), [k]:v};
+    if(this.db){ await this.db.doc('settings/main').set({startBalance:settings.startBalance||0, starts}); return; }
+    settings = {...settings, starts}; this.saveLocal(); render();
   },
 };
 
@@ -443,7 +462,7 @@ async function initStore(){
     render();
   }, err=>{ toast('記録を読み込めませんでした（'+err.code+'）。ページを再読み込みしてください。'); });
   db.doc('settings/main').onSnapshot(s=>{
-    settings = s.exists ? {startBalance:Number(s.data().startBalance)||0} : {startBalance:0};
+    settings = s.exists ? {startBalance:Number(s.data().startBalance)||0, starts:s.data().starts||{}} : {startBalance:0, starts:{}};
     render();
   }, ()=>{});
 
@@ -481,8 +500,53 @@ async function resolveNames(ids){
 const nameOf = id => MODE==='web' ? (id||'不明') : !id ? '不明' : (names[id] || (id===me ? 'あなた' : 'メンバー'));
 const PCOL = ['var(--p1)','var(--p2)','var(--p3)'];
 function colorOf(id){
-  const ids = [...new Set(entries.map(e=>e.by).filter(Boolean))].sort();
-  const i = ids.indexOf(id); return PCOL[(i<0?0:i)%PCOL.length];
+  const i = people().indexOf(id); return PCOL[(i<0?0:i)%PCOL.length];
+}
+/* ---------- 共有モード: 人ごとの所持金 ----------
+   その人の所持金 = その人の開始時の所持金 + その人（by）の記録の合計。共有の所持金はその合計。
+   記録者のない記録と、以前の共通の開始額は「未割り当て」として合計にだけ入れる */
+function people(){
+  const s = new Set(entries.map(e=>e.by).filter(Boolean));
+  for(const k of Object.keys(settings.starts||{})) s.add(k);
+  if(me) s.add(me);
+  return [...s].sort();
+}
+function totalStart(){
+  return (settings.startBalance||0) + Object.values(settings.starts||{}).reduce((a,b)=>a+(Number(b)||0), 0);
+}
+function personBalances(){
+  const out = {}, st = settings.starts||{};
+  for(const p of people()) out[p] = Number(st[p])||0;
+  let un = settings.startBalance||0;
+  for(const e of entries){ if(e.by) out[e.by] = (out[e.by]||0) + e.amount; else un += e.amount; }
+  return {each:out, unassigned:un};
+}
+/* 日ごとの終了時の所持金を人ごとに（グラフ用）。戻り値: {date: {person: 残高}} と開始値 */
+function personDaily(){
+  const st = settings.starts||{}, run = {};
+  for(const p of people()) run[p] = Number(st[p])||0;
+  const start = {...run}, byDate = {};
+  for(const e of sorted(entries)){
+    if(e.by){ run[e.by] = (run[e.by]||0) + e.amount; }
+    byDate[e.date] = {...run};
+  }
+  return {start, byDate};
+}
+function renderPeople(){
+  const bar = $('peopleBar');
+  if(!SHARED){ bar.hidden = true; return; }
+  const {each, unassigned} = personBalances();
+  const ps = people();
+  bar.hidden = !ps.length;
+  bar.innerHTML = ps.map(p=>`<div class="pcard" style="--pc:${colorOf(p)}">
+      <span class="pname">${esc(nameOf(p))}${p===me?'<small>（あなた）</small>':''}</span>
+      <span class="pbal num">${fmt(each[p]||0)}<span class="u">aUEC</span></span></div>`).join('')
+    + (unassigned ? `<div class="pcard" style="--pc:var(--line)"><span class="pname">未割り当て<small>（記録者なし・共通の開始額）</small></span><span class="pbal num">${fmt(unassigned)}<span class="u">aUEC</span></span></div>` : '');
+  // 設定欄の「対象の人」
+  const sel = $('who'), cur = sel.value || me || ps[0] || '';
+  sel.innerHTML = ps.map(p=>`<option value="${esc(p)}"${p===cur?' selected':''}>${esc(nameOf(p))}${p===me?'（あなた）':''}</option>`).join('');
+  $('whoWrap').hidden = !ps.length;
+  if(document.activeElement!==$('startBal')){ const v = Number((settings.starts||{})[sel.value])||0; $('startBal').value = v ? fmt(v) : ''; }
 }
 function applyReadOnly(){
   $('roNote').hidden = false;
@@ -525,7 +589,7 @@ function inRange(date){
 /* ---------- render ---------- */
 function render(){
   const D = {entries, settings};
-  const {balance, days} = compute(D.entries, D.settings.startBalance||0);
+  const {balance, days} = compute(D.entries, totalStart());
 
   $('tBal').innerHTML = fmt(balance)+'<span class="u">aUEC</span>';
   const td = days.find(d=>d.date===today());
@@ -544,12 +608,13 @@ function render(){
     $('tCountLabel').textContent = '選んだ期間の収支';
     $('tCount').textContent = sfmt(net); $('tCount').className = 'v '+cls(net);
   }
-  if(document.activeElement!==$('startBal')) $('startBal').value = settings.startBalance ? fmt(settings.startBalance) : '';
+  if(!SHARED && document.activeElement!==$('startBal')) $('startBal').value = settings.startBalance ? fmt(settings.startBalance) : '';
 
   renderBars(D.entries.filter(e=>inRange(e.date) && inP(e)));
-  renderChart(days.filter(d=>inRange(d.date) && inPeriod(d.date)), D.settings.startBalance||0, days);
+  renderChart(days.filter(d=>inRange(d.date) && inPeriod(d.date)), totalStart(), days);
   renderDays(days.filter(d=>inPeriod(d.date)));
   renderTabs();
+  renderPeople();
 }
 
 /* ---------- 表示する期間 ----------
@@ -646,8 +711,18 @@ function renderChart(days, start, allDays){
   const firstIdx = allDays.indexOf(days[0]);
   const before = firstIdx>0 ? allDays[firstIdx-1].end : start;
   const pts = [{x:dayNum(days[0].date)-1, y:before, label:'開始'}].concat(days.map(d=>({x:dayNum(d.date), y:d.end, label:d.date})));
+  // 共有モード: 一人ひとりの線（合計の線と同じ日付に揃える）
+  const series = [];
+  if(SHARED && people().length > 1){
+    const pd = personDaily();
+    const prev = firstIdx>0 ? pd.byDate[allDays[firstIdx-1].date] : pd.start;
+    for(const p of people()){
+      series.push({p, pts: [{x:pts[0].x, y:(prev||{})[p]||0}].concat(days.map(d=>({x:dayNum(d.date), y:(pd.byDate[d.date]||{})[p]||0})))});
+    }
+  }
   const W=760,H=240,L=78,R=18,T=14,B=30;
-  let ymin=Math.min(...pts.map(p=>p.y)), ymax=Math.max(...pts.map(p=>p.y));
+  const allY = pts.map(p=>p.y).concat(...series.map(s=>s.pts.map(p=>p.y)));
+  let ymin=Math.min(...allY), ymax=Math.max(...allY);
   if(ymin===ymax){ ymin-=1000; ymax+=1000; }
   const step = niceStep(ymax-ymin, 4);
   ymin = Math.floor(ymin/step)*step; ymax = Math.ceil(ymax/step)*step;
@@ -667,13 +742,20 @@ function renderChart(days, start, allDays){
   const area = path + ` L${X(x1)},${Y(ymin)} L${X(x0)},${Y(ymin)} Z`;
   const dots = pts.slice(1).map((p,i)=>`<circle cx="${X(p.x)}" cy="${Y(p.y)}" r="${i===pts.length-2?5:3}" fill="${i===pts.length-2?'var(--gold)':'var(--surface)'}" stroke="var(--accent)" stroke-width="2"><title>${p.label}  ${fmt(p.y)} aUEC</title></circle>`).join('');
   const last = pts[pts.length-1];
+  const lines = series.map(s=>{
+    let d = `M${X(s.pts[0].x)},${Y(s.pts[0].y)}`;
+    for(let i=1;i<s.pts.length;i++) d += ` L${X(s.pts[i].x)},${Y(s.pts[i].y)}`;
+    return `<path d="${d}" fill="none" stroke="${colorOf(s.p)}" stroke-width="1.5" stroke-dasharray="5 3" stroke-linejoin="round"><title>${esc(nameOf(s.p))}  ${fmt(s.pts[s.pts.length-1].y)} aUEC</title></path>`;
+  }).join('');
+  const legend = series.length ? `<div class="legend"><span><i style="background:var(--accent)"></i>合計</span>${series.map(s=>`<span><i style="background:${colorOf(s.p)}"></i>${esc(nameOf(s.p))} ${fmt(s.pts[s.pts.length-1].y)}</span>`).join('')}</div>` : '';
   el.innerHTML = `<svg viewBox="0 0 ${W} ${H}" role="img" aria-label="日ごとの終了時所持金の推移">
     ${g}
+    ${lines}
     <path d="${area}" fill="var(--accent)" fill-opacity=".10"/>
     <path d="${path}" fill="none" stroke="var(--accent)" stroke-width="2" stroke-linejoin="round"/>
     ${dots}
     <text x="${Math.min(X(last.x), W-R)}" y="${Math.max(Y(last.y)-12, T+10)}" text-anchor="end" style="fill:var(--gold);font-weight:500">${fmt(last.y)}</text>
-  </svg>`;
+  </svg>${legend}`;
 }
 
 /* 記録の時刻: ログ由来はゲーム内の時刻、手入力は入力した時刻。記録の日付と違う日の時刻（過去日付で手入力など）は出さない */
@@ -1063,16 +1145,23 @@ $('form').addEventListener('submit', async ev=>{
 $('saveStart').onclick = async ()=>{
   const v = $('startBal').value.trim()==='' ? 0 : parseAmount($('startBal').value);
   if(isNaN(v)){ toast('数値で入力してください'); return; }
-  try{ await store.setStart(v); toast('開始時の所持金を '+fmt(v)+' aUEC にしました'); }catch(e){ toast('保存できませんでした（'+(e.code||e)+'）'); }
+  const who = SHARED ? $('who').value : '';
+  if(SHARED && !who){ toast('対象の人がいません。先に名前を決めてください'); return; }
+  try{
+    if(SHARED){ await store.setPersonStart(who, v); toast(nameOf(who)+' の開始時の所持金を '+fmt(v)+' aUEC にしました'); }
+    else { await store.setStart(v); toast('開始時の所持金を '+fmt(v)+' aUEC にしました'); }
+  }catch(e){ toast('保存できませんでした（'+(e.code||e)+'）'); }
 };
+$('who').addEventListener('change', ()=>{ const v = Number((settings.starts||{})[$('who').value])||0; $('startBal').value = v ? fmt(v) : ''; });
 $('saveActual').onclick = async ()=>{
   const v = parseAmount($('actualBal').value);
   if(isNaN(v)){ toast('ゲーム内の現在額を入力してください'); return; }
-  const cur = compute(entries, settings.startBalance||0).balance;
+  const who = SHARED ? $('who').value : '';
+  const cur = SHARED ? (personBalances().each[who]||0) : compute(entries, totalStart()).balance;
   const diff = v - cur;
   if(diff===0){ toast('記録と一致しています'); return; }
   const e = {date:today(), type:'adjust', amount:diff, memo:'残高補正', createdAt:Date.now()};
-  if(SHARED && me) e.by = me;
+  if(SHARED && who) e.by = who;
   try{ await store.add(e); $('actualBal').value=''; toast('差額 '+sfmt(diff)+' を補正として記録しました'); }
   catch(err){ toast('保存できませんでした（'+(err.code||err)+'）'); }
 };
@@ -1090,7 +1179,7 @@ $('clearGo').onclick = async ()=>{
   finally{ $('clearGo').disabled = false; }
 };
 $('csvBtn').onclick = async ()=>{
-  const {days} = compute(entries, settings.startBalance||0);
+  const {days} = compute(entries, totalStart());
   const q = s => '"'+String(s||'').replace(/"/g,'""')+'"';
   const lines = ['日付,種別,金額,ミッション,船,メモ,'+(SHARED?'記録者,':'')+'記録後の所持金'];
   for(const d of days) for(const e of d.items)
@@ -1106,8 +1195,8 @@ if(SHARED){
   document.title = 'aUEC 共有収支帳';
   $('brand').innerHTML = 'aUEC <span>SHARED LEDGER</span>';
   $('subtitle').textContent = 'STAR CITIZEN ・ 二人の共有財布';
-  $('tBalLabel').textContent = '共有の所持金';
-  $('startLabel').textContent = '記録開始時の共有所持金 (aUEC)';
+  $('tBalLabel').textContent = '共有の所持金（二人の合計）';
+  $('startLabel').textContent = '記録開始時の所持金 (aUEC)';
 }
 $('appFoot').innerHTML = `<span>aUEC Ledger <b class="num">v${APP_VERSION}</b>（${{solo:'個人用',shared:'共有用',web:'共有用・Web'}[MODE]}）</span><span>更新日時 <span class="num">${APP_UPDATED.replace(/-/g,'.')}</span></span>`;
 $('date').value = today();

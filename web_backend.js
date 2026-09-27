@@ -101,6 +101,7 @@ async function initWeb(){
     }
   };
   store.setStart = v => L.set({startBalance:v}, {merge:true});
+  store.setPersonStart = (k, v) => L.set({starts:{[k]:v}}, {merge:true});
   $('storeNote').innerHTML = '保存先: <b>共有クラウド（Firebase）</b>';
   entries = []; render();
 
@@ -116,7 +117,8 @@ async function initWeb(){
     render();
   }, err => toast('記録を読み込めませんでした（'+err.code+'）'));
   L.onSnapshot(s => {
-    settings = {startBalance: Number((s.data()||{}).startBalance) || 0};
+    const d = s.data() || {};
+    settings = {startBalance: Number(d.startBalance) || 0, starts: d.starts || {}};
     render();
   }, () => {});
 
