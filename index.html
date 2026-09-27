@@ -247,10 +247,12 @@ code{font-family:var(--f-mono);font-size:12px;background:var(--surface-2);border
       <div class="row" style="align-items:center">
         <input type="text" id="logPath" readonly value="C:\Program Files\Roberts Space Industries\StarCitizen\LIVE" style="flex:1 1 280px">
         <button class="btn ghost" type="button" id="copyLogPath">場所をコピー</button>
-        <label class="btn" for="logFiles" style="display:inline-block">ログファイルを選ぶ</label>
+        <label class="btn" for="logDir" style="display:inline-block">LIVE フォルダごと選ぶ</label>
+        <label class="btn ghost" for="logFiles" style="display:inline-block">ファイルを選ぶ</label>
+        <input type="file" id="logDir" webkitdirectory directory multiple hidden>
         <input type="file" id="logFiles" accept=".log,.txt" multiple hidden>
       </div>
-      <p class="hint">ファイル選択の画面で、上の場所を貼り付けて開いてください。<code>Game.log</code>（今のログ）と、<code>logbackups</code> 内のファイル（Ctrl+A で全選択）を選べます。</p>
+      <p class="hint"><b>おすすめ:</b>「LIVE フォルダごと選ぶ」で上の場所の <code>LIVE</code> フォルダを選ぶと、今のログ（<code>Game.log</code>・最後の1回分）と過去のログ（<code>logbackups</code> 内）をまとめて読みます。ブラウザに「アップロードしますか」と聞かれますが、実際にはどこにも送らず、このページの中で読むだけです。</p>
     </div>
     <div id="logStatus" class="hint" role="status"></div>
     <div id="logResult" hidden>
@@ -772,6 +774,7 @@ async function readLogs(files){
   $('logStatus').textContent = logCands.length
     ? `${list.length}個のファイルから ${logCands.length}件 見つかりました` + (done ? `（うち ${done}件は取り込み済み）` : '') + '。種別は必要に応じて変えられます。'
     : `${list.length}個のファイルを読みましたが、取り込める記録は見つかりませんでした。`;
+  if(list.length === 1 && logCands.length) $('logStatus').textContent += '　※ Game.log は最後に遊んだ1回分だけです。それより前は logbackups にあります（「LIVE フォルダごと選ぶ」でまとめて読めます）。';
   $('logResult').hidden = !logCands.length;
   logFilter = 'all'; drawLog();
 }
@@ -798,6 +801,16 @@ function drawLogSum(){
   $('logImport').disabled = !sel.length || readOnly;
 }
 $('logFiles').addEventListener('change', ev=>{ if(ev.target.files.length) readLogs(ev.target.files); ev.target.value = ''; });
+$('logDir').addEventListener('change', ev=>{
+  // フォルダ選択: Game.log と logbackups 内の .log だけを読む（ほかのフォルダの .log は無視）
+  const fs = [...ev.target.files].filter(f=>{
+    const p = (f.webkitRelativePath || f.name).split('\\').join('/');
+    return /\.log$/i.test(f.name) && (/(^|\/)Game\.log$/i.test(p) || /(^|\/)logbackups\//i.test(p));
+  });
+  ev.target.value = '';
+  if(fs.length) readLogs(fs);
+  else $('logStatus').textContent = 'このフォルダには Game.log も logbackups もありませんでした。StarCitizen の中の LIVE フォルダを選んでください。';
+});
 $('copyLogPath').onclick = async ()=>{
   try{ await navigator.clipboard.writeText($('logPath').value); toast('場所をコピーしました'); }
   catch(e){ $('logPath').select(); toast('選択したのでコピーしてください'); }
