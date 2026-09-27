@@ -3,7 +3,8 @@
  * 帳簿は URL の #以降（推測できない長いID）で区別し、それを知っている人だけが読み書きできる。 */
 
 const NAME_KEY = 'auec-web-name';
-const CLIENT_ID = Math.random().toString(36).slice(2, 12);
+// 接続中の表示に使う、このブラウザ固定の番号（読み込み直しても同じ記録を上書きし、増えないように）
+const CLIENT_ID = (() => { let id = lsGet('auec-web-client'); if(!/^[a-z0-9]{10}$/.test(id)){ id = Math.random().toString(36).slice(2, 12).padEnd(10, '0'); lsSet('auec-web-client', id); } return id; })();
 
 function newLedgerId(){
   const a = new Uint8Array(18); crypto.getRandomValues(a);
@@ -79,7 +80,6 @@ async function initWeb(){
     try{ await navigator.clipboard.writeText(shareUrl); toast('URLをコピーしました'); }
     catch(e){ $('shareUrl').select(); toast('選択したのでコピーしてください'); }
   };
-  $('renameBtn').onclick = () => { try{ localStorage.removeItem(NAME_KEY); }catch(e){} location.reload(); };
 
   store.db = null;
   store.add = e => L.collection('entries').add(e);
@@ -128,6 +128,13 @@ async function initWeb(){
   beat(); setInterval(() => { if(document.visibilityState==='visible') beat(); }, 60000);
   document.addEventListener('visibilitychange', () => { if(document.visibilityState==='visible') beat(); });
   addEventListener('pagehide', () => { P.doc(CLIENT_ID).delete().catch(()=>{}); });
+  // 名前の変更: 古い名前の接続記録を消してから読み込み直す
+  $('renameBtn').onclick = async () => {
+    $('renameBtn').disabled = true;
+    try{ await P.doc(CLIENT_ID).delete(); }catch(e){}
+    try{ localStorage.removeItem(NAME_KEY); }catch(e){}
+    location.reload();
+  };
   let peers = [];
   const drawPeers = () => {
     const now = Date.now();
@@ -136,8 +143,15 @@ async function initWeb(){
     $('peers').hidden = false;
     $('peers').innerHTML = '<span>接続中</span>' + on.map(n => `<span class="peer">${esc(n)}${n===me?'（あなた）':''}</span>`).join('');
   };
+  let swept = false;
   P.onSnapshot(s => {
-    peers = s.docs.map(d => { const x = d.data({serverTimestamps:'estimate'}); return {name:x.name, at:x.at ? x.at.toMillis() : 0}; });
+    peers = s.docs.map(d => { const x = d.data({serverTimestamps:'estimate'}); return {id:d.id, name:x.name, at:x.at ? x.at.toMillis() : 0}; });
+    // 閉じ損ねて残った古い接続記録（10分以上更新なし）を一度だけ掃除する
+    if(!swept && !s.metadata.fromCache){
+      swept = true;
+      const old = peers.filter(p => p.id !== CLIENT_ID && (!p.at || Date.now() - p.at > 600000));
+      for(let i = 0; i < old.length; i += 400){ const b = fs.batch(); for(const p of old.slice(i, i + 400)) b.delete(P.doc(p.id)); b.commit().catch(()=>{}); }
+    }
     drawPeers();
   }, () => {});
   setInterval(drawPeers, 30000);
