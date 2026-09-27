@@ -307,6 +307,11 @@ code{font-family:var(--f-mono);font-size:12px;background:var(--surface-2);border
     <section class="panel settings">
       <h2>所持金の設定</h2>
       <label id="whoWrap" class="whowrap" hidden><span class="lab">対象の人</span><select id="who"></select></label>
+      <div class="row" id="handleRow" hidden>
+        <label><span class="lab">この人のゲーム内の名前（ハンドル）</span><input type="text" id="handle" maxlength="40" placeholder="例: lilAnthroposlil"></label>
+        <button class="btn ghost" type="button" id="saveHandle">登録</button>
+      </div>
+      <p class="hint" id="handleHint" hidden>登録すると、この人からの送金を「メンバー間の送金」として扱います（受け取った人に＋、送った人に−を記録し、共有の所持金は変わりません）。</p>
       <div class="persontools" id="personTools" hidden>
         <div class="row" id="renameRow" hidden>
           <label><span class="lab">この人の名前を付け替える</span><input type="text" id="newName" maxlength="20" placeholder="新しい名前"></label>
@@ -350,14 +355,14 @@ code{font-family:var(--f-mono);font-size:12px;background:var(--surface-2);border
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
-<script src="config.js?v=1.4.1"></script>
-<script src="web_backend.js?v=1.4.1"></script>
+<script src="config.js?v=1.5.0"></script>
+<script src="web_backend.js?v=1.5.0"></script>
 <script>
 /* 'solo' = 個人用, 'shared' = claude.ai で共有, 'web' = GitHub Pages + Firebase で共有（web_backend.js） */
 const MODE = 'web';
 /* 変更して公開するたびに上げる（表示はフッター） */
-const APP_VERSION = '1.4.1';
-const APP_UPDATED = '2026-09-28 03:37';   // 日本時間
+const APP_VERSION = '1.5.0';
+const APP_UPDATED = '2026-09-28 03:42';   // 日本時間
 const SHARED = MODE !== 'solo';
 
 const TYPES = [
@@ -376,7 +381,10 @@ const TYPES = [
   {id:'other_out',label:'その他支出', dir:-1},
 ];
 const ADJ = {id:'adjust', label:'残高補正', dir:0};
-const typeOf = id => TYPES.find(t=>t.id===id) || (id==='adjust'?ADJ:{id, label:id, dir:1});
+const XFER = {id:'transfer', label:'メンバー間の送金', dir:0};
+const typeOf = id => TYPES.find(t=>t.id===id) || (id==='adjust'?ADJ:id==='transfer'?XFER:{id, label:id, dir:1});
+/* 収入・支出の集計に入れない記録（残高補正、メンバー間の送金） */
+const isInternal = e => e.type==='adjust' || e.type==='transfer';
 const $ = id => document.getElementById(id);
 const fmt = n => Math.round(n).toLocaleString('ja-JP');
 const sfmt = n => (n>0?'+':n<0?'−':'±') + fmt(Math.abs(n));
@@ -396,6 +404,8 @@ function parseAmount(s){
 
 /* ---------- state ---------- */
 let entries = [], settings = {startBalance:0};
+/* 帳簿の設定ドキュメント全体（開始額・人ごとの開始額・ゲーム内の名前）。一部だけ書くと他が消えるので必ずこれで書く */
+const sdoc = (o={}) => ({startBalance:settings.startBalance||0, starts:settings.starts||{}, handles:settings.handles||{}, ...o});
 let range = 'all', group = 'type', selType = 'delivery', dir = 1;
 let picked = null;            // 選んだミッション
 let SC = {missions:[], ships:[]};
@@ -442,7 +452,7 @@ const store = {
     entries = []; this.saveLocal(); render();
   },
   async setStart(v){
-    if(this.db){ await this.db.doc('settings/main').set({startBalance:v, starts:settings.starts||{}}); return; }
+    if(this.db){ await this.db.doc('settings/main').set(sdoc({startBalance:v})); return; }
     settings = {...settings, startBalance:v}; this.saveLocal(); render();
   },
   // 以前の共通の開始額を、指定した人の開始額に足して 0 にする（合計は変わらない）
@@ -455,25 +465,35 @@ const store = {
       starts[nk] = (Number(starts[nk])||0) + (Number(starts[k])||0); delete starts[k];
     }
     for(const e of entries) if(e.by === from) e.by = to;
-    settings = {...settings, starts}; this.saveLocal(); render();
+    const handles = {...(settings.handles||{})};
+    if(from in handles){ handles[to] = handles[from]; delete handles[from]; }
+    settings = {...settings, starts, handles}; this.saveLocal(); render();
   },
   // 記録のない人を一覧から外す（開始額の登録を消す）
   async dropPerson(k){
     const starts = {...(settings.starts||{})};
     for(const key of Object.keys(starts)) if(splitKey(key)[0] === k) delete starts[key];
-    if(this.db){ await this.db.doc('settings/main').set({startBalance:settings.startBalance||0, starts}); return; }
-    settings = {...settings, starts}; this.saveLocal(); render();
+    const handles = {...(settings.handles||{})}; delete handles[k];
+    if(this.db){ await this.db.doc('settings/main').set(sdoc({starts, handles})); return; }
+    settings = {...settings, starts, handles}; this.saveLocal(); render();
   },
   async moveLegacy(k){
     const starts = {...(settings.starts||{}), [k]:(Number((settings.starts||{})[k])||0) + (settings.startBalance||0)};
-    if(this.db){ await this.db.doc('settings/main').set({startBalance:0, starts}); return; }
-    settings = {startBalance:0, starts}; this.saveLocal(); render();
+    if(this.db){ await this.db.doc('settings/main').set(sdoc({startBalance:0, starts})); return; }
+    settings = {...settings, startBalance:0, starts}; this.saveLocal(); render();
   },
   // 共有モード: 人ごとの開始時の所持金（キーは記録者 by と同じ）
   async setPersonStart(k, v){
     const starts = {...(settings.starts||{}), [k]:v};
-    if(this.db){ await this.db.doc('settings/main').set({startBalance:settings.startBalance||0, starts}); return; }
+    if(this.db){ await this.db.doc('settings/main').set(sdoc({starts})); return; }
     settings = {...settings, starts}; this.saveLocal(); render();
+  },
+  // メンバーのゲーム内の名前（送金の送り主の判定に使う）。空なら登録を消す
+  async setHandle(k, h){
+    const handles = {...(settings.handles||{})};
+    if(h) handles[k] = h; else delete handles[k];
+    if(this.db){ await this.db.doc('settings/main').set(sdoc({handles})); return; }
+    settings = {...settings, handles}; this.saveLocal(); render();
   },
 };
 
@@ -501,7 +521,7 @@ async function initStore(){
     render();
   }, err=>{ toast('記録を読み込めませんでした（'+err.code+'）。ページを再読み込みしてください。'); });
   db.doc('settings/main').onSnapshot(s=>{
-    settings = s.exists ? {startBalance:Number(s.data().startBalance)||0, starts:s.data().starts||{}} : {startBalance:0, starts:{}};
+    settings = s.exists ? {startBalance:Number(s.data().startBalance)||0, starts:s.data().starts||{}, handles:s.data().handles||{}} : {startBalance:0, starts:{}, handles:{}};
     render();
   }, ()=>{});
 
@@ -620,6 +640,8 @@ function renderPeople(){
   const sel = $('who'), cur = sel.value || me || ps[0] || '';
   sel.innerHTML = ps.map(p=>`<option value="${esc(p)}"${p===cur?' selected':''}>${esc(nameOf(p))}${p===me?'（あなた）':''}</option>`).join('');
   $('whoWrap').hidden = !ps.length;
+  $('handleRow').hidden = $('handleHint').hidden = !sel.value;
+  if(document.activeElement!==$('handle')) $('handle').value = (settings.handles||{})[sel.value] || '';
   // 名前の付け替え（Web 版のみ）と、一覧から外す（記録のない人のみ）
   const target = sel.value, nEnt = entries.filter(e=>e.by===target).length;
   $('personTools').hidden = !target;
@@ -659,7 +681,7 @@ function compute(list, start){
     bal += e.amount;
     let d = days.get(e.date);
     if(!d){ d = {date:e.date, inc:0, out:0, items:[], end:0}; days.set(e.date,d); }
-    if(e.type!=='adjust'){ if(e.amount>=0) d.inc+=e.amount; else d.out+=e.amount; }
+    if(!isInternal(e)){ if(e.amount>=0) d.inc+=e.amount; else d.out+=e.amount; }
     d.items.push({...e, after:bal}); d.end = bal;
   }
   return {balance:bal, days:[...days.values()]};
@@ -680,8 +702,8 @@ function render(){
 
   $('tBal').innerHTML = fmt(balance)+'<span class="u">aUEC</span>';
   const td = days.find(d=>d.date===today());
-  const tdNet = td ? td.items.filter(i=>i.type!=='adjust').reduce((a,b)=>a+b.amount,0) : 0;
-  const wk = D.entries.filter(e=>e.type!=='adjust' && dayNum(e.date)>dayNum(today())-7).reduce((a,b)=>a+b.amount,0);
+  const tdNet = td ? td.items.filter(i=>!isInternal(i)).reduce((a,b)=>a+b.amount,0) : 0;
+  const wk = D.entries.filter(e=>!isInternal(e) && dayNum(e.date)>dayNum(today())-7).reduce((a,b)=>a+b.amount,0);
   $('tToday').textContent = sfmt(tdNet); $('tToday').className='v '+cls(tdNet);
   $('tWeek').textContent = sfmt(wk); $('tWeek').className='v '+cls(wk);
   renderPeriods();
@@ -690,7 +712,7 @@ function render(){
     $('tCountLabel').textContent = '記録件数';
     $('tCount').textContent = fmt(D.entries.length); $('tCount').className = 'v';
   } else {
-    const net = D.entries.filter(e=>inP(e) && e.type!=='adjust').reduce((a,b)=>a+b.amount,0);
+    const net = D.entries.filter(e=>inP(e) && !isInternal(e)).reduce((a,b)=>a+b.amount,0);
     $('tCountLabel').textContent = '選んだ期間の収支';
     $('tCount').textContent = sfmt(net); $('tCount').className = 'v '+cls(net);
   }
@@ -783,7 +805,7 @@ function renderBars(list){
   const by = new Map();
   const keyOf = e => group==='ship' ? (e.ship||'（船の指定なし）') : group==='by' ? (e.by||'') : e.type;
   const labelOf = k => group==='ship' ? esc(k) : group==='by' ? esc(nameOf(k)) + (k===me?'（あなた）':'') : typeOf(k).label;
-  for(const e of list){ if(e.type==='adjust') continue; const k=keyOf(e); by.set(k,(by.get(k)||0)+e.amount); }
+  for(const e of list){ if(isInternal(e)) continue; const k=keyOf(e); by.set(k,(by.get(k)||0)+e.amount); }
   const rows = [...by.entries()].sort((a,b)=>b[1]-a[1]);
   if(!rows.length){ $('bars').innerHTML = '<div class="empty">この期間の記録はありません。</div>'; return; }
   const max = Math.max(...rows.map(r=>Math.abs(r[1]))) || 1;
@@ -865,7 +887,7 @@ function renderDays(days){
     const items = [...d.items].reverse().map(e=>{
       const t = typeOf(e.type);
       const who = SHARED && e.by ? `<span class="who" style="background:${colorOf(e.by)}">${esc(nameOf(e.by))}</span>` : '';
-      return `<div class="ent"><span class="etime">${entryTime(e)}</span><span class="tag ${e.type==='adjust'?'adj':''}">${t.label}</span>
+      return `<div class="ent"><span class="etime">${entryTime(e)}</span><span class="tag ${isInternal(e)?'adj':''}">${t.label}</span>
         <span class="memo">${who}${e.ship?`<span class="ship">${esc(e.ship)}</span>`:''}${esc(e.memo||'')}</span>
         <span class="num ${cls(e.amount)}">${sfmt(e.amount)}</span>
         ${readOnly?'<span></span>':`<button type="button" class="del" data-del="${esc(e.id)}" aria-label="この記録を削除">削除</button>`}</div>`;
@@ -968,7 +990,7 @@ function parseLogText(text, out){
       const a = line.match(/^<[^>]+>\s*([\d,]+)\s*aUEC/);
       if(a){
         const amt = +a[1].replace(/,/g,'');
-        if(amt) add({key:`log-xfer-${xfer.sec}-${amt}`, t:xfer.t, kind:'xfer', amount:amt, type:'other_in', checked:true, memo:`送金の受け取り: ${xfer.from}`});
+        if(amt) add({key:`log-xfer-${xfer.sec}-${amt}`, t:xfer.t, kind:'xfer', amount:amt, type:'other_in', checked:true, memo:`送金の受け取り: ${xfer.from}`, from:xfer.from});
       }
       xfer = null;
     }
@@ -1055,6 +1077,40 @@ function parseLogText(text, out){
   }
 }
 
+/* ---------- メンバー間の送金 ----------
+   送り主のゲーム内の名前（ハンドル）がメンバーに登録されていれば、受け取った人（取り込んだ人）に＋、送り主に−を記録する。
+   ＋の記録は src=ログのキー、−の記録は src=ログのキー+'-out'。共有の所持金は変わらず、収入・支出の集計にも入らない */
+function memberByHandle(h){
+  if(!h) return '';
+  const low = String(h).toLowerCase();
+  for(const [k, v] of Object.entries(settings.handles||{})) if(String(v).toLowerCase() === low) return k;
+  return '';
+}
+const xferMemo = (from, to) => `メンバー間の送金: ${nameOf(from)} → ${nameOf(to)}`;
+function transferPair(base, sender, receiver){
+  const plus = {...base, type:'transfer', memo:xferMemo(sender, receiver), by:receiver};
+  const minus = {...base, id:base.id.split('~')[0] + '-out' + (base.id.includes('~') ? '~' + base.id.split('~')[1] : ''), src:base.src + '-out', type:'transfer', amount:-base.amount, memo:xferMemo(sender, receiver), by:sender};
+  return [plus, minus];
+}
+/* ハンドルを登録したとき: 取り込み済みの「送金の受け取り」のうち、送り主がメンバーのものをメンバー間の送金に振り分け直す */
+async function reclassifyTransfers(){
+  const have = new Set(entries.map(e=>e.src).filter(Boolean));
+  const tag = Date.now().toString(36), add = [], drop = [];
+  for(const e of entries){
+    if(!e.src || !e.src.startsWith('log-xfer-') || e.src.endsWith('-out') || e.type === 'transfer') continue;
+    const m = String(e.memo||'').match(/^送金の受け取り: (.+)$/); if(!m) continue;
+    const sender = memberByHandle(m[1]); if(!sender || sender === e.by || !e.by) continue;
+    const {id, ...rest} = e;
+    const [plus, minus] = transferPair({...rest, id:id.split('~')[0] + '~' + tag}, sender, e.by);
+    add.push(plus); if(!have.has(minus.src)) add.push(minus);
+    drop.push(e.id);
+  }
+  if(!add.length) return 0;
+  await store.addMany(add);
+  for(const id of drop) await store.remove(id);
+  return drop.length;
+}
+
 async function readLogs(files){
   const out = new Map();
   const list = [...files].sort((a,b)=>a.lastModified-b.lastModified);
@@ -1069,6 +1125,10 @@ async function readLogs(files){
   logCands = [...out.values()].sort((a,b)=>a.t-b.t).map(c=>{
     c.date = new Date(c.t).toLocaleDateString('sv-SE');
     c.memo = c.memo.slice(0, 150);
+    if(c.kind === 'xfer' && SHARED){
+      const sender = memberByHandle(c.from);
+      if(sender && me && sender !== me){ c.internal = sender; c.type = 'transfer'; c.memo = xferMemo(sender, me); c.note = '共有の所持金は変わりません（受け取った人に＋、送った人に−）'; }
+    }
     if(have.has(c.key)){ c.done = true; c.checked = false; }
     return c;
   });
@@ -1092,7 +1152,7 @@ function drawLog(){
       <td><input type="checkbox" data-lc="${i}" ${c.checked?'checked':''} ${c.done?'disabled':''} aria-label="取り込む"></td>
       <td class="when">${c.date.slice(2).replace(/-/g,'/')} ${new Date(c.t).toTimeString().slice(0,5)}</td>
       <td class="what">${esc(c.memo)}${c.done?'<span class="note">取り込み済み</span>':c.warn?`<span class="note neg">${esc(c.warn)}</span>`:c.note?`<span class="note">${esc(c.note)}</span>`:''}</td>
-      <td><select data-lt="${i}" ${c.done?'disabled':''} aria-label="種別">${opts(c.type)}</select></td>
+      <td>${c.internal ? XFER.label : `<select data-lt="${i}" ${c.done?'disabled':''} aria-label="種別">${opts(c.type)}</select>`}</td>
       <td class="amt num ${cls(c.amount)}">${sfmt(c.amount)}</td></tr>`).join('') + '</tbody></table>';
   drawLogSum();
 }
@@ -1158,10 +1218,12 @@ $('logClose').onclick = ()=>{ logCands = []; $('logResult').hidden = true; $('lo
 $('logImport').onclick = async ()=>{
   const sel = logCands.filter(c=>c.checked && !c.done);
   if(!sel.length) return;
-  const list = sel.map(c=>{
+  const have = new Set(entries.map(e=>e.src).filter(Boolean));
+  const list = sel.flatMap(c=>{
     const e = {id:c.key, date:c.date, type:c.type, amount:c.amount, memo:c.memo, src:c.key, createdAt:c.t};
     if(SHARED && me) e.by = me;
-    return e;
+    if(c.internal && me){ const [plus, minus] = transferPair(e, c.internal, me); return have.has(minus.src) ? [plus] : [plus, minus]; }
+    return [e];
   });
   const btn = $('logImport'), label = btn.textContent;
   const say = (msg, bad) => { for(const id of ['logStatus','logSum']) $(id).innerHTML = bad ? `<span class="neg">${esc(msg)}</span>` : esc(msg); };
@@ -1175,7 +1237,7 @@ $('logImport').onclick = async ()=>{
     toast(`${list.length}件を取り込みました`);
   }catch(err){
     say((err && err.code === 'permission-denied')
-      ? '保存が拒否されました。Firebase の Firestore ルールが古い可能性があります（取り込み用の項目 src を許可する必要があります）。'
+      ? '保存が拒否されました。Firebase の Firestore ルールが古い可能性があります。'
       : '途中で止まりました（' + (err.code||err) + '）。もう一度「選んだ記録を取り込む」を押すと、残りから続けます。', true);
     const have = new Set(entries.map(e=>e.src).filter(Boolean));
     for(const c of logCands) if(have.has(c.key)){ c.done = true; c.checked = false; }
@@ -1251,6 +1313,21 @@ $('saveStart').onclick = async ()=>{
 const saveErr = e => (e && (e.code==='permission-denied' || /permission/i.test(e.message||'')))
   ? '保存が拒否されました。Firebase の Firestore ルールの更新が必要です（startBalance と starts を許可）'
   : '保存できませんでした（'+((e&&e.code)||e)+'）';
+$('saveHandle').onclick = async ()=>{
+  const who = $('who').value, h = $('handle').value.trim();
+  if(!who) return;
+  const other = h && memberByHandle(h);
+  if(other && other !== who){ toast(`そのゲーム内の名前は ${nameOf(other)} に登録済みです`); return; }
+  $('saveHandle').disabled = true;
+  try{
+    await store.setHandle(who, h);
+    settings = {...settings, handles:{...(settings.handles||{}), ...(h ? {[who]:h} : {})}};
+    if(!h){ const hs = {...settings.handles}; delete hs[who]; settings.handles = hs; }
+    const n = h ? await reclassifyTransfers() : 0;
+    toast(h ? `${nameOf(who)} のゲーム内の名前を「${h}」にしました` + (n ? `（取り込み済みの送金 ${n}件をメンバー間の送金に振り分け直しました）` : '') : `${nameOf(who)} のゲーム内の名前を消しました`);
+  }catch(e){ toast(saveErr(e)); }
+  finally{ $('saveHandle').disabled = false; }
+};
 $('renamePerson').onclick = async ()=>{
   const from = $('who').value, to = $('newName').value.trim();
   if(!from) return;

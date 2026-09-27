@@ -123,14 +123,19 @@ async function initWeb(){
       const nk = d ? `${to}@${d}` : to;
       args.push(new FP('starts', nk), (Number(st[nk])||0) + (Number(st[k])||0), new FP('starts', k), firebase.firestore.FieldValue.delete());
     }
+    const hs = settings.handles || {};
+    if(from in hs) args.push(new FP('handles', to), hs[from], new FP('handles', from), firebase.firestore.FieldValue.delete());
     if(args.length) await L.update(...args);
     if(from === me){ lsSet(NAME_KEY, to); me = to; beat(); const rb = document.getElementById('renameBtn'); if(rb) rb.textContent = `名前を変更（${to}）`; }
   };
   store.dropPerson = k => {
     const args = [];
     for(const key of Object.keys(settings.starts || {})) if(splitKey(key)[0] === k) args.push(new firebase.firestore.FieldPath('starts', key), firebase.firestore.FieldValue.delete());
+    if(k in (settings.handles || {})) args.push(new firebase.firestore.FieldPath('handles', k), firebase.firestore.FieldValue.delete());
     return args.length ? L.update(...args) : Promise.resolve();
   };
+  store.setHandle = (k, h) => h ? L.set({handles:{[k]:h}}, {merge:true})
+    : ((k in (settings.handles || {})) ? L.update(new firebase.firestore.FieldPath('handles', k), firebase.firestore.FieldValue.delete()) : Promise.resolve());
   store.moveLegacy = k => L.set({startBalance:0, starts:{[k]:(Number((settings.starts||{})[k])||0) + (settings.startBalance||0)}}, {merge:true});
   $('storeNote').innerHTML = '保存先: <b>共有クラウド（Firebase）</b>';
   entries = []; render();
@@ -148,7 +153,7 @@ async function initWeb(){
   }, err => toast('記録を読み込めませんでした（'+err.code+'）'));
   L.onSnapshot(s => {
     const d = s.data() || {};
-    settings = {startBalance: Number(d.startBalance) || 0, starts: d.starts || {}};
+    settings = {startBalance: Number(d.startBalance) || 0, starts: d.starts || {}, handles: d.handles || {}};
     render();
   }, () => {});
 
