@@ -369,17 +369,18 @@ const store = {
   // まとめて追加（ログ取り込み用）。docId を固定するので再試行しても二重にならない
   async addMany(list, onProgress){
     if(this.db){
-      let i = 0;
-      for(const {id, ...e} of list){
+      let i = 0, next = 0;
+      const one = async ({id, ...e}) => {
         for(let t = 0; ; t++){
-          try{ await this.db.collection('entries').doc(id).set(e); break; }
+          try{ await this.db.collection('entries').doc(id).set(e); return; }
           catch(err){
-            if(t < 5 && ['resource_exhausted','unavailable'].includes(err && err.code)){ await new Promise(r=>setTimeout(r, 1200*(t+1) + Math.random()*600)); continue; }
+            if(t < 6 && ['resource_exhausted','unavailable'].includes(err && err.code)){ await new Promise(r=>setTimeout(r, 1500*(t+1) + Math.random()*800)); continue; }
             throw err;
           }
         }
-        onProgress && onProgress(++i);
-      }
+      };
+      const worker = async () => { while(next < list.length){ await one(list[next++]); onProgress && onProgress(++i); } };
+      await Promise.all([worker(), worker(), worker(), worker()]);
       return;
     }
     for(const e of list) if(!entries.some(x=>x.id===e.id)) entries.push(e);
@@ -818,20 +819,25 @@ $('logImport').onclick = async ()=>{
     if(SHARED && me) e.by = me;
     return e;
   });
-  $('logImport').disabled = true;
+  const btn = $('logImport'), label = btn.textContent;
+  const say = (msg, bad) => { for(const id of ['logStatus','logSum']) $(id).innerHTML = bad ? `<span class="neg">${esc(msg)}</span>` : esc(msg); };
+  btn.disabled = true; btn.textContent = `取り込み中… 0/${list.length}`;
+  say(`取り込み中… 0/${list.length}件（このままお待ちください）`);
   try{
-    await store.addMany(list, n => { $('logStatus').textContent = `取り込み中… ${n}/${list.length}`; });
+    await store.addMany(list, n => { btn.textContent = `取り込み中… ${n}/${list.length}`; say(`取り込み中… ${n}/${list.length}件（このままお待ちください）`); });
     for(const c of sel){ c.done = true; c.checked = false; }
-    $('logStatus').textContent = `${list.length}件を取り込みました。所持金がゲーム内とずれている場合は「実際の所持金に合わせる」で補正してください。`;
-    toast(`${list.length}件を取り込みました`);
     drawLog();
+    say(`${list.length}件を取り込みました。所持金がゲーム内とずれている場合は「実際の所持金に合わせる」で補正してください。`);
+    toast(`${list.length}件を取り込みました`);
   }catch(err){
-    $('logStatus').textContent = (err && err.code === 'permission-denied')
+    say((err && err.code === 'permission-denied')
       ? '保存が拒否されました。Firebase の Firestore ルールが古い可能性があります（取り込み用の項目 src を許可する必要があります）。'
-      : '途中で止まりました（' + (err.code||err) + '）。もう一度「選んだ記録を取り込む」を押すと、残りから続けます。';
+      : '途中で止まりました（' + (err.code||err) + '）。もう一度「選んだ記録を取り込む」を押すと、残りから続けます。', true);
     const have = new Set(entries.map(e=>e.src).filter(Boolean));
     for(const c of logCands) if(have.has(c.key)){ c.done = true; c.checked = false; }
-    drawLog();
+    const msg = $('logSum').innerHTML; drawLog(); $('logSum').innerHTML = msg;
+  }finally{
+    btn.textContent = label; btn.disabled = !logCands.some(c=>c.checked && !c.done) || readOnly;
   }
 };
 
