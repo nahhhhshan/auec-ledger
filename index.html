@@ -129,7 +129,8 @@ input:focus-visible,button:focus-visible{outline:2px solid var(--accent);outline
 .dayhead .w{color:var(--muted);font-size:12px}
 .dayhead .net{margin-left:auto;font-weight:500}
 .dayhead .bal{color:var(--muted);font-size:12px}
-.ent{display:grid;grid-template-columns:auto 1fr auto auto;gap:10px;align-items:center;padding:6px 0 0 2px;font-size:13px}
+.ent{display:grid;grid-template-columns:3.2em auto 1fr auto auto;gap:10px;align-items:center;padding:6px 0 0 2px;font-size:13px}
+.etime{font-family:var(--f-mono);font-variant-numeric:tabular-nums;font-size:12px;color:var(--muted)}
 .tag{font-size:11px;border:1px solid var(--line);border-radius:3px;padding:1px 7px;white-space:nowrap;background:var(--surface-2)}
 .tag.adj{border-style:dashed}
 .memo{color:var(--muted);overflow-wrap:anywhere}
@@ -316,8 +317,8 @@ code{font-family:var(--f-mono);font-size:12px;background:var(--surface-2);border
 /* 'solo' = 個人用, 'shared' = claude.ai で共有, 'web' = GitHub Pages + Firebase で共有（web_backend.js） */
 const MODE = 'web';
 /* 変更して公開するたびに上げる（表示はフッター） */
-const APP_VERSION = '1.0.2';
-const APP_UPDATED = '2026-09-27 17:58';   // 日本時間
+const APP_VERSION = '1.0.3';
+const APP_UPDATED = '2026-09-27 18:17';   // 日本時間
 const SHARED = MODE !== 'solo';
 
 const TYPES = [
@@ -595,6 +596,12 @@ function renderChart(days, start, allDays){
   </svg>`;
 }
 
+/* 記録の時刻: ログ由来はゲーム内の時刻、手入力は入力した時刻。記録の日付と違う日の時刻（過去日付で手入力など）は出さない */
+function entryTime(e){
+  if(!e.createdAt || e.createdAt < 1e12) return '';
+  const d = new Date(e.createdAt);
+  return d.toLocaleDateString('sv-SE') === e.date ? d.toTimeString().slice(0,5) : '';
+}
 function renderDays(days){
   if(!days.length){ $('days').innerHTML='<div class="empty">記録はまだありません。「記録を追加」から最初の1件を入れてください。</div>'; return; }
   $('days').innerHTML = [...days].reverse().map(d=>{
@@ -602,7 +609,7 @@ function renderDays(days){
     const items = [...d.items].reverse().map(e=>{
       const t = typeOf(e.type);
       const who = SHARED && e.by ? `<span class="who" style="background:${colorOf(e.by)}">${esc(nameOf(e.by))}</span>` : '';
-      return `<div class="ent"><span class="tag ${e.type==='adjust'?'adj':''}">${t.label}</span>
+      return `<div class="ent"><span class="etime">${entryTime(e)}</span><span class="tag ${e.type==='adjust'?'adj':''}">${t.label}</span>
         <span class="memo">${who}${e.ship?`<span class="ship">${esc(e.ship)}</span>`:''}${esc(e.memo||'')}</span>
         <span class="num ${cls(e.amount)}">${sfmt(e.amount)}</span>
         ${readOnly?'<span></span>':`<button type="button" class="del" data-del="${esc(e.id)}" aria-label="この記録を削除">削除</button>`}</div>`;
