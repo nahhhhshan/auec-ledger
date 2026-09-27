@@ -163,7 +163,6 @@ input:focus-visible,button:focus-visible{outline:2px solid var(--accent);outline
     </div>
   </header>
 
-  <div class="demo" id="demoNote" hidden>まだ記録がありません。下は表示の例です。最初の記録を保存すると例は消えます。</div>
   <div class="demo" id="roNote" hidden>このアプリは閲覧のみの権限で開かれています。記録を追加するには、持ち主に「編集可能」以上で共有してもらってください。</div>
 
   <section class="tiles" aria-label="概要">
@@ -298,7 +297,7 @@ function parseAmount(s){
 }
 
 /* ---------- state ---------- */
-let entries = [], settings = {startBalance:0}, demo = false;
+let entries = [], settings = {startBalance:0};
 let range = 'all', group = 'type', selType = 'delivery', dir = 1;
 let picked = null;            // 選んだミッション
 let SC = {missions:[], ships:[]};
@@ -413,25 +412,6 @@ async function loadGameData(){
   }
 }
 
-/* ---------- demo data (shown only when empty) ---------- */
-function demoData(){
-  const t = dayNum(today());
-  const d = k => new Date((t-k)*864e5).toISOString().slice(0,10);
-  return {
-    settings:{startBalance:250000},
-    entries:[
-      {id:'x1',date:d(4),type:'delivery',amount:38500,memo:'Covalex 配達 x2',ship:'Cutlass Black'},
-      {id:'x2',date:d(4),type:'repair',amount:-4200,memo:'燃料と修理',ship:'Cutlass Black'},
-      {id:'x3',date:d(3),type:'salvage',amount:162000,memo:'RMC 売却',ship:'Vulture'},
-      {id:'x4',date:d(2),type:'mining',amount:94000,memo:'Quantanium 1回分',ship:'Prospector'},
-      {id:'x5',date:d(2),type:'fine',amount:-12000,memo:'保険の請求'},
-      {id:'x6',date:d(1),type:'bounty',amount:71000,memo:'VHRT x2',ship:'Cutlass Black'},
-      {id:'x7',date:d(1),type:'purchase',amount:-120000,memo:'採掘レーザー'},
-      {id:'x8',date:d(0),type:'hauling',amount:135000,memo:'Hull B 輸送',ship:'Cutlass Black'},
-    ].map((e,i)=>({...e,createdAt:i})),
-  };
-}
-
 /* ---------- derived ---------- */
 function sorted(list){
   return [...list].sort((a,b)=> a.date<b.date?-1:a.date>b.date?1:(a.createdAt||0)-(b.createdAt||0));
@@ -454,9 +434,7 @@ function inRange(date){
 
 /* ---------- render ---------- */
 function render(){
-  demo = entries.length===0;
-  const D = demo ? demoData() : {entries, settings};
-  $('demoNote').hidden = !demo;
+  const D = {entries, settings};
   const {balance, days} = compute(D.entries, D.settings.startBalance||0);
 
   $('tBal').innerHTML = fmt(balance)+'<span class="u">aUEC</span>';
@@ -505,7 +483,7 @@ function niceStep(span, n){
 }
 function renderChart(days, start, allDays){
   const el = $('chart');
-  if(!days.length){ el.innerHTML='<div class="empty">この期間の記録はありません。</div>'; return; }
+  if(!days.length){ el.innerHTML='<div class="empty">'+(entries.length?'この期間の記録はありません。':'記録を追加すると、ここに日ごとの所持金の推移が表示されます。')+'</div>'; return; }
   const firstIdx = allDays.indexOf(days[0]);
   const before = firstIdx>0 ? allDays[firstIdx-1].end : start;
   const pts = [{x:dayNum(days[0].date)-1, y:before, label:'開始'}].concat(days.map(d=>({x:dayNum(d.date), y:d.end, label:d.date})));
@@ -540,7 +518,7 @@ function renderChart(days, start, allDays){
 }
 
 function renderDays(days){
-  if(!days.length){ $('days').innerHTML='<div class="empty">記録はまだありません。</div>'; return; }
+  if(!days.length){ $('days').innerHTML='<div class="empty">記録はまだありません。「記録を追加」から最初の1件を入れてください。</div>'; return; }
   $('days').innerHTML = [...days].reverse().map(d=>{
     const net = d.inc + d.out;
     const items = [...d.items].reverse().map(e=>{
@@ -549,7 +527,7 @@ function renderDays(days){
       return `<div class="ent"><span class="tag ${e.type==='adjust'?'adj':''}">${t.label}</span>
         <span class="memo">${who}${e.ship?`<span class="ship">${esc(e.ship)}</span>`:''}${esc(e.memo||'')}</span>
         <span class="num ${cls(e.amount)}">${sfmt(e.amount)}</span>
-        ${demo||readOnly?'<span></span>':`<button type="button" class="del" data-del="${esc(e.id)}" aria-label="この記録を削除">削除</button>`}</div>`;
+        ${readOnly?'<span></span>':`<button type="button" class="del" data-del="${esc(e.id)}" aria-label="この記録を削除">削除</button>`}</div>`;
     }).join('');
     return `<div class="day"><div class="dayhead">
         <span class="d">${d.date.replace(/-/g,'.')}</span><span class="w">(${wday(d.date)})</span>
