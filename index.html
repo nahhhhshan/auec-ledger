@@ -355,14 +355,14 @@ code{font-family:var(--f-mono);font-size:12px;background:var(--surface-2);border
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
-<script src="config.js?v=1.5.0"></script>
-<script src="web_backend.js?v=1.5.0"></script>
+<script src="config.js?v=1.5.1"></script>
+<script src="web_backend.js?v=1.5.1"></script>
 <script>
 /* 'solo' = 個人用, 'shared' = claude.ai で共有, 'web' = GitHub Pages + Firebase で共有（web_backend.js） */
 const MODE = 'web';
 /* 変更して公開するたびに上げる（表示はフッター） */
-const APP_VERSION = '1.5.0';
-const APP_UPDATED = '2026-09-28 03:42';   // 日本時間
+const APP_VERSION = '1.5.1';
+const APP_UPDATED = '2026-09-28 03:49';   // 日本時間
 const SHARED = MODE !== 'solo';
 
 const TYPES = [
@@ -726,12 +726,12 @@ function render(){
 }
 
 /* ---------- 表示する期間 ----------
-   記録の日付が30日以上あいた所で自動的に区切る（休止期間）。自由な日付範囲も選べる。選択はこのブラウザに覚える */
-const PERIOD_KEY = 'auec-ledger-period-v2';   // v1.1.1 で初期値を「最新の期」にしたので、以前の保存値は使わない
+   記録の日付が30日以上あいた所で自動的に区切る（休止期間）。自由な日付範囲も選べる。開くたびに最新の期から始まる */
+// v1.5.1: 開くたびに必ず最新の期から始める（選んだ期間は覚えない）。以前に覚えた選択も消す
+try{ localStorage.removeItem('auec-ledger-period'); localStorage.removeItem('auec-ledger-period-v2'); }catch(e){}
 const GAP_DAYS = 30;
 // 初期表示は「最新の期」（latest は常に一番新しい期を指すので、新しい期ができれば自動で移る）
 let periods = [], period = {kind:'latest'};
-try{ const p = JSON.parse(localStorage.getItem(PERIOD_KEY) || 'null'); if(p && p.kind) period = p; }catch(e){}
 function findPeriods(list){
   const ds = [...new Set(list.map(e=>e.date))].sort();
   const out = [];
@@ -754,7 +754,6 @@ function inPeriod(date){
 }
 function setPeriod(p){
   period = p;
-  try{ localStorage.setItem(PERIOD_KEY, JSON.stringify(p)); }catch(e){}
   render();
 }
 function renderPeriods(){
