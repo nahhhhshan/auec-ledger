@@ -145,6 +145,8 @@ input:focus-visible,button:focus-visible{outline:2px solid var(--accent);outline
 .hint{font-size:12px;color:var(--muted);margin:0}
 /* log import */
 .logintro{display:grid;gap:10px}
+.dropzone{border:2px dashed var(--line);border-radius:6px;padding:14px;text-align:center;font-size:13px;color:var(--muted)}
+.dropzone.over{border-color:var(--accent);background:var(--accent-soft);color:var(--ink)}
 code{font-family:var(--f-mono);font-size:12px;background:var(--surface-2);border:1px solid var(--line);border-radius:3px;padding:0 4px}
 #logStatus{margin-top:10px}
 #logResult{display:grid;gap:10px;margin-top:10px}
@@ -252,6 +254,8 @@ code{font-family:var(--f-mono);font-size:12px;background:var(--surface-2);border
         <input type="file" id="logDir" webkitdirectory directory multiple hidden>
         <input type="file" id="logFiles" accept=".log,.txt" multiple hidden>
       </div>
+      <div class="dropzone" id="logDrop">エクスプローラーから <b>logbackups</b> フォルダ（または <b>LIVE</b> フォルダや <b>Game.log</b>）を、ここにドラッグして落としても読み込めます</div>
+      <p class="hint">フォルダ選択の画面にパスを入れたいときは、下の「フォルダー:」欄に <code>C:\Program Files\Roberts Space Industries\StarCitizen\LIVE\logbackups</code> を貼り付けて「アップロード」を押してください。</p>
       <p class="hint"><b>おすすめ:</b>「LIVE フォルダごと選ぶ」で上の場所の <code>LIVE</code> フォルダを選ぶと、今のログ（<code>Game.log</code>・最後の1回分）と過去のログ（<code>logbackups</code> 内）をまとめて読みます。ブラウザに「アップロードしますか」と聞かれますが、実際にはどこにも送らず、このページの中で読むだけです。</p>
     </div>
     <div id="logStatus" class="hint" role="status"></div>
@@ -665,7 +669,7 @@ $('ship').addEventListener('change', ()=>{
 /* 書式は 4.x 日本語クライアントで確認: 報酬は「Added notification "報酬 N aUEC"」、契約名は同じ秒の「契約完了：名前」。
    報酬行の MissionId は常に 0 なので、同じ秒の報酬と契約完了をひとまとめにする。 */
 let logCands = [], logFilter = 'all';
-const LOG_KIND = {reward:'契約報酬', sell:'売却', buy:'購入', rent:'レンタル'};
+const LOG_KIND = {reward:'契約報酬', xfer:'送金の受け取り', sell:'売却', buy:'購入', rent:'レンタル'};
 
 function classifyContract(s){
   if(/配達|Delivery/i.test(s)) return 'delivery';
@@ -687,8 +691,17 @@ function parseLogText(text, out){
   let lastBuy = null;
   const pend = [];              // 売却・購入の要求（直後のエラーで失敗扱い）
   const add = c => { if(!out.has(c.key)) out.set(c.key, c); };
+  let xfer = null;              // 「○○ が以下の金額を送信しました：」の次の行に金額が出る
   for(const line of lines){
     if(line.charCodeAt(0) !== 60) continue;
+    if(xfer){
+      const a = line.match(/^<[^>]+>\s*([\d,]+)\s*aUEC/);
+      if(a){
+        const amt = +a[1].replace(/,/g,'');
+        if(amt) add({key:`log-xfer-${xfer.sec}-${amt}`, t:xfer.t, kind:'xfer', amount:amt, type:'other_in', checked:true, memo:`送金の受け取り: ${xfer.from}`});
+      }
+      xfer = null;
+    }
     const notif = line.includes('Added notification "');
     const req = !notif && line.includes('Request> Sending');
     const err = !notif && !req && line.includes('Transaction Response Error');
@@ -696,6 +709,8 @@ function parseLogText(text, out){
     const m = line.match(/^<(\d{4}-\d\d-\d\dT\d\d:\d\d:\d\d)/); if(!m) continue;
     const sec = m[1], t = Date.parse(sec + 'Z');
     if(notif){
+      const x = line.match(/Added notification "(.+?) が以下の金額を送信しました/);
+      if(x){ xfer = {t, sec, from:x[1]}; continue; }
       let r = line.match(/Added notification "報酬 (\d+) aUEC/);
       if(r){ const g = groups.get(sec) || {t, rewards:[]}; g.rewards.push(+r[1]); groups.set(sec, g); continue; }
       r = line.match(/Added notification "契約完了[：:]\s*(.*?):\s*"/);
@@ -780,7 +795,7 @@ async function readLogs(files){
 }
 
 function drawLog(){
-  const kinds = ['reward','sell','buy','rent'].filter(k=>logCands.some(c=>c.kind===k));
+  const kinds = ['reward','xfer','sell','buy','rent'].filter(k=>logCands.some(c=>c.kind===k));
   $('logFilters').innerHTML = [['all','すべて']].concat(kinds.map(k=>[k,LOG_KIND[k]]))
     .map(([v,l])=>`<button type="button" data-lf="${v}" aria-pressed="${logFilter===v}">${l} ${logCands.filter(c=>v==='all'||c.kind===v).length}</button>`).join('');
   const opts = sel => TYPES.map(t=>`<option value="${t.id}"${t.id===sel?' selected':''}>${t.label}</option>`).join('');
@@ -801,15 +816,44 @@ function drawLogSum(){
   $('logImport').disabled = !sel.length || readOnly;
 }
 $('logFiles').addEventListener('change', ev=>{ if(ev.target.files.length) readLogs(ev.target.files); ev.target.value = ''; });
+// Game.log と logbackups 内の .log だけを読む（ほかのフォルダの .log は無視）
+const keepLogPath = p => { p = p.split('\\').join('/'); return /\.log$/i.test(p) && (/(^|\/)Game\.log$/i.test(p) || /(^|\/)logbackups\//i.test(p)); };
 $('logDir').addEventListener('change', ev=>{
-  // フォルダ選択: Game.log と logbackups 内の .log だけを読む（ほかのフォルダの .log は無視）
-  const fs = [...ev.target.files].filter(f=>{
-    const p = (f.webkitRelativePath || f.name).split('\\').join('/');
-    return /\.log$/i.test(f.name) && (/(^|\/)Game\.log$/i.test(p) || /(^|\/)logbackups\//i.test(p));
-  });
+  const fs = [...ev.target.files].filter(f=>keepLogPath(f.webkitRelativePath || f.name));
   ev.target.value = '';
   if(fs.length) readLogs(fs);
   else $('logStatus').textContent = 'このフォルダには Game.log も logbackups もありませんでした。StarCitizen の中の LIVE フォルダを選んでください。';
+});
+/* ドラッグ＆ドロップ: フォルダは logbackups / LIVE など関係するところだけ辿る（data や Bin64 は開かない） */
+async function droppedLogFiles(items){
+  const out = [];
+  const readAll = dir => new Promise((res, rej) => { const r = dir.createReader(), all = []; const step = () => r.readEntries(es => { if(!es.length) return res(all); all.push(...es); step(); }, rej); step(); });
+  const fileOf = fe => new Promise((res, rej) => fe.file(res, rej));
+  const walk = async (e, depth) => {
+    if(e.isFile){
+      if(depth === 0 ? /\.log$/i.test(e.name) : keepLogPath(e.fullPath)) out.push(await fileOf(e));
+      return;
+    }
+    if(depth > 0 && !/^(logbackups|LIVE|PTU|EPTU|HOTFIX|TECH-PREVIEW)$/i.test(e.name)) return;
+    if(depth > 2) return;
+    for(const c of await readAll(e)) await walk(c, depth + 1);
+  };
+  for(const e of items) if(e) await walk(e, 0);
+  return out;
+}
+const dz = $('logDrop');
+for(const t of ['dragenter','dragover']) $('logPanel').addEventListener(t, ev=>{ if([...ev.dataTransfer.types].includes('Files')){ ev.preventDefault(); dz.classList.add('over'); } });
+$('logPanel').addEventListener('dragleave', ev=>{ if(!$('logPanel').contains(ev.relatedTarget)) dz.classList.remove('over'); });
+$('logPanel').addEventListener('drop', async ev=>{
+  ev.preventDefault(); dz.classList.remove('over');
+  const items = [...ev.dataTransfer.items].map(i => i.webkitGetAsEntry && i.webkitGetAsEntry());
+  const plain = [...ev.dataTransfer.files].filter(f=>/\.log$/i.test(f.name));
+  $('logStatus').textContent = 'ファイルを探しています…';
+  let fs = [];
+  try{ fs = items.some(Boolean) ? await droppedLogFiles(items) : plain; }
+  catch(e){ fs = plain; }
+  if(fs.length) readLogs(fs);
+  else $('logStatus').textContent = 'ログファイルが見つかりませんでした。logbackups フォルダか Game.log を落としてください。';
 });
 $('copyLogPath').onclick = async ()=>{
   try{ await navigator.clipboard.writeText($('logPath').value); toast('場所をコピーしました'); }
