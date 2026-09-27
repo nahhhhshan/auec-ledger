@@ -102,6 +102,7 @@ async function initWeb(){
   };
   store.setStart = v => L.set({startBalance:v}, {merge:true});
   store.setPersonStart = (k, v) => L.set({starts:{[k]:v}}, {merge:true});
+  store.moveLegacy = k => L.set({startBalance:0, starts:{[k]:(Number((settings.starts||{})[k])||0) + (settings.startBalance||0)}}, {merge:true});
   $('storeNote').innerHTML = '保存先: <b>共有クラウド（Firebase）</b>';
   entries = []; render();
 

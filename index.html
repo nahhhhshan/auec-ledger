@@ -311,6 +311,10 @@ code{font-family:var(--f-mono);font-size:12px;background:var(--surface-2);border
         <button class="btn ghost" type="button" id="saveStart">保存</button>
       </div>
       <p class="hint">記録を始めた時点でゲーム内に持っていた金額です。推移はここから計算します。</p>
+      <div class="row" id="legacyRow" hidden>
+        <span class="hint" id="legacyMsg" style="flex:1 1 220px"></span>
+        <button class="btn ghost" type="button" id="moveLegacy">対象の人に移す</button>
+      </div>
       <div class="row">
         <label><span class="lab">実際の所持金に合わせる (aUEC)</span><input type="text" id="actualBal" inputmode="decimal" placeholder="ゲーム内の現在額"></label>
         <button class="btn ghost" type="button" id="saveActual">補正を記録</button>
@@ -341,8 +345,8 @@ code{font-family:var(--f-mono);font-size:12px;background:var(--surface-2);border
 /* 'solo' = 個人用, 'shared' = claude.ai で共有, 'web' = GitHub Pages + Firebase で共有（web_backend.js） */
 const MODE = 'web';
 /* 変更して公開するたびに上げる（表示はフッター） */
-const APP_VERSION = '1.2.1';
-const APP_UPDATED = '2026-09-28 03:10';   // 日本時間
+const APP_VERSION = '1.2.2';
+const APP_UPDATED = '2026-09-28 03:13';   // 日本時間
 const SHARED = MODE !== 'solo';
 
 const TYPES = [
@@ -429,6 +433,12 @@ const store = {
   async setStart(v){
     if(this.db){ await this.db.doc('settings/main').set({startBalance:v, starts:settings.starts||{}}); return; }
     settings = {...settings, startBalance:v}; this.saveLocal(); render();
+  },
+  // 以前の共通の開始額を、指定した人の開始額に足して 0 にする（合計は変わらない）
+  async moveLegacy(k){
+    const starts = {...(settings.starts||{}), [k]:(Number((settings.starts||{})[k])||0) + (settings.startBalance||0)};
+    if(this.db){ await this.db.doc('settings/main').set({startBalance:0, starts}); return; }
+    settings = {startBalance:0, starts}; this.saveLocal(); render();
   },
   // 共有モード: 人ごとの開始時の所持金（キーは記録者 by と同じ）
   async setPersonStart(k, v){
@@ -546,6 +556,9 @@ function renderPeople(){
   const sel = $('who'), cur = sel.value || me || ps[0] || '';
   sel.innerHTML = ps.map(p=>`<option value="${esc(p)}"${p===cur?' selected':''}>${esc(nameOf(p))}${p===me?'（あなた）':''}</option>`).join('');
   $('whoWrap').hidden = !ps.length;
+  const legacy = settings.startBalance||0;
+  $('legacyRow').hidden = !legacy || !ps.length;
+  $('legacyMsg').textContent = legacy ? `以前の共通の開始額 ${fmt(legacy)} aUEC が「未割り当て」になっています。上で選んだ人の開始額に移せます（合計は変わりません）。` : '';
   if(document.activeElement!==$('startBal')){ const v = Number((settings.starts||{})[sel.value])||0; $('startBal').value = v ? fmt(v) : ''; }
 }
 function applyReadOnly(){
@@ -1150,7 +1163,16 @@ $('saveStart').onclick = async ()=>{
   try{
     if(SHARED){ await store.setPersonStart(who, v); toast(nameOf(who)+' の開始時の所持金を '+fmt(v)+' aUEC にしました'); }
     else { await store.setStart(v); toast('開始時の所持金を '+fmt(v)+' aUEC にしました'); }
-  }catch(e){ toast('保存できませんでした（'+(e.code||e)+'）'); }
+  }catch(e){ toast(saveErr(e)); }
+};
+const saveErr = e => (e && (e.code==='permission-denied' || /permission/i.test(e.message||'')))
+  ? '保存が拒否されました。Firebase の Firestore ルールの更新が必要です（startBalance と starts を許可）'
+  : '保存できませんでした（'+((e&&e.code)||e)+'）';
+$('moveLegacy').onclick = async ()=>{
+  const who = $('who').value, v = settings.startBalance||0;
+  if(!who || !v) return;
+  try{ await store.moveLegacy(who); toast(`${fmt(v)} aUEC を ${nameOf(who)} の開始額に移しました`); }
+  catch(e){ toast(saveErr(e)); }
 };
 $('who').addEventListener('change', ()=>{ const v = Number((settings.starts||{})[$('who').value])||0; $('startBal').value = v ? fmt(v) : ''; });
 $('saveActual').onclick = async ()=>{
