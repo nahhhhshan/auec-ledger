@@ -162,12 +162,6 @@ code{font-family:var(--f-mono);font-size:12px;background:var(--surface-2);border
 .logtable td.what{overflow-wrap:anywhere;min-width:12em}
 .logtable select{font:inherit;font-size:12px;background:var(--surface-2);border:1px solid var(--line);border-radius:3px;padding:2px 4px;color:var(--ink)}
 .logtable .note{display:block;font-size:11px;color:var(--muted)}
-.costbox{display:grid;gap:8px;border:1px solid var(--line);border-radius:6px;padding:12px;background:var(--surface-2)}
-.costtitle{font-family:var(--f-disp);font-weight:600;letter-spacing:.04em}
-.costtable{max-height:320px;background:var(--surface)}
-.costtable td,.costtable th{text-align:right;white-space:nowrap}
-.costtable td:first-child,.costtable th:first-child{text-align:left}
-.costtable tr.tot td{font-weight:600;border-top:2px solid var(--line)}
 .appfoot{display:flex;flex-wrap:wrap;justify-content:space-between;gap:4px 16px;font-size:12px;color:var(--muted);border-top:1px solid var(--line);padding-top:12px}
 .danger{border-top:1px solid var(--line);padding-top:14px;display:grid;gap:10px}
 .danger-btn{color:var(--neg);justify-self:start}
@@ -267,11 +261,6 @@ code{font-family:var(--f-mono);font-size:12px;background:var(--surface-2);border
     </div>
     <div id="logStatus" class="hint" role="status"></div>
     <div id="logResult" hidden>
-      <div class="costbox">
-        <div class="logbar"><b class="costtitle">ログから計算した費用</b><span class="range" id="costBy"></span></div>
-        <div class="logtable costtable" id="logCost"></div>
-        <p class="hint">取り込まなくても見られます。失敗の可能性がある売買は除いています。契約の費用はゲームデータの値です。</p>
-      </div>
       <div class="logbar">
         <span class="range" id="logFilters"></span>
         <span class="range"><button type="button" id="logAll">すべて選択</button><button type="button" id="logNone">選択を解除</button></span>
@@ -327,7 +316,7 @@ code{font-family:var(--f-mono);font-size:12px;background:var(--surface-2);border
 /* 'solo' = 個人用, 'shared' = claude.ai で共有, 'web' = GitHub Pages + Firebase で共有（web_backend.js） */
 const MODE = 'web';
 /* 変更して公開するたびに上げる（表示はフッター） */
-const APP_VERSION = '1.0.0';
+const APP_VERSION = '1.0.1';
 const APP_UPDATED = '2026-09-27';
 const SHARED = MODE !== 'solo';
 
@@ -826,7 +815,7 @@ async function readLogs(files){
     : `${list.length}個のファイルを読みましたが、取り込める記録は見つかりませんでした。`;
   if(list.length === 1 && logCands.length) $('logStatus').textContent += '　※ Game.log は最後に遊んだ1回分だけです。それより前は logbackups にあります（「LIVE フォルダごと選ぶ」でまとめて読めます）。';
   $('logResult').hidden = !logCands.length;
-  logFilter = 'all'; drawLog(); drawLogCost();
+  logFilter = 'all'; drawLog();
 }
 
 function drawLog(){
@@ -844,37 +833,6 @@ function drawLog(){
       <td class="amt num ${cls(c.amount)}">${sfmt(c.amount)}</td></tr>`).join('') + '</tbody></table>';
   drawLogSum();
 }
-/* 費用の集計（取り込み前でも見られる）。月別／日別 × 費用の種類 */
-let costBy = 'month';
-function costCat(c){
-  if(c.amount >= 0) return null;
-  if(c.kind === 'fee') return 'fee';
-  if(c.kind === 'rent') return 'rent';
-  if(c.type === 'trade') return 'cargo';
-  return c.type === 'repair' ? 'supply' : 'gear';
-}
-const COST_COLS = [['fee','契約の費用'],['gear','船・装備'],['supply','消耗品'],['rent','レンタル'],['cargo','貨物購入']];
-function drawLogCost(){
-  $('costBy').innerHTML = [['month','月別'],['day','日別']].map(([v,l])=>`<button type="button" data-cb="${v}" aria-pressed="${costBy===v}">${l}</button>`).join('');
-  const rows = new Map(), tot = {inc:0, out:0};
-  for(const c of logCands){
-    if(c.warn) continue;
-    const k = costBy === 'month' ? c.date.slice(0,7) : c.date;
-    const r = rows.get(k) || {inc:0, out:0}; rows.set(k, r);
-    const cat = costCat(c);
-    if(cat){ r[cat] = (r[cat]||0) + c.amount; r.out += c.amount; tot[cat] = (tot[cat]||0) + c.amount; tot.out += c.amount; }
-    else { r.inc += c.amount; tot.inc += c.amount; }
-  }
-  const cols = COST_COLS.filter(([k])=>tot[k]);
-  const cell = v => v ? `<td class="num neg">${sfmt(v)}</td>` : '<td class="num" style="color:var(--muted)">—</td>';
-  const line = (label, r, rowCls='') => `<tr class="${rowCls}"><td class="num">${label}</td>${cols.map(([k])=>cell(r[k])).join('')}
-    <td class="num neg"><b>${sfmt(r.out)}</b></td><td class="num pos">${r.inc?sfmt(r.inc):'—'}</td><td class="num ${cls(r.inc+r.out)}">${sfmt(r.inc+r.out)}</td></tr>`;
-  $('logCost').innerHTML = `<table><thead><tr><th>${costBy==='month'?'月':'日'}</th>${cols.map(([,l])=>`<th>${l}</th>`).join('')}<th>費用計</th><th>収入</th><th>差引</th></tr></thead><tbody>` +
-    [...rows.keys()].sort().reverse().map(k=>line(k.replace(/-/g,'/'), rows.get(k))).join('') +
-    line('合計', tot, 'tot') + '</tbody></table>';
-}
-$('costBy').addEventListener('click', ev=>{ const b = ev.target.closest('[data-cb]'); if(b){ costBy = b.dataset.cb; drawLogCost(); } });
-
 function drawLogSum(){
   const sel = logCands.filter(c=>c.checked && !c.done);
   const tot = sel.reduce((a,c)=>a+c.amount, 0);
