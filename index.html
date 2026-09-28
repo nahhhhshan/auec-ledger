@@ -53,6 +53,7 @@ header{display:flex;flex-wrap:wrap;align-items:flex-end;justify-content:space-be
 .pcard{background:var(--surface);border:1px solid var(--line);border-left:4px solid var(--pc);border-radius:6px;padding:10px 14px;display:grid;gap:2px}
 .pname{font-size:12px;color:var(--muted);letter-spacing:.04em}
 .pname small{font-size:11px;margin-left:4px}
+.pname .phandle{display:block;margin-left:0;font-family:var(--f-mono)}
 .pbal{font-size:22px;font-weight:500}
 .pbal .u{font-size:12px;color:var(--muted);margin-left:4px;font-family:var(--f-disp)}
 .whowrap{display:grid;gap:4px}
@@ -307,11 +308,6 @@ code{font-family:var(--f-mono);font-size:12px;background:var(--surface-2);border
     <section class="panel settings">
       <h2>所持金の設定</h2>
       <label id="whoWrap" class="whowrap" hidden><span class="lab">対象の人</span><select id="who"></select></label>
-      <div class="row" id="handleRow" hidden>
-        <label><span class="lab">この人のゲーム内の名前（ハンドル）</span><input type="text" id="handle" maxlength="40" placeholder="例: lilAnthroposlil"></label>
-        <button class="btn ghost" type="button" id="saveHandle">登録</button>
-      </div>
-      <p class="hint" id="handleHint" hidden>登録すると、この人からの送金を「メンバー間の送金」として扱います（受け取った人に＋、送った人に−を記録し、共有の所持金は変わりません）。</p>
       <div class="persontools" id="personTools" hidden>
         <div class="row" id="renameRow" hidden>
           <label><span class="lab">この人の名前を付け替える</span><input type="text" id="newName" maxlength="20" placeholder="新しい名前"></label>
@@ -355,14 +351,14 @@ code{font-family:var(--f-mono);font-size:12px;background:var(--surface-2);border
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
-<script src="config.js?v=1.6.0"></script>
-<script src="web_backend.js?v=1.6.0"></script>
+<script src="config.js?v=1.6.1"></script>
+<script src="web_backend.js?v=1.6.1"></script>
 <script>
 /* 'solo' = 個人用, 'shared' = claude.ai で共有, 'web' = GitHub Pages + Firebase で共有（web_backend.js） */
 const MODE = 'web';
 /* 変更して公開するたびに上げる（表示はフッター） */
-const APP_VERSION = '1.6.0';
-const APP_UPDATED = '2026-09-28 23:33';   // 日本時間
+const APP_VERSION = '1.6.1';
+const APP_UPDATED = '2026-09-28 23:36';   // 日本時間
 const SHARED = MODE !== 'solo';
 
 const TYPES = [
@@ -633,15 +629,13 @@ function renderPeople(){
   const ps = people();
   bar.hidden = !ps.length;
   bar.innerHTML = ps.map(p=>`<div class="pcard" style="--pc:${colorOf(p)}">
-      <span class="pname">${esc(nameOf(p))}${p===me?'<small>（あなた）</small>':''}</span>
+      <span class="pname">${esc(nameOf(p))}${p===me?'<small>（あなた）</small>':''}${(settings.handles||{})[p] ? `<small class="phandle">ゲーム内: ${esc(settings.handles[p])}</small>` : ''}</span>
       <span class="pbal num">${fmt(each[p]||0)}<span class="u">aUEC</span></span></div>`).join('')
     + (unassigned ? `<div class="pcard" style="--pc:var(--line)"><span class="pname">未割り当て<small>（記録者なし${sc?'':'・共通の開始額'}）</small></span><span class="pbal num">${fmt(unassigned)}<span class="u">aUEC</span></span></div>` : '');
   // 設定欄の「対象の人」
   const sel = $('who'), cur = sel.value || me || ps[0] || '';
   sel.innerHTML = ps.map(p=>`<option value="${esc(p)}"${p===cur?' selected':''}>${esc(nameOf(p))}${p===me?'（あなた）':''}</option>`).join('');
   $('whoWrap').hidden = !ps.length;
-  $('handleRow').hidden = $('handleHint').hidden = !sel.value;
-  if(document.activeElement!==$('handle')) $('handle').value = (settings.handles||{})[sel.value] || '';
   // 名前の付け替え（Web 版のみ）と、一覧から外す（記録のない人のみ）
   const target = sel.value, nEnt = entries.filter(e=>e.by===target).length;
   $('personTools').hidden = !target;
@@ -1334,21 +1328,6 @@ $('saveStart').onclick = async ()=>{
 const saveErr = e => (e && (e.code==='permission-denied' || /permission/i.test(e.message||'')))
   ? '保存が拒否されました。Firebase の Firestore ルールの更新が必要です（startBalance と starts を許可）'
   : '保存できませんでした（'+((e&&e.code)||e)+'）';
-$('saveHandle').onclick = async ()=>{
-  const who = $('who').value, h = $('handle').value.trim();
-  if(!who) return;
-  const other = h && memberByHandle(h);
-  if(other && other !== who){ toast(`そのゲーム内の名前は ${nameOf(other)} に登録済みです`); return; }
-  $('saveHandle').disabled = true;
-  try{
-    await store.setHandle(who, h);
-    settings = {...settings, handles:{...(settings.handles||{}), ...(h ? {[who]:h} : {})}};
-    if(!h){ const hs = {...settings.handles}; delete hs[who]; settings.handles = hs; }
-    const n = h ? await reclassifyTransfers() : 0;
-    toast(h ? `${nameOf(who)} のゲーム内の名前を「${h}」にしました` + (n ? `（取り込み済みの送金 ${n}件をメンバー間の送金に振り分け直しました）` : '') : `${nameOf(who)} のゲーム内の名前を消しました`);
-  }catch(e){ toast(saveErr(e)); }
-  finally{ $('saveHandle').disabled = false; }
-};
 $('renamePerson').onclick = async ()=>{
   const from = $('who').value, to = $('newName').value.trim();
   if(!from) return;
