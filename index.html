@@ -355,14 +355,14 @@ code{font-family:var(--f-mono);font-size:12px;background:var(--surface-2);border
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
-<script src="config.js?v=1.5.1"></script>
-<script src="web_backend.js?v=1.5.1"></script>
+<script src="config.js?v=1.6.0"></script>
+<script src="web_backend.js?v=1.6.0"></script>
 <script>
 /* 'solo' = 個人用, 'shared' = claude.ai で共有, 'web' = GitHub Pages + Firebase で共有（web_backend.js） */
 const MODE = 'web';
 /* 変更して公開するたびに上げる（表示はフッター） */
-const APP_VERSION = '1.5.1';
-const APP_UPDATED = '2026-09-28 03:49';   // 日本時間
+const APP_VERSION = '1.6.0';
+const APP_UPDATED = '2026-09-28 23:33';   // 日本時間
 const SHARED = MODE !== 'solo';
 
 const TYPES = [
@@ -974,6 +974,7 @@ const shopLabel = s => s.replace(/^SCShop_(Entity_)?/,'').replace(/[-_]0*\d+$/,'
 const isConsumable = s => /drink|food|consumable|healing|medpen|burrito|bar_|sandwich|oxypen|ammo|_mag\b|mag$/i.test(s);
 
 function parseLogText(text, out){
+  let loginHandle = '';         // ログインした人のゲーム内の名前（User Login Success - Handle[...]）
   const lines = text.split('\n');
   const groups = new Map();     // 秒 -> {t, rewards:[]}
   const dones = [];             // 契約完了 {t, name, used}
@@ -997,6 +998,10 @@ function parseLogText(text, out){
     const req = !notif && line.includes('Request> Sending');
     const err = !notif && !req && line.includes('Transaction Response Error');
     if(!notif && !req && !err){
+      if(line.includes('User Login Success - Handle[')){
+        const h = line.match(/User Login Success - Handle\[([^\]]+)\]/); if(h) loginHandle = h[1];
+        continue;
+      }
       if(line.includes('CreateMarker> Creating objective marker')){
         const k = line.match(/missionId \[([0-9a-f-]+)\].*?contract \[([^\]]+)\]/);
         if(k && !contractOf.has(k[1])) contractOf.set(k[1], k[2]);
@@ -1074,6 +1079,7 @@ function parseLogText(text, out){
     add({key:`log-reward-${sec}-${amt}`, t:g.t, kind:'reward', amount:amt, type:classifyContract(g.names.join(' ')), checked:true,
       memo: memo + (g.rewards.length>1 ? `（報酬${g.rewards.length}件）` : '')});
   }
+  return loginHandle;
 }
 
 /* ---------- メンバー間の送金 ----------
@@ -1115,10 +1121,25 @@ async function readLogs(files){
   const list = [...files].sort((a,b)=>a.lastModified-b.lastModified);
   $('logResult').hidden = true;
   await scReady;
+  let handle = '';
   for(let i=0; i<list.length; i++){
     $('logStatus').textContent = `読み込み中… ${i+1}/${list.length}　${list[i].name}`;
-    try{ parseLogText(await list[i].text(), out); }
+    try{ handle = parseLogText(await list[i].text(), out) || handle; }
     catch(e){ toast(list[i].name + ' を読めませんでした'); }
+  }
+  // ログインしていたゲーム内の名前を、取り込んだ人（自分）のハンドルとして自動で登録する
+  let handleMsg = '';
+  if(SHARED && me && handle && (settings.handles||{})[me] !== handle){
+    const other = memberByHandle(handle);
+    if(other && other !== me) handleMsg = `（ログのゲーム内の名前「${handle}」は ${nameOf(other)} に登録済みのため、自分には登録していません）`;
+    else {
+      try{
+        await store.setHandle(me, handle);
+        settings = {...settings, handles:{...(settings.handles||{}), [me]:handle}};
+        const n = await reclassifyTransfers();
+        handleMsg = `（ゲーム内の名前「${handle}」をあなたに登録しました` + (n ? `。取り込み済みの送金 ${n}件をメンバー間の送金に振り分け直しました` : '') + '）';
+      }catch(e){ handleMsg = '（ゲーム内の名前を登録できませんでした: ' + saveErr(e) + '）'; }
+    }
   }
   const have = new Set(entries.map(e=>e.src).filter(Boolean));
   logCands = [...out.values()].sort((a,b)=>a.t-b.t).map(c=>{
@@ -1136,6 +1157,7 @@ async function readLogs(files){
     ? `${list.length}個のファイルから ${logCands.length}件 見つかりました` + (done ? `（うち ${done}件は取り込み済み）` : '') + '。種別は必要に応じて変えられます。'
     : `${list.length}個のファイルを読みましたが、取り込める記録は見つかりませんでした。`;
   if(list.length === 1 && logCands.length) $('logStatus').textContent += '　※ Game.log は最後に遊んだ1回分だけです。それより前は logbackups にあります（「LIVE フォルダごと選ぶ」でまとめて読めます）。';
+  if(handleMsg) $('logStatus').textContent += handleMsg;
   $('logResult').hidden = !logCands.length;
   logFilter = 'all'; drawLog();
 }
