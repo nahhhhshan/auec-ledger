@@ -223,53 +223,6 @@ code{font-family:var(--f-mono);font-size:12px;background:var(--surface-2);border
 
   <section class="peoplebar" id="peopleBar" aria-label="一人ひとりの所持金" hidden></section>
 
-  <div class="grid2">
-    <section class="panel">
-      <h2>記録を追加</h2>
-      <form id="form" autocomplete="off">
-        <div class="msearch">
-          <label for="mq" class="lab">ミッションから選ぶ（任意・英語名で検索）</label>
-          <input type="text" id="mq" placeholder="例: covalex / bounty / salvage" role="combobox" aria-autocomplete="list" aria-expanded="false" aria-controls="mlist">
-          <ul class="mlist" id="mlist" role="listbox" hidden></ul>
-          <div class="mpicked" id="mpicked" hidden></div>
-        </div>
-        <div class="chipgroup">
-          <span class="lab">契約種別・収入</span>
-          <div class="chips" id="chipsIn"></div>
-          <span class="lab">支出</span>
-          <div class="chips" id="chipsOut"></div>
-        </div>
-        <div class="amount-wrap">
-          <div class="dir" role="group" aria-label="収入か支出か">
-            <button type="button" class="in" id="dirIn" aria-pressed="true">＋ 収入</button>
-            <button type="button" class="out" id="dirOut" aria-pressed="false">− 支出</button>
-          </div>
-          <label><span class="lab">金額 (aUEC)　例: 45000 / 45k / 1.2m</span>
-            <input type="text" id="amount" inputmode="decimal" placeholder="45000" required></label>
-        </div>
-        <div class="preview num" id="preview"></div>
-        <div class="row">
-          <label style="flex:0 1 170px"><span class="lab">日付</span><input type="date" id="date" required></label>
-          <label><span class="lab">使った船（任意）</span><input type="text" id="ship" list="shiplist" placeholder="例: Vulture"></label>
-          <datalist id="shiplist"></datalist>
-        </div>
-        <label style="display:grid;gap:4px"><span class="lab">メモ（任意）</span><input type="text" id="memo" maxlength="120" placeholder="例: Covalex 配達 x3、Hurston→ArcCorp"></label>
-        <div><button class="btn" type="submit" id="submitBtn">記録する</button></div>
-      </form>
-    </section>
-
-    <section class="panel">
-      <h2><span>収支の内訳<small class="scopetag" id="scope1"></small></span> <span class="range" id="range1"></span></h2>
-      <div class="subtabs range" id="groupTabs"></div>
-      <div class="bars" id="bars"></div>
-    </section>
-  </div>
-
-  <section class="panel">
-    <h2><span>所持金の推移<small class="scopetag" id="scope2"></small></span> <span class="range" id="range2"></span></h2>
-    <div class="chart" id="chart"></div>
-  </section>
-
   <section class="panel" id="logPanel">
     <h2>ゲームのログから取り込む</h2>
     <div class="logintro">
@@ -299,6 +252,19 @@ code{font-family:var(--f-mono);font-size:12px;background:var(--surface-2);border
       </div>
     </div>
   </section>
+
+  <div class="grid2">
+    <section class="panel">
+      <h2><span>収支の内訳<small class="scopetag" id="scope1"></small></span> <span class="range" id="range1"></span></h2>
+      <div class="subtabs range" id="groupTabs"></div>
+      <div class="bars" id="bars"></div>
+    </section>
+
+    <section class="panel">
+      <h2><span>所持金の推移<small class="scopetag" id="scope2"></small></span> <span class="range" id="range2"></span></h2>
+      <div class="chart" id="chart"></div>
+    </section>
+  </div>
 
   <div class="grid2">
     <section class="panel">
@@ -341,6 +307,40 @@ code{font-family:var(--f-mono);font-size:12px;background:var(--surface-2);border
       </div>
     </section>
   </div>
+
+  <section class="panel">
+    <h2>記録を追加（手入力）</h2>
+    <form id="form" autocomplete="off">
+      <div class="msearch">
+        <label for="mq" class="lab">ミッションから選ぶ（任意・英語名で検索）</label>
+        <input type="text" id="mq" placeholder="例: covalex / bounty / salvage" role="combobox" aria-autocomplete="list" aria-expanded="false" aria-controls="mlist">
+        <ul class="mlist" id="mlist" role="listbox" hidden></ul>
+        <div class="mpicked" id="mpicked" hidden></div>
+      </div>
+      <div class="chipgroup">
+        <span class="lab">契約種別・収入</span>
+        <div class="chips" id="chipsIn"></div>
+        <span class="lab">支出</span>
+        <div class="chips" id="chipsOut"></div>
+      </div>
+      <div class="amount-wrap">
+        <div class="dir" role="group" aria-label="収入か支出か">
+          <button type="button" class="in" id="dirIn" aria-pressed="true">＋ 収入</button>
+          <button type="button" class="out" id="dirOut" aria-pressed="false">− 支出</button>
+        </div>
+        <label><span class="lab">金額 (aUEC)　例: 45000 / 45k / 1.2m</span>
+          <input type="text" id="amount" inputmode="decimal" placeholder="45000" required></label>
+      </div>
+      <div class="preview num" id="preview"></div>
+      <div class="row">
+        <label style="flex:0 1 170px"><span class="lab">日付</span><input type="date" id="date" required></label>
+        <label><span class="lab">使った船（任意）</span><input type="text" id="ship" list="shiplist" placeholder="例: Vulture"></label>
+        <datalist id="shiplist"></datalist>
+      </div>
+      <label style="display:grid;gap:4px"><span class="lab">メモ（任意）</span><input type="text" id="memo" maxlength="120" placeholder="例: Covalex 配達 x3、Hurston→ArcCorp"></label>
+      <div><button class="btn" type="submit" id="submitBtn">記録する</button></div>
+    </form>
+  </section>
   <footer class="appfoot" id="appFoot"></footer>
 </div>
 <div class="toast" id="toast" hidden></div>
@@ -348,14 +348,14 @@ code{font-family:var(--f-mono);font-size:12px;background:var(--surface-2);border
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
-<script src="config.js?v=1.6.3"></script>
-<script src="web_backend.js?v=1.6.3"></script>
+<script src="config.js?v=1.7.0"></script>
+<script src="web_backend.js?v=1.7.0"></script>
 <script>
 /* 'solo' = 個人用, 'shared' = claude.ai で共有, 'web' = GitHub Pages + Firebase で共有（web_backend.js） */
 const MODE = 'web';
 /* 変更して公開するたびに上げる（表示はフッター） */
-const APP_VERSION = '1.6.3';
-const APP_UPDATED = '2026-09-29 23:32';   // 日本時間
+const APP_VERSION = '1.7.0';
+const APP_UPDATED = '2026-09-30 00:21';   // 日本時間
 const SHARED = MODE !== 'solo';
 
 const TYPES = [
