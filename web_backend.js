@@ -25,6 +25,9 @@ function webPanel(html){
 }
 
 async function initWeb(){
+  // 共有帳簿に接続するまでは保存させない（以前はこの間の記録がブラウザの中だけに保存されていた）
+  const notReady = () => Promise.reject({code:'not-connected'});
+  for(const k of ['add','addMany','remove','clearAll','setStart','setPersonStart','setHandle','dropPerson','moveLegacy']) store[k] = notReady;
   const cfg = window.FIREBASE_CONFIG || {};
   if(!cfg.apiKey || String(cfg.apiKey).startsWith('ここに')){
     $('storeNote').innerHTML = '保存先: <b>未設定</b>';
@@ -47,6 +50,7 @@ async function initWeb(){
   // 2) 自分の名前
   let myName = lsGet(NAME_KEY);
   if(!myName){
+    $('storeNote').innerHTML = '保存先: <b>未接続</b>（名前を入れると共有帳簿に接続します）';
     render();
     await new Promise(done => {
       const p = webPanel(`<h2>あなたの名前</h2>
@@ -65,10 +69,18 @@ async function initWeb(){
   me = myName;
 
   // 3) Firebase
-  firebase.initializeApp(cfg);
-  try{ await firebase.auth().signInAnonymously(); }
-  catch(e){ webPanel('<h2>接続できませんでした</h2><p class="hint">Firebase の匿名ログインが有効か確認してください（'+esc(e.code||e.message)+'）。</p>'); return; }
-  const fs = firebase.firestore();
+  $('storeNote').innerHTML = '保存先: <b>共有帳簿に接続中…</b>';
+  const fail = msg => {
+    $('storeNote').innerHTML = '保存先: <b class="neg">接続できません</b>';
+    webPanel('<h2>共有帳簿に接続できませんでした</h2><p class="hint">' + msg + '</p><p class="hint">この状態では記録を保存できません。ページを読み込み直しても直らないときは、広告ブロックなどの拡張機能を一時的に止めて試してください。</p>');
+  };
+  if(typeof firebase === 'undefined'){ fail('接続用のプログラム（Firebase）を読み込めませんでした。'); return; }
+  let fs;
+  try{
+    firebase.initializeApp(cfg);
+    await firebase.auth().signInAnonymously();
+    fs = firebase.firestore();
+  }catch(e){ fail('ログインできませんでした（' + esc(e.code || e.message || e) + '）。'); return; }
   const L = fs.collection('ledgers').doc(lid);
 
   const shareUrl = location.href;
@@ -115,15 +127,30 @@ async function initWeb(){
   entries = []; render();
 
   let first = true;
+  // 以前の不具合で、このブラウザの中だけに保存されていた記録があれば共有帳簿へ移す
+  const migrateLocal = async () => {
+    let local = [];
+    try{ local = (JSON.parse(localStorage.getItem(LS_KEY) || '{}').entries) || []; }catch(e){}
+    if(!local.length) return;
+    const have = new Set(entries.map(e => e.src || e.id));
+    const list = local.filter(e => !have.has(e.src || e.id)).map(e => ({...e, id: e.id || ('l' + Date.now() + Math.random().toString(36).slice(2, 6)), by: e.by || me}));
+    try{
+      if(list.length) await store.addMany(list);
+      try{ localStorage.removeItem(LS_KEY); }catch(e){}
+      if(list.length) toast(`このブラウザの中だけに保存されていた ${list.length}件を共有帳簿に移しました`);
+    }catch(e){ toast('このブラウザの中の記録を共有帳簿に移せませんでした（' + (e.code || e) + '）'); }
+  };
   L.collection('entries').onSnapshot(snap => {
     if(!first){
       for(const c of snap.docChanges()) if(c.type==='added' && !c.doc.metadata.hasPendingWrites){
         const e = c.doc.data(); if(e.by && e.by!==me) toast(`${e.by} が ${typeOf(e.type).label} ${sfmt(e.amount)} を追加しました`);
       }
     }
+    const wasFirst = first;
     first = false;
     entries = snap.docs.map(d => ({id:d.id, ...d.data()}));
     render();
+    if(wasFirst && !snap.metadata.fromCache) migrateLocal();
   }, err => toast('記録を読み込めませんでした（'+err.code+'）'));
   L.onSnapshot(s => {
     const d = s.data() || {};

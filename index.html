@@ -348,14 +348,14 @@ code{font-family:var(--f-mono);font-size:12px;background:var(--surface-2);border
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
-<script src="config.js?v=1.6.2"></script>
-<script src="web_backend.js?v=1.6.2"></script>
+<script src="config.js?v=1.6.3"></script>
+<script src="web_backend.js?v=1.6.3"></script>
 <script>
 /* 'solo' = 個人用, 'shared' = claude.ai で共有, 'web' = GitHub Pages + Firebase で共有（web_backend.js） */
 const MODE = 'web';
 /* 変更して公開するたびに上げる（表示はフッター） */
-const APP_VERSION = '1.6.2';
-const APP_UPDATED = '2026-09-28 23:45';   // 日本時間
+const APP_VERSION = '1.6.3';
+const APP_UPDATED = '2026-09-29 23:32';   // 日本時間
 const SHARED = MODE !== 'solo';
 
 const TYPES = [
@@ -1235,8 +1235,8 @@ $('logImport').onclick = async ()=>{
     say(`${list.length}件を取り込みました。所持金がゲーム内とずれている場合は「実際の所持金に合わせる」で補正してください。`);
     toast(`${list.length}件を取り込みました`);
   }catch(err){
-    say((err && err.code === 'permission-denied')
-      ? '保存が拒否されました。Firebase の Firestore ルールが古い可能性があります。'
+    say((err && (err.code === 'permission-denied' || err.code === 'not-connected'))
+      ? saveErr(err)
       : '途中で止まりました（' + (err.code||err) + '）。もう一度「選んだ記録を取り込む」を押すと、残りから続けます。', true);
     const have = new Set(entries.map(e=>e.src).filter(Boolean));
     for(const c of logCands) if(have.has(c.key)){ c.done = true; c.checked = false; }
@@ -1309,7 +1309,8 @@ $('saveStart').onclick = async ()=>{
     else { await store.setStart(v); toast('開始時の所持金を '+fmt(v)+' aUEC にしました'); }
   }catch(e){ toast(saveErr(e)); }
 };
-const saveErr = e => (e && (e.code==='permission-denied' || /permission/i.test(e.message||'')))
+const saveErr = e => (e && e.code==='not-connected') ? '共有帳簿にまだ接続していません。上で名前を入れて接続してから、もう一度お試しください'
+  : (e && (e.code==='permission-denied' || /permission/i.test(e.message||'')))
   ? '保存が拒否されました。Firebase の Firestore ルールの更新が必要です（startBalance と starts を許可）'
   : '保存できませんでした（'+((e&&e.code)||e)+'）';
 $('dropPerson').onclick = async ()=>{
