@@ -40,7 +40,7 @@ body{background:var(--bg);color:var(--ink);font-family:var(--f-body);font-size:1
 .wrap{max-width:1040px;margin:0 auto;display:grid;gap:18px}
 .num{font-family:var(--f-mono);font-variant-numeric:tabular-nums}
 .pos{color:var(--pos)} .neg{color:var(--neg)}
-header{display:flex;flex-wrap:wrap;align-items:flex-end;justify-content:space-between;gap:8px 16px}
+header{display:flex;flex-wrap:wrap;align-items:flex-start;justify-content:space-between;gap:8px 16px}
 .brand{font-family:var(--f-disp);font-weight:600;font-size:26px;letter-spacing:.04em;margin:0}
 .brand span{color:var(--accent)}
 .sub{color:var(--muted);font-size:12px;letter-spacing:.06em}
@@ -390,14 +390,14 @@ code{font-family:var(--f-mono);font-size:12px;background:var(--surface-2);border
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
-<script src="config.js?v=1.10.0"></script>
-<script src="web_backend.js?v=1.10.0"></script>
+<script src="config.js?v=1.10.1"></script>
+<script src="web_backend.js?v=1.10.1"></script>
 <script>
 /* 'solo' = 個人用, 'shared' = claude.ai で共有, 'web' = GitHub Pages + Firebase で共有（web_backend.js） */
 const MODE = 'web';
 /* 変更して公開するたびに上げる（表示はフッター） */
-const APP_VERSION = '1.10.0';
-const APP_UPDATED = '2026-10-01 12:49';   // 日本時間
+const APP_VERSION = '1.10.1';
+const APP_UPDATED = '2026-10-01 12:50';   // 日本時間
 const SHARED = MODE !== 'solo';
 
 const TYPES = [
