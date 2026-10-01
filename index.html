@@ -70,8 +70,8 @@ button.pav:hover .av,button.pav:focus-visible .av{outline:2px solid var(--accent
 .pname small{font-size:11px;margin-left:4px}
 .pname .phandle{display:block;margin-left:0;font-family:var(--f-mono)}
 .pbal{font-size:22px;font-weight:500}
-.padj{justify-self:start;grid-column:2;margin-top:4px;font:inherit;font-size:11px;color:var(--accent);background:none;border:1px solid var(--line);border-radius:4px;padding:2px 8px;cursor:pointer}
-.tile .padj{grid-column:auto}
+.pcard,.tile.main{position:relative}
+.padj{position:absolute;top:8px;right:10px;font:inherit;font-size:11px;color:var(--accent);background:var(--surface);border:1px solid var(--line);border-radius:4px;padding:2px 8px;cursor:pointer}
 .padj:hover,.padj:focus-visible{border-color:var(--accent)}
 .pbal .u{font-size:12px;color:var(--muted);margin-left:4px;font-family:var(--f-disp)}
 .whowrap{display:grid;gap:4px}
@@ -435,14 +435,14 @@ code{font-family:var(--f-mono);font-size:12px;background:var(--surface-2);border
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
-<script src="config.js?v=2.1.1"></script>
-<script src="web_backend.js?v=2.1.1"></script>
+<script src="config.js?v=2.1.2"></script>
+<script src="web_backend.js?v=2.1.2"></script>
 <script>
 /* 'solo' = 個人用, 'shared' = claude.ai で共有, 'web' = GitHub Pages + Firebase で共有（web_backend.js） */
 const MODE = 'web';
 /* 変更して公開するたびに上げる（表示はフッター） */
-const APP_VERSION = '2.1.1';
-const APP_UPDATED = '2026-10-02 00:53';   // 日本時間
+const APP_VERSION = '2.1.2';
+const APP_UPDATED = '2026-10-02 00:54';   // 日本時間
 const SHARED = MODE !== 'solo';
 
 const TYPES = [
