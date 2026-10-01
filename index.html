@@ -409,14 +409,14 @@ code{font-family:var(--f-mono);font-size:12px;background:var(--surface-2);border
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
-<script src="config.js?v=2.0.1"></script>
-<script src="web_backend.js?v=2.0.1"></script>
+<script src="config.js?v=2.0.2"></script>
+<script src="web_backend.js?v=2.0.2"></script>
 <script>
 /* 'solo' = 個人用, 'shared' = claude.ai で共有, 'web' = GitHub Pages + Firebase で共有（web_backend.js） */
 const MODE = 'web';
 /* 変更して公開するたびに上げる（表示はフッター） */
-const APP_VERSION = '2.0.1';
-const APP_UPDATED = '2026-10-02 00:33';   // 日本時間
+const APP_VERSION = '2.0.2';
+const APP_UPDATED = '2026-10-02 00:37';   // 日本時間
 const SHARED = MODE !== 'solo';
 
 const TYPES = [
@@ -1209,10 +1209,12 @@ function parseLogText(text, out){
   const costs = SC.costs || {};
   for(const a of accepts){
     if(sharedIn.has(a.mid)) continue;   // 共有で受けた契約は、費用を払ったのは共有した人
+    // ゲームに入り直すと同じ契約の「契約が成立しました」がもう一度出るので、費用は契約（MissionId）ごとに1回だけ
+    if([...out.values()].some(c => c.kind === 'fee' && c.mid === a.mid)) continue;
     const dn = contractOf.get(a.mid); if(!dn) continue;
     const cost = costs[dn] || costs[dn.replace(/_\d+$/, '')];
     if(!cost) continue;
-    add({key:`log-fee-${a.sec}-${a.mid.slice(0,8)}`, t:a.t, kind:'fee', amount:-cost, type:classifyContract(a.name + ' ' + dn), checked:true,
+    add({key:`log-fee-${a.sec}-${a.mid.slice(0,8)}`, mid:a.mid, t:a.t, kind:'fee', amount:-cost, type:classifyContract(a.name + ' ' + dn), checked:true,
       memo:`契約の費用: ${a.name}`, note:'費用はゲームデータの値（ログに金額は出ません）'});
   }
   for(const [sec, g] of groups){
@@ -1289,7 +1291,9 @@ async function readLogs(files, auto){
     }
   }
   const have = new Set(entries.map(e=>e.src).filter(Boolean));
-  logCands = [...out.values()].sort((a,b)=>a.t-b.t).map(c=>{
+  // 帳簿にすでにある契約の費用（MissionId の先頭8文字）。入り直しで出た同じ契約の受注は取り込まない
+  const feeMids = new Set([...have].filter(k=>k.startsWith('log-fee-')).map(k=>k.slice(-8)));
+  logCands = [...out.values()].sort((a,b)=>a.t-b.t).filter(c=>!(c.kind === 'fee' && !have.has(c.key) && feeMids.has(c.mid.slice(0,8)))).map(c=>{
     c.date = new Date(c.t).toLocaleDateString('sv-SE');
     c.memo = c.memo.slice(0, 150);
     if(c.kind === 'xfer' && SHARED){
