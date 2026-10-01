@@ -390,14 +390,14 @@ code{font-family:var(--f-mono);font-size:12px;background:var(--surface-2);border
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
-<script src="config.js?v=1.10.1"></script>
-<script src="web_backend.js?v=1.10.1"></script>
+<script src="config.js?v=1.10.2"></script>
+<script src="web_backend.js?v=1.10.2"></script>
 <script>
 /* 'solo' = 個人用, 'shared' = claude.ai で共有, 'web' = GitHub Pages + Firebase で共有（web_backend.js） */
 const MODE = 'web';
 /* 変更して公開するたびに上げる（表示はフッター） */
-const APP_VERSION = '1.10.1';
-const APP_UPDATED = '2026-10-01 12:50';   // 日本時間
+const APP_VERSION = '1.10.2';
+const APP_UPDATED = '2026-10-01 12:55';   // 日本時間
 const SHARED = MODE !== 'solo';
 
 const TYPES = [
@@ -441,7 +441,7 @@ function parseAmount(s){
 let entries = [], settings = {startBalance:0};
 /* 帳簿の設定ドキュメント全体（開始額・人ごとの開始額・ゲーム内の名前）。一部だけ書くと他が消えるので必ずこれで書く */
 const sdoc = (o={}) => ({startBalance:settings.startBalance||0, starts:settings.starts||{}, handles:settings.handles||{}, avatars:settings.avatars||{}, ...o});
-let range = 'all', group = 'type', selType = 'delivery', dir = 1;
+let group = 'type', selType = 'delivery', dir = 1;
 let picked = null;            // 選んだミッション
 let SC = {missions:[], ships:[]};
 let me = null, names = {}, userApi = null, readOnly = false;
@@ -771,10 +771,6 @@ function compute(list, start){
   }
   return {balance:bal, days:[...days.values()]};
 }
-function inRange(date){
-  if(range==='all') return true;
-  return dayNum(date) > dayNum(today()) - Number(range);
-}
 
 /* ---------- render ---------- */
 function render(){
@@ -804,7 +800,7 @@ function render(){
   }
   if(!SHARED && document.activeElement!==$('startBal')){ const v = (sc && !isFirstScope(sc)) ? (startsFor(sc)['']||0) : (settings.startBalance||0); $('startBal').value = v ? fmt(v) : ''; }
 
-  renderBars(D.entries.filter(e=>inRange(e.date) && inP(e)));
+  renderBars(D.entries.filter(e=>inP(e)));
   renderChart(days.filter(d=>inPeriod(d.date)), totalStart(sc), days);
   renderDaily(days.filter(d=>inPeriod(d.date)));
   renderDays(days.filter(d=>inPeriod(d.date)));
@@ -858,7 +854,7 @@ function renderPeriods(){
   $('periodChips').innerHTML = chips.join('');
   // 所持金の推移・日別の収支の切り替えも、一番上の「表示する期間」と同じ（日付指定は上の欄で）
   const short = chips.slice(0, -1).map(c => c.replace(/第(\d+)期 [^<（]*/, '第$1期'));
-  for(const id of ['range2','range3']) $(id).innerHTML = short.join('');
+  for(const id of ['range1','range2','range3']) $(id).innerHTML = short.join('');
   $('periodCustom').hidden = period.kind !== 'custom';
   if(period.kind === 'custom'){
     if(document.activeElement !== $('pFrom')) $('pFrom').value = period.from || '';
@@ -872,7 +868,7 @@ const onPeriodChip = ev=>{
   else if(b.dataset.p === 'custom') setPeriod({kind:'custom', from: period.from || (periods.length ? periods[periods.length-1].from : today()), to: period.to || ''});
   else setPeriod({kind:'all'});
 };
-for(const id of ['periodChips','range2','range3']) $(id).addEventListener('click', onPeriodChip);
+for(const id of ['periodChips','range1','range2','range3']) $(id).addEventListener('click', onPeriodChip);
 for(const id of ['pFrom','pTo']) $(id).addEventListener('change', ()=>setPeriod({kind:'custom', from:$('pFrom').value, to:$('pTo').value}));
 
 /* 「表示する期間」の名前（第2期・指定期間・全期間） */
@@ -883,10 +879,7 @@ function periodLabel(){
 }
 function renderTabs(){
   const pl = periodLabel();
-  $('scope1').textContent = `（${pl}${range==='all'?'':'・直近'+range+'日'}）`;
-  $('scope2').textContent = $('scope3').textContent = `（${pl}）`;
-  $('range1').innerHTML = [['7','7日'],['30','30日'],['all',pl]]
-    .map(([v,l])=>`<button type="button" data-r="${v}" aria-pressed="${range===v}">${l}</button>`).join('');
+  for(const id of ['scope1','scope2','scope3']) $(id).textContent = `（${pl}）`;
   const gs = [['type','種別ごと'],['ship','船ごと']].concat(SHARED?[['by','人ごと']]:[]);
   $('groupTabs').innerHTML = gs.map(([v,l])=>`<button type="button" data-g="${v}" aria-pressed="${group===v}">${l}</button>`).join('');
 }
@@ -1448,8 +1441,6 @@ document.addEventListener('click', ev=>{
   if(ev.target.id==='unpick'){ unpick(); return; }
   const c = ev.target.closest('[data-type]');
   if(c){ selType = c.dataset.type; setDir(typeOf(selType).dir); renderChips(); return; }
-  const r = ev.target.closest('[data-r]');
-  if(r){ range = r.dataset.r; render(); return; }
   const g = ev.target.closest('[data-g]');
   if(g){ group = g.dataset.g; render(); return; }
   const del = ev.target.closest('[data-del]');
