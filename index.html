@@ -43,6 +43,7 @@ body{background:var(--bg);color:var(--ink);font-family:var(--f-body);font-size:1
 header{display:grid;grid-template-columns:1fr auto;align-items:center;gap:4px 16px}
 .brand{font-family:var(--f-disp);font-weight:600;font-size:26px;letter-spacing:.04em;margin:0}
 .brand span{color:var(--accent)}
+.sub .ver{margin-left:10px;font-family:var(--f-mono);font-size:11px;letter-spacing:0;border:1px solid var(--line);border-radius:3px;padding:0 5px}
 .sub{color:var(--muted);font-size:12px;letter-spacing:.06em}
 .hmeta{grid-column:1/-1;display:flex;flex-wrap:wrap;align-items:center;justify-content:flex-start;gap:4px 18px;font-size:12px;color:var(--muted)}
 .hmeta>div:empty{display:none}
@@ -223,7 +224,7 @@ code{font-family:var(--f-mono);font-size:12px;background:var(--surface-2);border
   <header>
     <div>
       <h1 class="brand" id="brand">aUEC <span>LEDGER</span></h1>
-      <div class="sub" id="subtitle">STAR CITIZEN ・ 契約と所持金の記録</div>
+      <div class="sub"><span id="subtitle">STAR CITIZEN ・ 契約と所持金の記録</span><span class="ver" id="verTag" title=""></span></div>
     </div>
     <div class="hbtns">
       <button class="btn" type="button" id="hdrImport" title="ゲームのログを読み、新しい記録をそのまま取り込みます">ログを取り込む</button>
@@ -435,14 +436,14 @@ code{font-family:var(--f-mono);font-size:12px;background:var(--surface-2);border
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
-<script src="config.js?v=2.1.3"></script>
-<script src="web_backend.js?v=2.1.3"></script>
+<script src="config.js?v=2.1.4"></script>
+<script src="web_backend.js?v=2.1.4"></script>
 <script>
 /* 'solo' = 個人用, 'shared' = claude.ai で共有, 'web' = GitHub Pages + Firebase で共有（web_backend.js） */
 const MODE = 'web';
 /* 変更して公開するたびに上げる（表示はフッター） */
-const APP_VERSION = '2.1.3';
-const APP_UPDATED = '2026-10-02 00:56';   // 日本時間
+const APP_VERSION = '2.1.4';
+const APP_UPDATED = '2026-10-02 00:57';   // 日本時間
 const SHARED = MODE !== 'solo';
 
 const TYPES = [
@@ -1670,6 +1671,8 @@ if(SHARED){
   $('subtitle').textContent = 'STAR CITIZEN ・ 二人の共有口座';
 }
 if(!SHARED) $('soloAdj').hidden = false;
+$('verTag').textContent = 'v' + APP_VERSION;
+$('verTag').title = '更新日時 ' + APP_UPDATED.replace(/-/g,'.');
 $('appFoot').innerHTML = `<span>aUEC Ledger <b class="num">v${APP_VERSION}</b>（${{solo:'個人用',shared:'共有用',web:'共有用・Web'}[MODE]}）</span><span>更新日時 <span class="num">${APP_UPDATED.replace(/-/g,'.')}</span></span>`;
 $('date').value = today();
 renderChips(); setDir(1);
