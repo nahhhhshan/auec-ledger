@@ -126,8 +126,11 @@ async function initWeb(){
     const args = [];
     for(const key of Object.keys(settings.starts || {})) if(splitKey(key)[0] === k) args.push(new firebase.firestore.FieldPath('starts', key), firebase.firestore.FieldValue.delete());
     if(k in (settings.handles || {})) args.push(new firebase.firestore.FieldPath('handles', k), firebase.firestore.FieldValue.delete());
+    if(k in (settings.avatars || {})) args.push(new firebase.firestore.FieldPath('avatars', k), firebase.firestore.FieldValue.delete());
     return args.length ? L.update(...args) : Promise.resolve();
   };
+  store.setAvatar = (k, url) => url ? L.set({avatars:{[k]:url}}, {merge:true})
+    : ((k in (settings.avatars || {})) ? L.update(new firebase.firestore.FieldPath('avatars', k), firebase.firestore.FieldValue.delete()) : Promise.resolve());
   store.setHandle = (k, h) => h ? L.set({handles:{[k]:h}}, {merge:true})
     : ((k in (settings.handles || {})) ? L.update(new firebase.firestore.FieldPath('handles', k), firebase.firestore.FieldValue.delete()) : Promise.resolve());
   store.moveLegacy = k => L.set({startBalance:0, starts:{[k]:(Number((settings.starts||{})[k])||0) + (settings.startBalance||0)}}, {merge:true});
@@ -162,7 +165,7 @@ async function initWeb(){
   }, err => toast('記録を読み込めませんでした（'+err.code+'）'));
   L.onSnapshot(s => {
     const d = s.data() || {};
-    settings = {startBalance: Number(d.startBalance) || 0, starts: d.starts || {}, handles: d.handles || {}};
+    settings = {startBalance: Number(d.startBalance) || 0, starts: d.starts || {}, handles: d.handles || {}, avatars: d.avatars || {}};
     render();
   }, () => {});
 
@@ -185,8 +188,9 @@ async function initWeb(){
     const on = [...new Set(peers.filter(p => p.at && now - p.at < 180000).map(p => p.name))];
     if(!on.includes(me)) on.unshift(me);
     $('peers').hidden = false;
-    $('peers').innerHTML = '<span>接続中</span>' + on.map(n => `<span class="peer">${esc(n)}${n===me?'（あなた）':''}</span>`).join('');
+    $('peers').innerHTML = '<span>接続中</span>' + on.map(n => peerChip(n)).join('');
   };
+  window.redrawPeers = drawPeers;
   let swept = false;
   P.onSnapshot(s => {
     peers = s.docs.map(d => { const x = d.data({serverTimestamps:'estimate'}); return {id:d.id, name:x.name, at:x.at ? x.at.toMillis() : 0}; });

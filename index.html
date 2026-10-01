@@ -51,9 +51,19 @@ header{display:flex;flex-wrap:wrap;align-items:flex-end;justify-content:space-be
 .peers{display:flex;flex-wrap:wrap;gap:6px;justify-content:flex-end;align-items:center}
 .peer{display:inline-flex;align-items:center;gap:5px;border:1px solid var(--line);background:var(--surface);border-radius:999px;padding:2px 9px 2px 7px;color:var(--ink)}
 .peer::before{content:"";width:7px;height:7px;border-radius:50%;background:var(--pos)}
+button.peer{font:inherit;cursor:pointer}
+.peerme:hover,.peerme:focus-visible{border-color:var(--accent)}
+.av{width:20px;height:20px;border-radius:50%;object-fit:cover;flex:none;display:inline-grid;place-items:center;font-size:11px;font-weight:600;color:var(--surface);font-family:var(--f-body)}
+.avlg{width:40px;height:40px;font-size:18px}
+.pav{grid-row:1/span 2;align-self:center;background:none;border:0;padding:0;border-radius:50%;line-height:0}
+button.pav{cursor:pointer}
+button.pav:hover .av,button.pav:focus-visible .av{outline:2px solid var(--accent);outline-offset:2px}
+.avatarpop{position:fixed;z-index:20;top:calc(64px + env(safe-area-inset-top,0px));right:16px;width:min(340px,calc(100% - 32px));background:var(--surface);border:1px solid var(--line);border-radius:8px;box-shadow:0 12px 32px rgb(0 0 0 / .25);padding:14px;display:grid;gap:10px}
+.avhead{display:flex;justify-content:space-between;align-items:center;font-family:var(--f-disp);letter-spacing:.04em}
+.avbody{display:grid;grid-template-columns:auto 1fr;gap:12px;align-items:center}
 
 .peoplebar{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:10px}
-.pcard{background:var(--surface);border:1px solid var(--line);border-left:4px solid var(--pc);border-radius:6px;padding:10px 14px;display:grid;gap:2px}
+.pcard{background:var(--surface);border:1px solid var(--line);border-left:4px solid var(--pc);border-radius:6px;padding:10px 14px;display:grid;grid-template-columns:auto 1fr;column-gap:12px;row-gap:2px}
 .pname{font-size:12px;color:var(--muted);letter-spacing:.04em}
 .pname small{font-size:11px;margin-left:4px}
 .pname .phandle{display:block;margin-left:0;font-family:var(--f-mono)}
@@ -362,19 +372,32 @@ code{font-family:var(--f-mono);font-size:12px;background:var(--surface-2);border
   </section>
   <footer class="appfoot" id="appFoot"></footer>
 </div>
+<div class="avatarpop" id="avatarPop" role="dialog" aria-label="アイコンの設定" hidden>
+  <div class="avhead"><b>アイコンの設定</b><button type="button" class="btn ghost" id="avClose" style="padding:2px 10px;font-size:12px">閉じる</button></div>
+  <div class="avbody">
+    <div id="avPreview"></div>
+    <p class="hint">Discord や Steam のアイコンを右クリック →「画像をコピー」して、ここで <b>Ctrl + V</b> で貼り付けてください。画像ファイルからも選べます。</p>
+  </div>
+  <div class="row">
+    <label class="btn" for="avFile" id="avPick" tabindex="0" style="display:inline-block">画像ファイルを選ぶ</label>
+    <input type="file" id="avFile" accept="image/*" hidden>
+    <button type="button" class="btn ghost danger-btn" id="avRemove">アイコンを外す</button>
+  </div>
+  <div class="hint" id="avMsg" role="status"></div>
+</div>
 <div class="toast" id="toast" hidden></div>
 
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
-<script src="config.js?v=1.9.0"></script>
-<script src="web_backend.js?v=1.9.0"></script>
+<script src="config.js?v=1.10.0"></script>
+<script src="web_backend.js?v=1.10.0"></script>
 <script>
 /* 'solo' = 個人用, 'shared' = claude.ai で共有, 'web' = GitHub Pages + Firebase で共有（web_backend.js） */
 const MODE = 'web';
 /* 変更して公開するたびに上げる（表示はフッター） */
-const APP_VERSION = '1.9.0';
-const APP_UPDATED = '2026-10-01 12:35';   // 日本時間
+const APP_VERSION = '1.10.0';
+const APP_UPDATED = '2026-10-01 12:49';   // 日本時間
 const SHARED = MODE !== 'solo';
 
 const TYPES = [
@@ -417,7 +440,7 @@ function parseAmount(s){
 /* ---------- state ---------- */
 let entries = [], settings = {startBalance:0};
 /* 帳簿の設定ドキュメント全体（開始額・人ごとの開始額・ゲーム内の名前）。一部だけ書くと他が消えるので必ずこれで書く */
-const sdoc = (o={}) => ({startBalance:settings.startBalance||0, starts:settings.starts||{}, handles:settings.handles||{}, ...o});
+const sdoc = (o={}) => ({startBalance:settings.startBalance||0, starts:settings.starts||{}, handles:settings.handles||{}, avatars:settings.avatars||{}, ...o});
 let range = 'all', group = 'type', selType = 'delivery', dir = 1;
 let picked = null;            // 選んだミッション
 let SC = {missions:[], ships:[]};
@@ -472,8 +495,9 @@ const store = {
     const starts = {...(settings.starts||{})};
     for(const key of Object.keys(starts)) if(splitKey(key)[0] === k) delete starts[key];
     const handles = {...(settings.handles||{})}; delete handles[k];
-    if(this.db){ await this.db.doc('settings/main').set(sdoc({starts, handles})); return; }
-    settings = {...settings, starts, handles}; this.saveLocal(); render();
+    const avatars = {...(settings.avatars||{})}; delete avatars[k];
+    if(this.db){ await this.db.doc('settings/main').set(sdoc({starts, handles, avatars})); return; }
+    settings = {...settings, starts, handles, avatars}; this.saveLocal(); render();
   },
   // 以前の共通の開始額を、指定した人の開始額に足して 0 にする（合計は変わらない）
   async moveLegacy(k){
@@ -488,6 +512,13 @@ const store = {
     settings = {...settings, starts}; this.saveLocal(); render();
   },
   // メンバーのゲーム内の名前（送金の送り主の判定に使う）。空なら登録を消す
+  // メンバーのアイコン（96px に縮めた画像の data URL）。空なら外す
+  async setAvatar(k, url){
+    const avatars = {...(settings.avatars||{})};
+    if(url) avatars[k] = url; else delete avatars[k];
+    if(this.db){ await this.db.doc('settings/main').set(sdoc({avatars})); return; }
+    settings = {...settings, avatars}; this.saveLocal(); render();
+  },
   async setHandle(k, h){
     const handles = {...(settings.handles||{})};
     if(h) handles[k] = h; else delete handles[k];
@@ -520,7 +551,7 @@ async function initStore(){
     render();
   }, err=>{ toast('記録を読み込めませんでした（'+err.code+'）。ページを再読み込みしてください。'); });
   db.doc('settings/main').onSnapshot(s=>{
-    settings = s.exists ? {startBalance:Number(s.data().startBalance)||0, starts:s.data().starts||{}, handles:s.data().handles||{}} : {startBalance:0, starts:{}, handles:{}};
+    settings = s.exists ? {startBalance:Number(s.data().startBalance)||0, starts:s.data().starts||{}, handles:s.data().handles||{}, avatars:s.data().avatars||{}} : {startBalance:0, starts:{}, handles:{}, avatars:{}};
     render();
   }, ()=>{});
 
@@ -539,13 +570,14 @@ async function initPeople(use){
   const room = await use('room').catch(()=>null);
   if(!room) return;
   $('peers').hidden = false;
+  let lastPeers = [];
   const draw = async peers => {
+    lastPeers = peers;
     const ids = [...new Set(peers.filter(p=>p.kind==='viewer' && p.by).map(p=>p.by))];
     await resolveNames(ids);
-    $('peers').innerHTML = ids.length
-      ? '<span>接続中</span>' + ids.map(id=>`<span class="peer">${esc(nameOf(id))}${id===me?'（あなた）':''}</span>`).join('')
-      : '';
+    $('peers').innerHTML = ids.length ? '<span>接続中</span>' + ids.map(id=>peerChip(id)).join('') : '';
   };
+  window.redrawPeers = () => draw(lastPeers);
   room.onPeers(ch=>draw(ch.peers), ()=>{ $('peers').hidden = true; });
   room.presence({here:true}).catch(()=>{});
   draw(room.peers());
@@ -613,6 +645,62 @@ function personBalances(sc){
   for(const e of entries){ if(!inScope(sc, e.date)) continue; if(e.by) out[e.by] = (out[e.by]||0) + e.amount; else un += e.amount; }
   return {each:out, unassigned:un};
 }
+/* ---------- アイコン ----------
+   右上「接続中」の自分の名前（またはカードの自分のアイコン）をクリック → 貼り付け（Ctrl+V）か画像ファイルで登録。
+   96px に縮めて帳簿の設定（avatars）に保存するので相手の画面にも出る。未登録は頭文字の丸 */
+function avatarHtml(p, size){
+  const url = (settings.avatars||{})[p];
+  const cls = 'av' + (size === 'lg' ? ' avlg' : '');
+  if(url) return `<img class="${cls}" src="${esc(url)}" alt="">`;
+  const ch = (String(nameOf(p) || '?').trim()[0] || '?').toUpperCase();
+  return `<span class="${cls} avtxt" style="background:${colorOf(p)}">${esc(ch)}</span>`;
+}
+function peerChip(p){
+  const label = `${avatarHtml(p)}<span>${esc(nameOf(p))}${p===me?'（あなた）':''}</span>`;
+  return p === me
+    ? `<button type="button" class="peer peerme" data-avatar-me title="クリックでアイコンを設定">${label}</button>`
+    : `<span class="peer">${label}</span>`;
+}
+async function shrinkImage(blob){
+  const url = URL.createObjectURL(blob);
+  try{
+    const img = await new Promise((res, rej)=>{ const i = new Image(); i.onload = ()=>res(i); i.onerror = rej; i.src = url; });
+    const S = 96, c = document.createElement('canvas'); c.width = c.height = S;
+    const k = Math.max(S / img.width, S / img.height), w = img.width * k, h = img.height * k;
+    c.getContext('2d').drawImage(img, (S - w) / 2, (S - h) / 2, w, h);
+    let out = c.toDataURL('image/webp', 0.85);
+    if(!out.startsWith('data:image/webp')) out = c.toDataURL('image/jpeg', 0.85);
+    return out;
+  } finally { URL.revokeObjectURL(url); }
+}
+function openAvatarPop(){
+  if(!me || readOnly) return;
+  $('avPreview').innerHTML = avatarHtml(me, 'lg');
+  $('avRemove').hidden = !(settings.avatars||{})[me];
+  $('avMsg').textContent = '';
+  $('avatarPop').hidden = false;
+  $('avPick').focus();
+}
+const closeAvatarPop = () => { $('avatarPop').hidden = true; };
+async function saveAvatar(blob){
+  if(!blob || !/^image\//.test(blob.type)){ $('avMsg').textContent = '画像を貼り付けるか、画像ファイルを選んでください。'; return; }
+  $('avMsg').textContent = '保存しています…';
+  try{
+    const url = await shrinkImage(blob);
+    await store.setAvatar(me, url);
+    settings = {...settings, avatars:{...(settings.avatars||{}), [me]:url}};
+    render(); closeAvatarPop(); toast('アイコンを設定しました');
+  }catch(e){ $('avMsg').textContent = saveErr(e); }
+}
+document.addEventListener('click', ev=>{ if(ev.target.closest('[data-avatar-me]')) openAvatarPop(); });
+document.addEventListener('paste', ev=>{
+  if($('avatarPop').hidden) return;
+  const item = [...(ev.clipboardData||{}).items||[]].find(i=>i.type && i.type.startsWith('image/'));
+  if(item){ ev.preventDefault(); saveAvatar(item.getAsFile()); }
+  else $('avMsg').textContent = 'クリップボードに画像がありません。Discord などでアイコンを右クリック →「画像をコピー」してから貼り付けてください。';
+});
+document.addEventListener('keydown', ev=>{ if(ev.key === 'Escape' && !$('avatarPop').hidden) closeAvatarPop(); });
+
 /* 日ごとの終了時の所持金を人ごとに（グラフ用）。戻り値: {date: {person: 残高}} と開始値 */
 function personDaily(sc){
   const st = startsFor(sc), run = {};
@@ -632,6 +720,7 @@ function renderPeople(){
   const ps = people();
   bar.hidden = !ps.length;
   bar.innerHTML = ps.map(p=>`<div class="pcard" style="--pc:${colorOf(p)}">
+      ${p===me ? `<button type="button" class="pav" data-avatar-me title="クリックでアイコンを設定">${avatarHtml(p, 'lg')}</button>` : `<span class="pav">${avatarHtml(p, 'lg')}</span>`}
       <span class="pname">${esc(nameOf(p))}${p===me?'<small>（あなた）</small>':''}${(settings.handles||{})[p] ? `<small class="phandle">ゲーム内: ${esc(settings.handles[p])}</small>` : ''}</span>
       <span class="pbal num">${fmt(each[p]||0)}<span class="u">aUEC</span></span></div>`).join('')
     + (unassigned ? `<div class="pcard" style="--pc:var(--line)"><span class="pname">未割り当て<small>（記録者なし${sc?'':'・共通の開始額'}）</small></span><span class="pbal num">${fmt(unassigned)}<span class="u">aUEC</span></span></div>` : '');
@@ -721,6 +810,7 @@ function render(){
   renderDays(days.filter(d=>inPeriod(d.date)));
   renderTabs();
   renderPeople();
+  if(window.redrawPeers) window.redrawPeers();
 }
 
 /* ---------- 表示する期間 ----------
@@ -1333,6 +1423,13 @@ async function importSelected(auto){
   }
 }
 $('logImport').onclick = ()=>importSelected(false);
+
+$('avClose').onclick = closeAvatarPop;
+$('avFile').addEventListener('change', ev=>{ const f = ev.target.files[0]; ev.target.value = ''; if(f) saveAvatar(f); });
+$('avRemove').onclick = async ()=>{
+  try{ await store.setAvatar(me, ''); const a = {...(settings.avatars||{})}; delete a[me]; settings = {...settings, avatars:a}; render(); closeAvatarPop(); toast('アイコンを外しました'); }
+  catch(e){ $('avMsg').textContent = saveErr(e); }
+};
 
 /* ---------- form ---------- */
 function renderChips(){
