@@ -166,6 +166,9 @@ input:focus-visible,button:focus-visible{outline:2px solid var(--accent);outline
 .hint{font-size:12px;color:var(--muted);margin:0}
 /* log import */
 .logintro{display:grid;gap:10px}
+.pctool{display:flex;gap:8px;align-items:flex-start;font-size:12px;color:var(--muted);margin-top:10px}
+.pctool b{color:var(--ink);font-weight:500}
+.pctool input{margin-top:2px}
 .dropzone{border:2px dashed var(--line);border-radius:6px;padding:14px;text-align:center;font-size:13px;color:var(--muted)}
 .dropzone.over{border-color:var(--accent);background:var(--accent-soft);color:var(--ink)}
 code{font-family:var(--f-mono);font-size:12px;background:var(--surface-2);border:1px solid var(--line);border-radius:3px;padding:0 4px}
@@ -203,7 +206,7 @@ code{font-family:var(--f-mono);font-size:12px;background:var(--surface-2);border
     </div>
     <div class="hmeta">
       <div class="hbtns">
-        <button class="btn" type="button" id="hdrImport" title="ゲームのログフォルダ（logbackups か LIVE）を選んで取り込みます">ログを取り込む</button>
+        <button class="btn" type="button" id="hdrImport" title="ゲームのログを読み、新しい記録をそのまま取り込みます">ログを取り込む</button>
         <button class="btn ghost" type="button" id="hdrShare" aria-expanded="false" hidden>共有URL</button>
       </div>
       <div class="peers" id="peers" hidden></div>
@@ -308,6 +311,8 @@ code{font-family:var(--f-mono);font-size:12px;background:var(--surface-2);border
       <p class="hint">フォルダ選択の画面にパスを入れたいときは、下の「フォルダー:」欄に <code>C:\Program Files\Roberts Space Industries\StarCitizen\LIVE\logbackups</code> を貼り付けて「アップロード」を押してください。</p>
       <p class="hint"><b>おすすめ:</b>「LIVE フォルダごと選ぶ」で上の場所の <code>LIVE</code> フォルダを選ぶと、今のログ（<code>Game.log</code>・最後の1回分）と過去のログ（<code>logbackups</code> 内）をまとめて読みます。ブラウザに「アップロードしますか」と聞かれますが、実際にはどこにも送らず、このページの中で読むだけです。</p>
     </div>
+    <label class="pctool" id="pcToolRow" hidden><input type="checkbox" id="usePcTool">
+      <span><b>この PC の取り込みプログラムを使う</b>（右上の「ログを取り込む」でフォルダを選ばずに取り込みます。デスクトップの「SCログ取り込み」が入っている PC だけで有効にしてください。初回はブラウザが「アプリを開きますか」と確認します）</span></label>
     <div id="logStatus" class="hint" role="status"></div>
     <div id="logResult" hidden>
       <div class="logbar">
@@ -362,14 +367,14 @@ code{font-family:var(--f-mono);font-size:12px;background:var(--surface-2);border
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
-<script src="config.js?v=1.8.0"></script>
-<script src="web_backend.js?v=1.8.0"></script>
+<script src="config.js?v=1.9.0"></script>
+<script src="web_backend.js?v=1.9.0"></script>
 <script>
 /* 'solo' = 個人用, 'shared' = claude.ai で共有, 'web' = GitHub Pages + Firebase で共有（web_backend.js） */
 const MODE = 'web';
 /* 変更して公開するたびに上げる（表示はフッター） */
-const APP_VERSION = '1.8.0';
-const APP_UPDATED = '2026-10-01 12:30';   // 日本時間
+const APP_VERSION = '1.9.0';
+const APP_UPDATED = '2026-10-01 12:35';   // 日本時間
 const SHARED = MODE !== 'solo';
 
 const TYPES = [
@@ -1150,7 +1155,7 @@ async function reclassifyTransfers(){
   return drop.length;
 }
 
-async function readLogs(files){
+async function readLogs(files, auto){
   const out = new Map();
   const list = [...files].sort((a,b)=>a.lastModified-b.lastModified);
   $('logResult').hidden = true;
@@ -1193,6 +1198,8 @@ async function readLogs(files){
   if(list.length === 1 && logCands.length) $('logStatus').textContent += '　※ Game.log は最後に遊んだ1回分だけです。それより前は logbackups にあります（「LIVE フォルダごと選ぶ」でまとめて読めます）。';
   if(handleMsg) $('logStatus').textContent += handleMsg;
   try{ $('logPanel').scrollIntoView({behavior:'smooth', block:'start'}); }catch(e){}
+  // 右上の「ログを取り込む」から来たときは、初期の選択のまま自動で取り込む
+  if(auto && !readOnly) await importSelected(true);
   $('logResult').hidden = !logCands.length;
   logFilter = 'all'; drawLog();
 }
@@ -1218,14 +1225,33 @@ function drawLogSum(){
   $('logSum').innerHTML = `選択中 ${fmt(sel.length)}件　合計 <span class="${cls(tot)}">${sfmt(tot)} aUEC</span>`;
   $('logImport').disabled = !sel.length || readOnly;
 }
-$('hdrImport').onclick = ()=> $('logDir').click();
+let autoNext = false;
+const PCTOOL_KEY = 'auec-sclog';
+const usePcTool = () => { try{ return MODE === 'web' && localStorage.getItem(PCTOOL_KEY) === '1'; }catch(e){ return false; } };
+$('hdrImport').onclick = ()=>{
+  if(usePcTool()){
+    // この PC の取り込みプログラム（sclog://）を起動。結果は共有帳簿を通して、この画面にそのまま反映される
+    location.href = 'sclog://import';
+    $('logStatus').textContent = 'この PC の取り込みプログラムを起動しました。数秒〜十数秒で記録に反映されます。何も起きない場合は「この PC の取り込みプログラムを使う」の説明を確認してください。';
+    toast('PC の取り込みプログラムを起動しました');
+    return;
+  }
+  autoNext = true; $('logDir').click();
+};
+document.querySelector('label[for="logDir"]').addEventListener('click', ()=>{ autoNext = false; });
+if(MODE === 'web'){
+  $('pcToolRow').hidden = false;
+  try{ $('usePcTool').checked = localStorage.getItem(PCTOOL_KEY) === '1'; }catch(e){}
+  $('usePcTool').addEventListener('change', ev=>{ try{ localStorage.setItem(PCTOOL_KEY, ev.target.checked ? '1' : '0'); }catch(e){} });
+}
 $('logFiles').addEventListener('change', ev=>{ if(ev.target.files.length) readLogs(ev.target.files); ev.target.value = ''; });
 // Game.log と logbackups 内の .log だけを読む（ほかのフォルダの .log は無視）
 const keepLogPath = p => { p = p.split('\\').join('/'); return /\.log$/i.test(p) && (/(^|\/)Game\.log$/i.test(p) || /(^|\/)logbackups\//i.test(p)); };
 $('logDir').addEventListener('change', ev=>{
   const fs = [...ev.target.files].filter(f=>keepLogPath(f.webkitRelativePath || f.name));
   ev.target.value = '';
-  if(fs.length) readLogs(fs);
+  const auto = autoNext; autoNext = false;
+  if(fs.length) readLogs(fs, auto);
   else $('logStatus').textContent = 'このフォルダには Game.log も logbackups もありませんでした。StarCitizen の中の LIVE フォルダを選んでください。';
 });
 /* ドラッグ＆ドロップ: フォルダは logbackups / LIVE など関係するところだけ辿る（data や Bin64 は開かない） */
@@ -1272,9 +1298,12 @@ const logVisible = () => logCands.filter(c=>!c.done && (logFilter==='all'||c.kin
 $('logAll').onclick = ()=>{ for(const c of logVisible()) c.checked = true; drawLog(); };
 $('logNone').onclick = ()=>{ for(const c of logVisible()) c.checked = false; drawLog(); };
 $('logClose').onclick = ()=>{ logCands = []; $('logResult').hidden = true; $('logStatus').textContent = ''; };
-$('logImport').onclick = async ()=>{
+async function importSelected(auto){
   const sel = logCands.filter(c=>c.checked && !c.done);
-  if(!sel.length) return;
+  if(!sel.length){
+    if(auto){ const m = '新しい記録はありませんでした（すべて取り込み済みです）。'; $('logStatus').textContent = m; toast(m); }
+    return;
+  }
   const have = new Set(entries.map(e=>e.src).filter(Boolean));
   const list = sel.flatMap(c=>{
     const e = {id:c.key, date:c.date, type:c.type, amount:c.amount, memo:c.memo, src:c.key, createdAt:c.t};
@@ -1302,7 +1331,8 @@ $('logImport').onclick = async ()=>{
   }finally{
     btn.textContent = label; btn.disabled = !logCands.some(c=>c.checked && !c.done) || readOnly;
   }
-};
+}
+$('logImport').onclick = ()=>importSelected(false);
 
 /* ---------- form ---------- */
 function renderChips(){
