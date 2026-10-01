@@ -40,11 +40,12 @@ body{background:var(--bg);color:var(--ink);font-family:var(--f-body);font-size:1
 .wrap{max-width:1040px;margin:0 auto;display:grid;gap:18px}
 .num{font-family:var(--f-mono);font-variant-numeric:tabular-nums}
 .pos{color:var(--pos)} .neg{color:var(--neg)}
-header{display:flex;flex-wrap:wrap;align-items:flex-end;justify-content:space-between;gap:8px 16px}
+header{display:grid;grid-template-columns:1fr auto;align-items:center;gap:4px 16px}
 .brand{font-family:var(--f-disp);font-weight:600;font-size:26px;letter-spacing:.04em;margin:0}
 .brand span{color:var(--accent)}
 .sub{color:var(--muted);font-size:12px;letter-spacing:.06em}
-.hmeta{display:grid;gap:4px;justify-items:end;font-size:12px;color:var(--muted)}
+.hmeta{grid-column:1/-1;display:flex;flex-wrap:wrap;align-items:center;justify-content:flex-end;gap:4px 18px;font-size:12px;color:var(--muted)}
+.hmeta>div:empty{display:none}
 .hmeta b{color:var(--ink);font-weight:500}
 .hbtns{display:flex;flex-wrap:wrap;gap:6px;justify-content:flex-end}
 .hbtns .btn{padding:6px 14px;font-size:13px}
@@ -214,11 +215,11 @@ code{font-family:var(--f-mono);font-size:12px;background:var(--surface-2);border
       <h1 class="brand" id="brand">aUEC <span>LEDGER</span></h1>
       <div class="sub" id="subtitle">STAR CITIZEN ・ 契約と所持金の記録</div>
     </div>
+    <div class="hbtns">
+      <button class="btn" type="button" id="hdrImport" title="ゲームのログを読み、新しい記録をそのまま取り込みます">ログを取り込む</button>
+      <button class="btn ghost" type="button" id="hdrShare" aria-expanded="false" hidden>共有URL</button>
+    </div>
     <div class="hmeta">
-      <div class="hbtns">
-        <button class="btn" type="button" id="hdrImport" title="ゲームのログを読み、新しい記録をそのまま取り込みます">ログを取り込む</button>
-        <button class="btn ghost" type="button" id="hdrShare" aria-expanded="false" hidden>共有URL</button>
-      </div>
       <div class="peers" id="peers" hidden></div>
       <div id="storeNote">保存先を確認中…</div>
       <div id="dataNote"></div>
@@ -390,14 +391,14 @@ code{font-family:var(--f-mono);font-size:12px;background:var(--surface-2);border
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
-<script src="config.js?v=1.10.3"></script>
-<script src="web_backend.js?v=1.10.3"></script>
+<script src="config.js?v=1.10.4"></script>
+<script src="web_backend.js?v=1.10.4"></script>
 <script>
 /* 'solo' = 個人用, 'shared' = claude.ai で共有, 'web' = GitHub Pages + Firebase で共有（web_backend.js） */
 const MODE = 'web';
 /* 変更して公開するたびに上げる（表示はフッター） */
-const APP_VERSION = '1.10.3';
-const APP_UPDATED = '2026-10-01 12:56';   // 日本時間
+const APP_VERSION = '1.10.4';
+const APP_UPDATED = '2026-10-01 12:58';   // 日本時間
 const SHARED = MODE !== 'solo';
 
 const TYPES = [
