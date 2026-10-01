@@ -436,14 +436,14 @@ code{font-family:var(--f-mono);font-size:12px;background:var(--surface-2);border
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
-<script src="config.js?v=2.1.4"></script>
-<script src="web_backend.js?v=2.1.4"></script>
+<script src="config.js?v=2.1.5"></script>
+<script src="web_backend.js?v=2.1.5"></script>
 <script>
 /* 'solo' = 個人用, 'shared' = claude.ai で共有, 'web' = GitHub Pages + Firebase で共有（web_backend.js） */
 const MODE = 'web';
 /* 変更して公開するたびに上げる（表示はフッター） */
-const APP_VERSION = '2.1.4';
-const APP_UPDATED = '2026-10-02 00:57';   // 日本時間
+const APP_VERSION = '2.1.5';
+const APP_UPDATED = '2026-10-02 01:00';   // 日本時間
 const SHARED = MODE !== 'solo';
 
 const TYPES = [
@@ -1387,6 +1387,8 @@ window.onExeStatus = ()=>{
   const st = myExe();
   if(!st || !usePcTool()) return;
   if(verLt(st.exeVersion, MIN_EXE_VERSION)) showExeAlert(`取り込みプログラムが古い版（v${st.exeVersion}）です。最新版をダウンロードして、今の exe に上書きしてください。古いままだと、記録が正しく取り込まれないことがあります。`);
+  // 最新版の報告が届いたら、どこから起動した場合でも（ダブルクリックでも）警告を消す
+  else if(st.ok && !exeWait) $('exeAlert').hidden = true;
   if(exeWait && st.at >= exeWait.since){
     clearTimeout(exeWait.timer); exeWait = null;
     if(!st.ok){ showExeAlert('取り込みでエラーが出ました: ' + (st.message || '不明なエラー')); return; }
