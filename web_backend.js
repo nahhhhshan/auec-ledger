@@ -193,7 +193,12 @@ async function initWeb(){
   window.redrawPeers = drawPeers;
   let swept = false;
   P.onSnapshot(s => {
-    peers = s.docs.map(d => { const x = d.data({serverTimestamps:'estimate'}); return {id:d.id, name:x.name, at:x.at ? x.at.toMillis() : 0}; });
+    const all = s.docs.map(d => { const x = d.data({serverTimestamps:'estimate'}); return {...x, id:d.id, at:x.at ? x.at.toMillis() : 0}; });
+    // exe- で始まるものは取り込みプログラムの結果（版・追加件数）。接続中の表示と掃除の対象からは外す
+    window.exeStatus = {};
+    for(const p of all) if(p.id.startsWith('exe-') && p.name) window.exeStatus[p.name] = p;
+    peers = all.filter(p => !p.id.startsWith('exe-'));
+    if(window.onExeStatus) window.onExeStatus();
     // 閉じ損ねて残った古い接続記録（10分以上更新なし）を一度だけ掃除する
     if(!swept && !s.metadata.fromCache){
       swept = true;

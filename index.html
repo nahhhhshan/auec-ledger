@@ -70,6 +70,9 @@ button.pav:hover .av,button.pav:focus-visible .av{outline:2px solid var(--accent
 .pname small{font-size:11px;margin-left:4px}
 .pname .phandle{display:block;margin-left:0;font-family:var(--f-mono)}
 .pbal{font-size:22px;font-weight:500}
+.padj{justify-self:start;grid-column:2;margin-top:4px;font:inherit;font-size:11px;color:var(--accent);background:none;border:1px solid var(--line);border-radius:4px;padding:2px 8px;cursor:pointer}
+.tile .padj{grid-column:auto}
+.padj:hover,.padj:focus-visible{border-color:var(--accent)}
 .pbal .u{font-size:12px;color:var(--muted);margin-left:4px;font-family:var(--f-disp)}
 .whowrap{display:grid;gap:4px}
 .whowrap select{font:inherit;background:var(--surface-2);border:1px solid var(--line);border-radius:4px;padding:7px 8px;color:var(--ink)}
@@ -182,6 +185,8 @@ input:focus-visible,button:focus-visible{outline:2px solid var(--accent);outline
 .exedl details{font-size:12px;color:var(--muted)}
 .exedl summary{cursor:pointer;color:var(--accent)}
 .exedl ol{margin:6px 0;padding-left:20px;display:grid;gap:3px}
+.exealert{border:1px solid var(--neg);background:color-mix(in srgb, var(--neg) 8%, var(--surface));border-radius:6px;padding:12px 14px;display:grid;gap:10px;font-size:13px}
+.exealert p{margin:0}
 .pctool{display:flex;gap:8px;align-items:flex-start;font-size:12px;color:var(--muted);margin-top:10px}
 .pctool b{color:var(--ink);font-weight:500}
 .pctool input{margin-top:2px}
@@ -222,6 +227,7 @@ code{font-family:var(--f-mono);font-size:12px;background:var(--surface-2);border
     </div>
     <div class="hbtns">
       <button class="btn" type="button" id="hdrImport" title="ゲームのログを読み、新しい記録をそのまま取り込みます">ログを取り込む</button>
+      <button class="btn ghost" type="button" id="hdrExe" aria-expanded="false" hidden title="この PC の取り込みプログラム（Windows）の設定とダウンロード">取り込みプログラム</button>
       <button class="btn ghost" type="button" id="hdrShare" aria-expanded="false" hidden>共有URL</button>
     </div>
     <div class="hmeta">
@@ -233,6 +239,13 @@ code{font-family:var(--f-mono);font-size:12px;background:var(--surface-2);border
 
   <div class="demo" id="roNote" hidden>このアプリは閲覧のみの権限で開かれています。記録を追加するには、持ち主に「編集可能」以上で共有してもらってください。</div>
 
+  <section class="exealert" id="exeAlert" role="alert" hidden>
+    <p id="exeAlertMsg"></p>
+    <div class="row"><a class="btn" href="https://github.com/nahhhhshan/auec-ledger/releases/latest/download/SCLogImport.exe" target="_blank" rel="noopener">取り込みプログラムをダウンロード</a>
+      <button type="button" class="btn ghost" id="exeAlertHelp">使い方</button>
+      <button type="button" class="btn ghost" id="exeAlertClose">閉じる</button></div>
+  </section>
+
   <section class="periodbar" aria-label="表示する期間">
     <span class="lab">表示する期間</span>
     <span class="range" id="periodChips"></span>
@@ -242,7 +255,8 @@ code{font-family:var(--f-mono);font-size:12px;background:var(--surface-2);border
   </section>
 
   <section class="tiles" aria-label="概要">
-    <div class="tile main"><div class="k" id="tBalLabel">現在の所持金</div><div class="v" id="tBal">0<span class="u">aUEC</span></div></div>
+    <div class="tile main"><div class="k" id="tBalLabel">現在の所持金</div><div class="v" id="tBal">0<span class="u">aUEC</span></div>
+      <button type="button" class="padj" data-adj="" id="soloAdj" hidden title="ゲーム内の所持金に合わせる">残高補正</button></div>
     <div class="tile"><div class="k">今日の収支</div><div class="v" id="tToday">0</div></div>
     <div class="tile"><div class="k">直近7日</div><div class="v" id="tWeek">0</div></div>
     <div class="tile"><div class="k" id="tCountLabel">記録件数</div><div class="v" id="tCount">0</div></div>
@@ -327,21 +341,6 @@ code{font-family:var(--f-mono);font-size:12px;background:var(--surface-2);border
       <p class="hint">フォルダ選択の画面にパスを入れたいときは、下の「フォルダー:」欄に <code>C:\Program Files\Roberts Space Industries\StarCitizen\LIVE\logbackups</code> を貼り付けて「アップロード」を押してください。</p>
       <p class="hint"><b>おすすめ:</b>「LIVE フォルダごと選ぶ」で上の場所の <code>LIVE</code> フォルダを選ぶと、今のログ（<code>Game.log</code>・最後の1回分）と過去のログ（<code>logbackups</code> 内）をまとめて読みます。ブラウザに「アップロードしますか」と聞かれますが、実際にはどこにも送らず、このページの中で読むだけです。</p>
     </div>
-    <div class="exedl" id="exeDl" hidden>
-      <a class="btn ghost" id="exeLink" href="https://github.com/nahhhhshan/auec-ledger/releases/latest/download/SCLogImport.exe" target="_blank" rel="noopener">取り込みプログラム（Windows）をダウンロード</a>
-      <details>
-        <summary>使い方</summary>
-        <ol>
-          <li>ダウンロードした <code>SCLogImport.exe</code> を、ずっと置いておく場所（ドキュメントなど）に置いてダブルクリック（「PC が保護されました」と出たら「詳細情報」→「実行」）</li>
-          <li>共有帳簿のURL（右上「共有URL」→「コピー」）、このページで使っている名前、Star Citizen の LIVE フォルダ（自動で見つかれば Enter だけ）を入力</li>
-          <li>今までのログがそのまま取り込まれます</li>
-          <li>下の「この PC の取り込みプログラムを使う」にチェックを入れると、右上の「ログを取り込む」だけで取り込めます（初回はブラウザの確認で「常に許可」→「開く」）</li>
-        </ol>
-        <p class="hint">exe を別の場所に移したら、もう一度ダブルクリックしてください。共有URLや名前は exe には入っておらず、各 PC に保存されます。</p>
-      </details>
-    </div>
-    <label class="pctool" id="pcToolRow" hidden><input type="checkbox" id="usePcTool">
-      <span><b>この PC の取り込みプログラムを使う</b>（右上の「ログを取り込む」でフォルダを選ばずに取り込みます。デスクトップの「SCログ取り込み」が入っている PC だけで有効にしてください。初回はブラウザが「アプリを開きますか」と確認します）</span></label>
     <div id="logStatus" class="hint" role="status"></div>
     <div id="logResult" hidden>
       <div class="logbar">
@@ -404,19 +403,46 @@ code{font-family:var(--f-mono);font-size:12px;background:var(--surface-2);border
   </div>
   <div class="hint" id="avMsg" role="status"></div>
 </div>
+<div class="avatarpop" id="exePop" role="dialog" aria-label="取り込みプログラム" hidden>
+  <div class="avhead"><b>取り込みプログラム（Windows）</b><button type="button" class="btn ghost" id="exeClose" style="padding:2px 10px;font-size:12px">閉じる</button></div>
+  <div class="hint" id="exeState"></div>
+  <label class="pctool"><input type="checkbox" id="usePcTool">
+    <span><b>この PC の取り込みプログラムを使う</b>（「ログを取り込む」でフォルダを選ばずに取り込みます。exe を入れた PC だけで有効にしてください）</span></label>
+  <div class="exedl">
+    <a class="btn ghost" href="https://github.com/nahhhhshan/auec-ledger/releases/latest/download/SCLogImport.exe" target="_blank" rel="noopener">最新版をダウンロード</a>
+    <details>
+        <summary>使い方</summary>
+        <ol>
+          <li>ダウンロードした <code>SCLogImport.exe</code> を、ずっと置いておく場所（ドキュメントなど）に置いてダブルクリック（「PC が保護されました」と出たら「詳細情報」→「実行」）。古い exe があるときは、同じ場所に上書きしてからダブルクリック</li>
+          <li>初めての場合は、共有帳簿のURL（右上「共有URL」→「コピー」）、このページで使っている名前、Star Citizen の LIVE フォルダ（自動で見つかれば Enter だけ）を入力</li>
+          <li>「この PC の取り込みプログラムを使う」にチェックを入れると、右上の「ログを取り込む」だけで取り込めます（初回はブラウザの確認で「常に許可」→「開く」）</li>
+        </ol>
+        <p class="hint">exe を別の場所に移したら、もう一度ダブルクリックしてください。共有URLや名前は exe には入っておらず、各 PC に保存されます。</p>
+      </details>
+  </div>
+</div>
+<div class="avatarpop" id="adjPop" role="dialog" aria-label="残高補正" hidden>
+  <div class="avhead"><b id="adjTitle">残高補正</b><button type="button" class="btn ghost" id="adjClose" style="padding:2px 10px;font-size:12px">閉じる</button></div>
+  <div class="hint" id="adjNow"></div>
+  <form id="adjForm" class="row" style="align-items:end">
+    <label style="flex:1 1 160px"><span class="lab">ゲーム内の所持金 (aUEC)</span><input type="text" id="adjInput" inputmode="decimal" placeholder="例: 2498287 / 2.5m" autocomplete="off"></label>
+    <button class="btn" type="submit">記録</button>
+  </form>
+  <div class="hint" id="adjPreview" role="status"></div>
+</div>
 <div class="toast" id="toast" hidden></div>
 
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
-<script src="config.js?v=2.0.2"></script>
-<script src="web_backend.js?v=2.0.2"></script>
+<script src="config.js?v=2.1.0"></script>
+<script src="web_backend.js?v=2.1.0"></script>
 <script>
 /* 'solo' = 個人用, 'shared' = claude.ai で共有, 'web' = GitHub Pages + Firebase で共有（web_backend.js） */
 const MODE = 'web';
 /* 変更して公開するたびに上げる（表示はフッター） */
-const APP_VERSION = '2.0.2';
-const APP_UPDATED = '2026-10-02 00:37';   // 日本時間
+const APP_VERSION = '2.1.0';
+const APP_UPDATED = '2026-10-02 00:46';   // 日本時間
 const SHARED = MODE !== 'solo';
 
 const TYPES = [
@@ -741,7 +767,8 @@ function renderPeople(){
   bar.innerHTML = ps.map(p=>`<div class="pcard" style="--pc:${colorOf(p)}">
       ${p===me ? `<button type="button" class="pav" data-avatar-me title="クリックでアイコンを設定">${avatarHtml(p, 'lg')}</button>` : `<span class="pav">${avatarHtml(p, 'lg')}</span>`}
       <span class="pname">${esc(nameOf(p))}${p===me?'<small>（あなた）</small>':''}${(settings.handles||{})[p] ? `<small class="phandle">ゲーム内: ${esc(settings.handles[p])}</small>` : ''}</span>
-      <span class="pbal num">${fmt(each[p]||0)}<span class="u">aUEC</span></span></div>`).join('')
+      <span class="pbal num">${fmt(each[p]||0)}<span class="u">aUEC</span></span>
+      ${readOnly ? '' : `<button type="button" class="padj" data-adj="${esc(p)}" title="ゲーム内の所持金に合わせる">残高補正</button>`}</div>`).join('')
     + (unassigned ? `<div class="pcard" style="--pc:var(--line)"><span class="pname">未割り当て<small>（記録者なし${sc?'':'・共通の開始額'}）</small></span><span class="pbal num">${fmt(unassigned)}<span class="u">aUEC</span></span></div>` : '');
   // 設定欄の「対象の人」
   const sel = $('who'), cur = sel.value || me || ps[0] || '';
@@ -1340,20 +1367,56 @@ function drawLogSum(){
 let autoNext = false;
 const PCTOOL_KEY = 'auec-sclog';
 const usePcTool = () => { try{ return MODE === 'web' && localStorage.getItem(PCTOOL_KEY) === '1'; }catch(e){ return false; } };
+/* ---------- 取り込みプログラム（exe）の版の確認 ----------
+   exe は取り込みのたびに「版・追加件数」を帳簿（presence/exe-名前）に書き残す。
+   起動して25秒たっても返事がない（入っていない・古い）か、版が MIN_EXE_VERSION より古ければ、警告とダウンロードを出す */
+const MIN_EXE_VERSION = '2.1.0';
+const verLt = (a, b) => { const x = String(a).split('.').map(Number), y = String(b).split('.').map(Number); for(let i=0;i<3;i++){ if((x[i]||0) !== (y[i]||0)) return (x[i]||0) < (y[i]||0); } return false; };
+let exeWait = null;
+const myExe = () => (window.exeStatus||{})[me];
+function showExeAlert(msg){ $('exeAlertMsg').textContent = msg; $('exeAlert').hidden = false; }
+function exeStateText(){
+  const st = myExe();
+  if(!st) return 'この PC の取り込みプログラムからの記録はまだありません。';
+  const when = st.at ? new Date(st.at).toLocaleString('ja-JP', {month:'2-digit', day:'2-digit', hour:'2-digit', minute:'2-digit'}) : '';
+  return `この PC の取り込みプログラム: v${st.exeVersion}${verLt(st.exeVersion, MIN_EXE_VERSION) ? '（古い版です）' : ''}　最後の取り込み ${when}（${st.ok ? fmt(st.added||0) + '件を追加' : 'エラー'}）`;
+}
+window.onExeStatus = ()=>{
+  $('exeState').textContent = exeStateText();
+  const st = myExe();
+  if(!st || !usePcTool()) return;
+  if(verLt(st.exeVersion, MIN_EXE_VERSION)) showExeAlert(`取り込みプログラムが古い版（v${st.exeVersion}）です。最新版をダウンロードして、今の exe に上書きしてください。古いままだと、記録が正しく取り込まれないことがあります。`);
+  if(exeWait && st.at >= exeWait.since){
+    clearTimeout(exeWait.timer); exeWait = null;
+    if(!st.ok){ showExeAlert('取り込みでエラーが出ました: ' + (st.message || '不明なエラー')); return; }
+    if(!verLt(st.exeVersion, MIN_EXE_VERSION)) $('exeAlert').hidden = true;
+    const m = st.added ? `${fmt(st.added)}件を取り込みました（取り込みプログラム v${st.exeVersion}）` : `新しい記録はありませんでした（取り込みプログラム v${st.exeVersion}）`;
+    $('logStatus').textContent = m; toast(m);
+  }
+};
 $('hdrImport').onclick = ()=>{
   if(usePcTool()){
     // この PC の取り込みプログラム（sclog://）を起動。結果は共有帳簿を通して、この画面にそのまま反映される
     location.href = 'sclog://import';
-    $('logStatus').textContent = 'この PC の取り込みプログラムを起動しました。数秒〜十数秒で記録に反映されます。何も起きない場合は「この PC の取り込みプログラムを使う」の説明を確認してください。';
-    toast('PC の取り込みプログラムを起動しました');
+    $('logStatus').textContent = 'この PC の取り込みプログラムを起動しました。数秒〜十数秒で記録に反映されます。';
+    toast('取り込みプログラムを起動しました');
+    if(exeWait) clearTimeout(exeWait.timer);
+    exeWait = {since: Date.now() - 5000, timer: setTimeout(()=>{
+      exeWait = null;
+      showExeAlert('取り込みプログラムから応答がありませんでした。この PC に入っていないか、古い版の可能性があります。最新版をダウンロードし、今の exe があれば同じ場所に上書きしてからダブルクリックしてください。');
+    }, 25000)};
     return;
   }
   autoNext = true; $('logDir').click();
 };
 document.querySelector('label[for="logDir"]').addEventListener('click', ()=>{ autoNext = false; });
+const openExePop = open => { $('exePop').hidden = !open; $('hdrExe').setAttribute('aria-expanded', String(open)); if(open) $('exeState').textContent = exeStateText(); };
 if(MODE === 'web'){
-  $('pcToolRow').hidden = false;
-  $('exeDl').hidden = false;
+  $('hdrExe').hidden = false;
+  $('hdrExe').onclick = ()=> openExePop($('exePop').hidden);
+  $('exeClose').onclick = ()=> openExePop(false);
+  $('exeAlertClose').onclick = ()=>{ $('exeAlert').hidden = true; };
+  $('exeAlertHelp').onclick = ()=>{ openExePop(true); $('exePop').querySelector('details').open = true; };
   try{ $('usePcTool').checked = localStorage.getItem(PCTOOL_KEY) === '1'; }catch(e){}
   $('usePcTool').addEventListener('change', ev=>{ try{ localStorage.setItem(PCTOOL_KEY, ev.target.checked ? '1' : '0'); }catch(e){} });
 }
@@ -1532,21 +1595,49 @@ $('moveLegacy').onclick = async ()=>{
   catch(e){ toast(saveErr(e)); }
 };
 $('who').addEventListener('change', ()=>{ const v = startsFor(balScope())[$('who').value]||0; $('startBal').value = v ? fmt(v) : ''; });
-$('saveActual').onclick = async ()=>{
-  const v = parseAmount($('actualBal').value);
-  if(isNaN(v)){ toast('ゲーム内の現在額を入力してください'); return; }
-  const who = SHARED ? $('who').value : '';
+/* 残高補正: ゲーム内の実際の所持金に合わせて、差額を「残高補正」として記録する（今表示している期の中で計算） */
+function currentBalanceOf(who){
   const sc = balScope();
-  const cur = SHARED ? (personBalances(sc).each[who]||0) : compute(entries.filter(e=>inScope(sc, e.date)), totalStart(sc)).balance;
-  const diff = v - cur;
-  if(diff===0){ toast('記録と一致しています'); return; }
+  return SHARED ? (personBalances(sc).each[who]||0) : compute(entries.filter(e=>inScope(sc, e.date)), totalStart(sc)).balance;
+}
+async function adjustTo(who, v){
+  const sc = balScope();
+  const diff = v - currentBalanceOf(who);
+  if(diff===0){ toast('記録と一致しています'); return true; }
   // 過去の期を見ているときは、その期の最終日に補正を入れる（今日に入れると別の期に入ってしまう）
   const date = (sc && sc.to && sc.to < today()) ? sc.to : today();
   const e = {date, type:'adjust', amount:diff, memo:'残高補正', createdAt:Date.now()};
   if(SHARED && who) e.by = who;
-  try{ await store.add(e); $('actualBal').value=''; toast('差額 '+sfmt(diff)+' を補正として記録しました'); }
-  catch(err){ toast('保存できませんでした（'+(err.code||err)+'）'); }
+  try{ await store.add(e); toast((SHARED ? nameOf(who) + ' の' : '') + '差額 ' + sfmt(diff) + ' を補正として記録しました'); return true; }
+  catch(err){ toast(saveErr(err)); return false; }
+}
+$('saveActual').onclick = async ()=>{
+  const v = parseAmount($('actualBal').value);
+  if(isNaN(v)){ toast('ゲーム内の現在額を入力してください'); return; }
+  if(await adjustTo(SHARED ? $('who').value : '', v)) $('actualBal').value = '';
 };
+/* 所持金のカード（個人用は上の所持金の欄）の「残高補正」ボタン → 小窓で金額を入れる */
+let adjWho = '';
+function openAdjPop(who){
+  if(readOnly) return;
+  adjWho = who;
+  $('adjTitle').textContent = SHARED ? `${nameOf(who)} の残高補正` : '残高補正';
+  $('adjNow').textContent = `アプリ上の所持金${scopeName() ? '（' + scopeName() + '）' : ''}: ${fmt(currentBalanceOf(who))} aUEC`;
+  $('adjInput').value = ''; $('adjPreview').textContent = '';
+  $('adjPop').hidden = false; $('adjInput').focus();
+}
+$('adjInput').addEventListener('input', ()=>{
+  const v = parseAmount($('adjInput').value);
+  $('adjPreview').innerHTML = isNaN(v) ? '' : `差額 <b class="${cls(v - currentBalanceOf(adjWho))}">${sfmt(v - currentBalanceOf(adjWho))}</b> aUEC を「残高補正」として記録します`;
+});
+$('adjForm').addEventListener('submit', async ev=>{
+  ev.preventDefault();
+  const v = parseAmount($('adjInput').value);
+  if(isNaN(v)){ $('adjPreview').textContent = 'ゲーム内の所持金を数字で入れてください（例: 2498287 / 2.5m）'; return; }
+  if(await adjustTo(adjWho, v)) $('adjPop').hidden = true;
+});
+$('adjClose').onclick = ()=>{ $('adjPop').hidden = true; };
+document.addEventListener('click', ev=>{ const b = ev.target.closest('[data-adj]'); if(b) openAdjPop(b.dataset.adj); });
 $('clearBtn').onclick = ()=>{
   if(!entries.length){ toast('削除する記録はありません'); return; }
   $('clearMsg').innerHTML = `<b>${fmt(entries.length)}件</b>の記録をすべて削除します。${SHARED?'共有している相手の画面からも消えます。':''}元に戻せないので、必要なら先に「CSVをコピー」で控えを取ってください。開始時の所持金の設定は残ります。`;
@@ -1578,6 +1669,7 @@ if(SHARED){
   $('brand').innerHTML = 'aUEC <span>SHARED LEDGER</span>';
   $('subtitle').textContent = 'STAR CITIZEN ・ 二人の共有口座';
 }
+if(!SHARED) $('soloAdj').hidden = false;
 $('appFoot').innerHTML = `<span>aUEC Ledger <b class="num">v${APP_VERSION}</b>（${{solo:'個人用',shared:'共有用',web:'共有用・Web'}[MODE]}）</span><span>更新日時 <span class="num">${APP_UPDATED.replace(/-/g,'.')}</span></span>`;
 $('date').value = today();
 renderChips(); setDir(1);
