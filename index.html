@@ -46,6 +46,7 @@ header{display:grid;grid-template-columns:1fr auto;align-items:center;gap:4px 16
 .sub{color:var(--muted);font-size:12px;letter-spacing:.06em}
 .hmeta{grid-column:1/-1;display:flex;flex-wrap:wrap;align-items:center;justify-content:flex-end;gap:4px 18px;font-size:12px;color:var(--muted)}
 .hmeta>div:empty{display:none}
+.hmeta #peers{order:3}
 .hmeta b{color:var(--ink);font-weight:500}
 .hbtns{display:flex;flex-wrap:wrap;gap:6px;justify-content:flex-end}
 .hbtns .btn{padding:6px 14px;font-size:13px}
@@ -177,6 +178,10 @@ input:focus-visible,button:focus-visible{outline:2px solid var(--accent);outline
 .hint{font-size:12px;color:var(--muted);margin:0}
 /* log import */
 .logintro{display:grid;gap:10px}
+.exedl{display:grid;gap:6px;margin-top:10px;justify-items:start}
+.exedl details{font-size:12px;color:var(--muted)}
+.exedl summary{cursor:pointer;color:var(--accent)}
+.exedl ol{margin:6px 0;padding-left:20px;display:grid;gap:3px}
 .pctool{display:flex;gap:8px;align-items:flex-start;font-size:12px;color:var(--muted);margin-top:10px}
 .pctool b{color:var(--ink);font-weight:500}
 .pctool input{margin-top:2px}
@@ -322,6 +327,19 @@ code{font-family:var(--f-mono);font-size:12px;background:var(--surface-2);border
       <p class="hint">フォルダ選択の画面にパスを入れたいときは、下の「フォルダー:」欄に <code>C:\Program Files\Roberts Space Industries\StarCitizen\LIVE\logbackups</code> を貼り付けて「アップロード」を押してください。</p>
       <p class="hint"><b>おすすめ:</b>「LIVE フォルダごと選ぶ」で上の場所の <code>LIVE</code> フォルダを選ぶと、今のログ（<code>Game.log</code>・最後の1回分）と過去のログ（<code>logbackups</code> 内）をまとめて読みます。ブラウザに「アップロードしますか」と聞かれますが、実際にはどこにも送らず、このページの中で読むだけです。</p>
     </div>
+    <div class="exedl" id="exeDl" hidden>
+      <a class="btn ghost" id="exeLink" href="https://github.com/nahhhhshan/auec-ledger/releases/latest/download/SCLogImport.exe" target="_blank" rel="noopener">取り込みプログラム（Windows）をダウンロード</a>
+      <details>
+        <summary>使い方</summary>
+        <ol>
+          <li>ダウンロードした <code>SCLogImport.exe</code> を、ずっと置いておく場所（ドキュメントなど）に置いてダブルクリック（「PC が保護されました」と出たら「詳細情報」→「実行」）</li>
+          <li>共有帳簿のURL（右上「共有URL」→「コピー」）、このページで使っている名前、Star Citizen の LIVE フォルダ（自動で見つかれば Enter だけ）を入力</li>
+          <li>今までのログがそのまま取り込まれます</li>
+          <li>下の「この PC の取り込みプログラムを使う」にチェックを入れると、右上の「ログを取り込む」だけで取り込めます（初回はブラウザの確認で「常に許可」→「開く」）</li>
+        </ol>
+        <p class="hint">exe を別の場所に移したら、もう一度ダブルクリックしてください。共有URLや名前は exe には入っておらず、各 PC に保存されます。</p>
+      </details>
+    </div>
     <label class="pctool" id="pcToolRow" hidden><input type="checkbox" id="usePcTool">
       <span><b>この PC の取り込みプログラムを使う</b>（右上の「ログを取り込む」でフォルダを選ばずに取り込みます。デスクトップの「SCログ取り込み」が入っている PC だけで有効にしてください。初回はブラウザが「アプリを開きますか」と確認します）</span></label>
     <div id="logStatus" class="hint" role="status"></div>
@@ -391,14 +409,14 @@ code{font-family:var(--f-mono);font-size:12px;background:var(--surface-2);border
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
-<script src="config.js?v=1.10.4"></script>
-<script src="web_backend.js?v=1.10.4"></script>
+<script src="config.js?v=1.11.0"></script>
+<script src="web_backend.js?v=1.11.0"></script>
 <script>
 /* 'solo' = 個人用, 'shared' = claude.ai で共有, 'web' = GitHub Pages + Firebase で共有（web_backend.js） */
 const MODE = 'web';
 /* 変更して公開するたびに上げる（表示はフッター） */
-const APP_VERSION = '1.10.4';
-const APP_UPDATED = '2026-10-01 12:58';   // 日本時間
+const APP_VERSION = '1.11.0';
+const APP_UPDATED = '2026-10-01 13:00';   // 日本時間
 const SHARED = MODE !== 'solo';
 
 const TYPES = [
@@ -1325,6 +1343,7 @@ $('hdrImport').onclick = ()=>{
 document.querySelector('label[for="logDir"]').addEventListener('click', ()=>{ autoNext = false; });
 if(MODE === 'web'){
   $('pcToolRow').hidden = false;
+  $('exeDl').hidden = false;
   try{ $('usePcTool').checked = localStorage.getItem(PCTOOL_KEY) === '1'; }catch(e){}
   $('usePcTool').addEventListener('change', ev=>{ try{ localStorage.setItem(PCTOOL_KEY, ev.target.checked ? '1' : '0'); }catch(e){} });
 }
