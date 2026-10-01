@@ -44,9 +44,9 @@ header{display:grid;grid-template-columns:1fr auto;align-items:center;gap:4px 16
 .brand{font-family:var(--f-disp);font-weight:600;font-size:26px;letter-spacing:.04em;margin:0}
 .brand span{color:var(--accent)}
 .sub{color:var(--muted);font-size:12px;letter-spacing:.06em}
-.hmeta{grid-column:1/-1;display:flex;flex-wrap:wrap;align-items:center;justify-content:flex-end;gap:4px 18px;font-size:12px;color:var(--muted)}
+.hmeta{grid-column:1/-1;display:flex;flex-wrap:wrap;align-items:center;justify-content:flex-start;gap:4px 18px;font-size:12px;color:var(--muted)}
 .hmeta>div:empty{display:none}
-.hmeta #peers{order:3}
+.hmeta #peers{order:3;margin-left:auto}
 .hmeta b{color:var(--ink);font-weight:500}
 .hbtns{display:flex;flex-wrap:wrap;gap:6px;justify-content:flex-end}
 .hbtns .btn{padding:6px 14px;font-size:13px}
@@ -409,14 +409,14 @@ code{font-family:var(--f-mono);font-size:12px;background:var(--surface-2);border
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
-<script src="config.js?v=1.11.0"></script>
-<script src="web_backend.js?v=1.11.0"></script>
+<script src="config.js?v=1.11.1"></script>
+<script src="web_backend.js?v=1.11.1"></script>
 <script>
 /* 'solo' = 個人用, 'shared' = claude.ai で共有, 'web' = GitHub Pages + Firebase で共有（web_backend.js） */
 const MODE = 'web';
 /* 変更して公開するたびに上げる（表示はフッター） */
-const APP_VERSION = '1.11.0';
-const APP_UPDATED = '2026-10-01 13:00';   // 日本時間
+const APP_VERSION = '1.11.1';
+const APP_UPDATED = '2026-10-01 13:02';   // 日本時間
 const SHARED = MODE !== 'solo';
 
 const TYPES = [
