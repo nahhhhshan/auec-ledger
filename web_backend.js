@@ -84,10 +84,18 @@ async function initWeb(){
   const L = fs.collection('ledgers').doc(lid);
 
   const shareUrl = location.href;
-  webPanel(`<h2>共有URL <span class="hint" style="font-weight:400;letter-spacing:0">このURLを知っている人は誰でも読み書きできます。相手以外には教えないでください。</span></h2>
+  // 共有URLは普段は隠し、右上の「共有URL」ボタンで開く
+  const sp = webPanel(`<h2>共有URL <span class="hint" style="font-weight:400;letter-spacing:0">このURLを知っている人は誰でも読み書きできます。相手以外には教えないでください。</span>
+      <button class="btn ghost" type="button" id="closeShare" style="padding:3px 10px;font-size:12px">閉じる</button></h2>
     <div class="row" style="align-items:center"><input type="text" id="shareUrl" readonly value="${esc(shareUrl)}" style="flex:1 1 260px">
     <button class="btn ghost" type="button" id="copyUrl">コピー</button>
     <button class="btn ghost" type="button" id="renameBtn">名前を変更（${esc(me)}）</button></div>`);
+  sp.hidden = true;
+  const hs = $('hdrShare');
+  const toggleShare = open => { sp.hidden = !open; hs.setAttribute('aria-expanded', String(open)); };
+  hs.hidden = false;
+  hs.onclick = () => toggleShare(sp.hidden);
+  $('closeShare').onclick = () => toggleShare(false);
   $('copyUrl').onclick = async () => {
     try{ await navigator.clipboard.writeText(shareUrl); toast('URLをコピーしました'); }
     catch(e){ $('shareUrl').select(); toast('選択したのでコピーしてください'); }

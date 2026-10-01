@@ -46,6 +46,8 @@ header{display:flex;flex-wrap:wrap;align-items:flex-end;justify-content:space-be
 .sub{color:var(--muted);font-size:12px;letter-spacing:.06em}
 .hmeta{display:grid;gap:4px;justify-items:end;font-size:12px;color:var(--muted)}
 .hmeta b{color:var(--ink);font-weight:500}
+.hbtns{display:flex;flex-wrap:wrap;gap:6px;justify-content:flex-end}
+.hbtns .btn{padding:6px 14px;font-size:13px}
 .peers{display:flex;flex-wrap:wrap;gap:6px;justify-content:flex-end;align-items:center}
 .peer{display:inline-flex;align-items:center;gap:5px;border:1px solid var(--line);background:var(--surface);border-radius:999px;padding:2px 9px 2px 7px;color:var(--ink)}
 .peer::before{content:"";width:7px;height:7px;border-radius:50%;background:var(--pos)}
@@ -128,6 +130,8 @@ input:focus-visible,button:focus-visible{outline:2px solid var(--accent);outline
 
 /* breakdown */
 .bars{display:grid;gap:8px}
+.dstats{display:flex;flex-wrap:wrap;gap:6px 22px;margin-top:10px;font-size:12px;color:var(--muted)}
+.dstats b{font-family:var(--f-mono);font-variant-numeric:tabular-nums;font-weight:500;color:var(--ink);font-size:14px;margin-left:6px}
 .bar{display:grid;grid-template-columns:8.5em 1fr 7.5em;gap:10px;align-items:center;font-size:13px}
 .bar>span:first-child{overflow-wrap:anywhere}
 .bar .track{height:10px;background:var(--surface-2);border-radius:2px;overflow:hidden}
@@ -198,6 +202,10 @@ code{font-family:var(--f-mono);font-size:12px;background:var(--surface-2);border
       <div class="sub" id="subtitle">STAR CITIZEN ・ 契約と所持金の記録</div>
     </div>
     <div class="hmeta">
+      <div class="hbtns">
+        <button class="btn" type="button" id="hdrImport" title="ゲームのログフォルダ（logbackups か LIVE）を選んで取り込みます">ログを取り込む</button>
+        <button class="btn ghost" type="button" id="hdrShare" aria-expanded="false" hidden>共有URL</button>
+      </div>
       <div class="peers" id="peers" hidden></div>
       <div id="storeNote">保存先を確認中…</div>
       <div id="dataNote"></div>
@@ -223,36 +231,6 @@ code{font-family:var(--f-mono);font-size:12px;background:var(--surface-2);border
 
   <section class="peoplebar" id="peopleBar" aria-label="一人ひとりの所持金" hidden></section>
 
-  <section class="panel" id="logPanel">
-    <h2>ゲームのログから取り込む</h2>
-    <div class="logintro">
-      <p class="hint">Star Citizen の <code>Game.log</code> から、契約の報酬・ショップでの購入・貨物の売却を拾って記録候補にします。過去のログは <code>logbackups</code> フォルダにあり、まとめて選べます。ファイルはこのブラウザの中で読むだけで、どこにも送りません。</p>
-      <div class="row" style="align-items:center">
-        <input type="text" id="logPath" readonly value="C:\Program Files\Roberts Space Industries\StarCitizen\LIVE" style="flex:1 1 280px">
-        <button class="btn ghost" type="button" id="copyLogPath">場所をコピー</button>
-        <label class="btn" for="logDir" style="display:inline-block">LIVE フォルダごと選ぶ</label>
-        <label class="btn ghost" for="logFiles" style="display:inline-block">ファイルを選ぶ</label>
-        <input type="file" id="logDir" webkitdirectory directory multiple hidden>
-        <input type="file" id="logFiles" accept=".log,.txt" multiple hidden>
-      </div>
-      <div class="dropzone" id="logDrop">エクスプローラーから <b>logbackups</b> フォルダ（または <b>LIVE</b> フォルダや <b>Game.log</b>）を、ここにドラッグして落としても読み込めます</div>
-      <p class="hint">フォルダ選択の画面にパスを入れたいときは、下の「フォルダー:」欄に <code>C:\Program Files\Roberts Space Industries\StarCitizen\LIVE\logbackups</code> を貼り付けて「アップロード」を押してください。</p>
-      <p class="hint"><b>おすすめ:</b>「LIVE フォルダごと選ぶ」で上の場所の <code>LIVE</code> フォルダを選ぶと、今のログ（<code>Game.log</code>・最後の1回分）と過去のログ（<code>logbackups</code> 内）をまとめて読みます。ブラウザに「アップロードしますか」と聞かれますが、実際にはどこにも送らず、このページの中で読むだけです。</p>
-    </div>
-    <div id="logStatus" class="hint" role="status"></div>
-    <div id="logResult" hidden>
-      <div class="logbar">
-        <span class="range" id="logFilters"></span>
-        <span class="range"><button type="button" id="logAll">すべて選択</button><button type="button" id="logNone">選択を解除</button></span>
-      </div>
-      <div class="logtable" id="logTable"></div>
-      <div class="logbar">
-        <span id="logSum" class="num"></span>
-        <span class="row"><button class="btn ghost" type="button" id="logClose">閉じる</button><button class="btn" type="button" id="logImport">選んだ記録を取り込む</button></span>
-      </div>
-    </div>
-  </section>
-
   <div class="grid2">
     <section class="panel">
       <h2><span>収支の内訳<small class="scopetag" id="scope1"></small></span> <span class="range" id="range1"></span></h2>
@@ -265,6 +243,12 @@ code{font-family:var(--f-mono);font-size:12px;background:var(--surface-2);border
       <div class="chart" id="chart"></div>
     </section>
   </div>
+
+  <section class="panel">
+    <h2><span>日別の収支<small class="scopetag" id="scope3"></small></span> <span class="range" id="range3"></span></h2>
+    <div class="chart" id="daily"></div>
+    <div class="dstats" id="dailyStats"></div>
+  </section>
 
   <div class="grid2">
     <section class="panel">
@@ -308,6 +292,36 @@ code{font-family:var(--f-mono);font-size:12px;background:var(--surface-2);border
     </section>
   </div>
 
+  <section class="panel" id="logPanel">
+    <h2>ゲームのログから取り込む</h2>
+    <div class="logintro">
+      <p class="hint">Star Citizen の <code>Game.log</code> から、契約の報酬・ショップでの購入・貨物の売却を拾って記録候補にします。過去のログは <code>logbackups</code> フォルダにあり、まとめて選べます。ファイルはこのブラウザの中で読むだけで、どこにも送りません。</p>
+      <div class="row" style="align-items:center">
+        <input type="text" id="logPath" readonly value="C:\Program Files\Roberts Space Industries\StarCitizen\LIVE" style="flex:1 1 280px">
+        <button class="btn ghost" type="button" id="copyLogPath">場所をコピー</button>
+        <label class="btn" for="logDir" style="display:inline-block">LIVE フォルダごと選ぶ</label>
+        <label class="btn ghost" for="logFiles" style="display:inline-block">ファイルを選ぶ</label>
+        <input type="file" id="logDir" webkitdirectory directory multiple hidden>
+        <input type="file" id="logFiles" accept=".log,.txt" multiple hidden>
+      </div>
+      <div class="dropzone" id="logDrop">エクスプローラーから <b>logbackups</b> フォルダ（または <b>LIVE</b> フォルダや <b>Game.log</b>）を、ここにドラッグして落としても読み込めます</div>
+      <p class="hint">フォルダ選択の画面にパスを入れたいときは、下の「フォルダー:」欄に <code>C:\Program Files\Roberts Space Industries\StarCitizen\LIVE\logbackups</code> を貼り付けて「アップロード」を押してください。</p>
+      <p class="hint"><b>おすすめ:</b>「LIVE フォルダごと選ぶ」で上の場所の <code>LIVE</code> フォルダを選ぶと、今のログ（<code>Game.log</code>・最後の1回分）と過去のログ（<code>logbackups</code> 内）をまとめて読みます。ブラウザに「アップロードしますか」と聞かれますが、実際にはどこにも送らず、このページの中で読むだけです。</p>
+    </div>
+    <div id="logStatus" class="hint" role="status"></div>
+    <div id="logResult" hidden>
+      <div class="logbar">
+        <span class="range" id="logFilters"></span>
+        <span class="range"><button type="button" id="logAll">すべて選択</button><button type="button" id="logNone">選択を解除</button></span>
+      </div>
+      <div class="logtable" id="logTable"></div>
+      <div class="logbar">
+        <span id="logSum" class="num"></span>
+        <span class="row"><button class="btn ghost" type="button" id="logClose">閉じる</button><button class="btn" type="button" id="logImport">選んだ記録を取り込む</button></span>
+      </div>
+    </div>
+  </section>
+
   <section class="panel">
     <h2>記録を追加（手入力）</h2>
     <form id="form" autocomplete="off">
@@ -348,14 +362,14 @@ code{font-family:var(--f-mono);font-size:12px;background:var(--surface-2);border
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
-<script src="config.js?v=1.7.0"></script>
-<script src="web_backend.js?v=1.7.0"></script>
+<script src="config.js?v=1.8.0"></script>
+<script src="web_backend.js?v=1.8.0"></script>
 <script>
 /* 'solo' = 個人用, 'shared' = claude.ai で共有, 'web' = GitHub Pages + Firebase で共有（web_backend.js） */
 const MODE = 'web';
 /* 変更して公開するたびに上げる（表示はフッター） */
-const APP_VERSION = '1.7.0';
-const APP_UPDATED = '2026-09-30 00:21';   // 日本時間
+const APP_VERSION = '1.8.0';
+const APP_UPDATED = '2026-10-01 12:30';   // 日本時間
 const SHARED = MODE !== 'solo';
 
 const TYPES = [
@@ -697,7 +711,8 @@ function render(){
   if(!SHARED && document.activeElement!==$('startBal')){ const v = (sc && !isFirstScope(sc)) ? (startsFor(sc)['']||0) : (settings.startBalance||0); $('startBal').value = v ? fmt(v) : ''; }
 
   renderBars(D.entries.filter(e=>inRange(e.date) && inP(e)));
-  renderChart(days.filter(d=>inRange(d.date) && inPeriod(d.date)), totalStart(sc), days);
+  renderChart(days.filter(d=>inPeriod(d.date)), totalStart(sc), days);
+  renderDaily(days.filter(d=>inPeriod(d.date)));
   renderDays(days.filter(d=>inPeriod(d.date)));
   renderTabs();
   renderPeople();
@@ -746,19 +761,23 @@ function renderPeriods(){
   });
   chips.push(`<button type="button" data-p="custom" aria-pressed="${period.kind==='custom'}">日付を指定</button>`);
   $('periodChips').innerHTML = chips.join('');
+  // 所持金の推移・日別の収支の切り替えも、一番上の「表示する期間」と同じ（日付指定は上の欄で）
+  const short = chips.slice(0, -1).map(c => c.replace(/第(\d+)期 [^<（]*/, '第$1期'));
+  for(const id of ['range2','range3']) $(id).innerHTML = short.join('');
   $('periodCustom').hidden = period.kind !== 'custom';
   if(period.kind === 'custom'){
     if(document.activeElement !== $('pFrom')) $('pFrom').value = period.from || '';
     if(document.activeElement !== $('pTo')) $('pTo').value = period.to || '';
   }
 }
-$('periodChips').addEventListener('click', ev=>{
+const onPeriodChip = ev=>{
   const b = ev.target.closest('[data-p]'); if(!b) return;
   if(b.dataset.p === 'latest') setPeriod({kind:'latest'});
   else if(b.dataset.p === 'auto') setPeriod({kind:'auto', i:+b.dataset.pi});
   else if(b.dataset.p === 'custom') setPeriod({kind:'custom', from: period.from || (periods.length ? periods[periods.length-1].from : today()), to: period.to || ''});
   else setPeriod({kind:'all'});
-});
+};
+for(const id of ['periodChips','range2','range3']) $(id).addEventListener('click', onPeriodChip);
 for(const id of ['pFrom','pTo']) $(id).addEventListener('change', ()=>setPeriod({kind:'custom', from:$('pFrom').value, to:$('pTo').value}));
 
 /* 「表示する期間」の名前（第2期・指定期間・全期間） */
@@ -769,11 +788,10 @@ function periodLabel(){
 }
 function renderTabs(){
   const pl = periodLabel();
-  for(const id of ['scope1','scope2']) $(id).textContent = `（${pl}${range==='all'?'':'・直近'+range+'日'}）`;
-  for(const id of ['range1','range2']){
-    $(id).innerHTML = [['7','7日'],['30','30日'],['all',pl]]
-      .map(([v,l])=>`<button type="button" data-r="${v}" aria-pressed="${range===v}">${l}</button>`).join('');
-  }
+  $('scope1').textContent = `（${pl}${range==='all'?'':'・直近'+range+'日'}）`;
+  $('scope2').textContent = $('scope3').textContent = `（${pl}）`;
+  $('range1').innerHTML = [['7','7日'],['30','30日'],['all',pl]]
+    .map(([v,l])=>`<button type="button" data-r="${v}" aria-pressed="${range===v}">${l}</button>`).join('');
   const gs = [['type','種別ごと'],['ship','船ごと']].concat(SHARED?[['by','人ごと']]:[]);
   $('groupTabs').innerHTML = gs.map(([v,l])=>`<button type="button" data-g="${v}" aria-pressed="${group===v}">${l}</button>`).join('');
 }
@@ -849,6 +867,44 @@ function renderChart(days, start, allDays){
     ${dots}
     <text x="${Math.min(X(last.x), W-R)}" y="${Math.max(Y(last.y)-12, T+10)}" text-anchor="end" style="fill:var(--gold);font-weight:500">${fmt(last.y)}</text>
   </svg>${legend}`;
+}
+
+/* 日別の収支: 収入（上向き・緑）と支出（下向き・赤）の棒、その日の差引（点）。残高補正・メンバー間の送金は含めない */
+function renderDaily(days){
+  const el = $('daily');
+  const rows = days.map(d=>{
+    let inc = 0, out = 0;
+    for(const e of d.items){ if(isInternal(e)) continue; if(e.amount >= 0) inc += e.amount; else out += e.amount; }
+    return {date:d.date, inc, out, net:inc+out};
+  }).filter(r=>r.inc || r.out);
+  if(!rows.length){ el.innerHTML = '<div class="empty">この期間の収支はありません。</div>'; $('dailyStats').innerHTML = ''; return; }
+  const W=760, H=230, L=78, R=14, T=12, B=28;
+  let ymax = Math.max(...rows.map(r=>r.inc), 0), ymin = Math.min(...rows.map(r=>r.out), 0);
+  if(ymax === ymin){ ymax += 1000; }
+  const step = niceStep(ymax - ymin, 4);
+  ymax = Math.ceil(ymax/step)*step; ymin = Math.floor(ymin/step)*step;
+  const Y = y => T + (1 - (y - ymin)/(ymax - ymin))*(H - T - B);
+  const slot = (W - L - R)/rows.length, bw = Math.max(2, Math.min(26, slot*0.7));
+  const X = i => L + slot*i + slot/2;
+  let g = '';
+  for(let v = ymin; v <= ymax + 1e-6; v += step){
+    g += `<line x1="${L}" x2="${W-R}" y1="${Y(v)}" y2="${Y(v)}" stroke="${v===0?'var(--muted)':'var(--grid)'}" stroke-width="1"/>`;
+    g += `<text x="${L-8}" y="${Y(v)+4}" text-anchor="end">${fmt(v)}</text>`;
+  }
+  const every = Math.max(1, Math.ceil(rows.length/8));
+  rows.forEach((r,i)=>{
+    const tip = `<title>${r.date}  収入 ${sfmt(r.inc)} / 支出 ${sfmt(r.out)} / 差引 ${sfmt(r.net)}</title>`;
+    if(r.inc) g += `<rect x="${X(i)-bw/2}" y="${Y(r.inc)}" width="${bw}" height="${Y(0)-Y(r.inc)}" rx="2" fill="var(--pos)" fill-opacity=".75">${tip}</rect>`;
+    if(r.out) g += `<rect x="${X(i)-bw/2}" y="${Y(0)}" width="${bw}" height="${Y(r.out)-Y(0)}" rx="2" fill="var(--neg)" fill-opacity=".7">${tip}</rect>`;
+    g += `<circle cx="${X(i)}" cy="${Y(r.net)}" r="3.5" fill="var(--gold)" stroke="var(--surface)" stroke-width="1.5">${tip}</circle>`;
+    if(i % every === 0 || i === rows.length-1) g += `<text x="${X(i)}" y="${H-8}" text-anchor="middle">${r.date.slice(5).replace('-','/')}</text>`;
+  });
+  el.innerHTML = `<svg viewBox="0 0 ${W} ${H}" role="img" aria-label="日ごとの収入と支出">${g}</svg>
+    <div class="legend"><span><i style="background:var(--pos)"></i>収入</span><span><i style="background:var(--neg)"></i>支出</span><span><i style="background:var(--gold)"></i>差引</span></div>`;
+  const tot = rows.reduce((a,r)=>a+r.net, 0), best = rows.reduce((a,r)=>r.net>a.net?r:a, rows[0]);
+  $('dailyStats').innerHTML = `<span>記録のある日<b>${rows.length}日</b></span><span>1日あたりの差引<b class="${cls(tot)}">${sfmt(Math.round(tot/rows.length))}</b></span>`
+    + `<span>いちばん稼いだ日<b class="${cls(best.net)}">${best.date.slice(5).replace('-','/')} ${sfmt(best.net)}</b></span>`
+    + `<span>収入の合計<b class="pos">${sfmt(rows.reduce((a,r)=>a+r.inc,0))}</b></span><span>支出の合計<b class="neg">${sfmt(rows.reduce((a,r)=>a+r.out,0))}</b></span>`;
 }
 
 /* 記録の時刻: ログ由来はゲーム内の時刻、手入力は入力した時刻。記録の日付と違う日の時刻（過去日付で手入力など）は出さない */
@@ -1136,6 +1192,7 @@ async function readLogs(files){
     : `${list.length}個のファイルを読みましたが、取り込める記録は見つかりませんでした。`;
   if(list.length === 1 && logCands.length) $('logStatus').textContent += '　※ Game.log は最後に遊んだ1回分だけです。それより前は logbackups にあります（「LIVE フォルダごと選ぶ」でまとめて読めます）。';
   if(handleMsg) $('logStatus').textContent += handleMsg;
+  try{ $('logPanel').scrollIntoView({behavior:'smooth', block:'start'}); }catch(e){}
   $('logResult').hidden = !logCands.length;
   logFilter = 'all'; drawLog();
 }
@@ -1161,6 +1218,7 @@ function drawLogSum(){
   $('logSum').innerHTML = `選択中 ${fmt(sel.length)}件　合計 <span class="${cls(tot)}">${sfmt(tot)} aUEC</span>`;
   $('logImport').disabled = !sel.length || readOnly;
 }
+$('hdrImport').onclick = ()=> $('logDir').click();
 $('logFiles').addEventListener('change', ev=>{ if(ev.target.files.length) readLogs(ev.target.files); ev.target.value = ''; });
 // Game.log と logbackups 内の .log だけを読む（ほかのフォルダの .log は無視）
 const keepLogPath = p => { p = p.split('\\').join('/'); return /\.log$/i.test(p) && (/(^|\/)Game\.log$/i.test(p) || /(^|\/)logbackups\//i.test(p)); };
@@ -1370,7 +1428,7 @@ function toast(msg){ const t=$('toast'); t.textContent=msg; t.hidden=false; clea
 if(SHARED){
   document.title = 'aUEC 共有収支帳';
   $('brand').innerHTML = 'aUEC <span>SHARED LEDGER</span>';
-  $('subtitle').textContent = 'STAR CITIZEN ・ 二人の共有財布';
+  $('subtitle').textContent = 'STAR CITIZEN ・ 二人の共有口座';
 }
 $('appFoot').innerHTML = `<span>aUEC Ledger <b class="num">v${APP_VERSION}</b>（${{solo:'個人用',shared:'共有用',web:'共有用・Web'}[MODE]}）</span><span>更新日時 <span class="num">${APP_UPDATED.replace(/-/g,'.')}</span></span>`;
 $('date').value = today();
