@@ -409,14 +409,14 @@ code{font-family:var(--f-mono);font-size:12px;background:var(--surface-2);border
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
-<script src="config.js?v=2.0.0"></script>
-<script src="web_backend.js?v=2.0.0"></script>
+<script src="config.js?v=2.0.1"></script>
+<script src="web_backend.js?v=2.0.1"></script>
 <script>
 /* 'solo' = 個人用, 'shared' = claude.ai で共有, 'web' = GitHub Pages + Firebase で共有（web_backend.js） */
 const MODE = 'web';
 /* 変更して公開するたびに上げる（表示はフッター） */
-const APP_VERSION = '2.0.0';
-const APP_UPDATED = '2026-10-01 13:03';   // 日本時間
+const APP_VERSION = '2.0.1';
+const APP_UPDATED = '2026-10-02 00:33';   // 日本時間
 const SHARED = MODE !== 'solo';
 
 const TYPES = [
@@ -1125,6 +1125,7 @@ function parseLogText(text, out){
   let xfer = null;              // 「○○ が以下の金額を送信しました：」の次の行に金額が出る
   const accepts = [];           // 契約の受注 {t, sec, mid, name}（費用はログに出ないのでゲームデータの費用表で補う）
   const contractOf = new Map(); // MissionId -> 内部契約名（目標マーカーの行に出る）
+  const sharedIn = new Set();   // 他の人から共有された契約の MissionId（受けても費用は払っていない）
   for(const line of lines){
     if(line.charCodeAt(0) !== 60) continue;
     if(xfer){
@@ -1141,6 +1142,10 @@ function parseLogText(text, out){
     if(!notif && !req && !err){
       if(line.includes('User Login Success - Handle[')){
         const h = line.match(/User Login Success - Handle\[([^\]]+)\]/); if(h) loginHandle = h[1];
+        continue;
+      }
+      if(line.includes('<MissionShared> Received share push message')){
+        const k = line.match(/missionId\[([0-9a-f-]+)\]/); if(k) sharedIn.add(k[1]);
         continue;
       }
       if(line.includes('CreateMarker> Creating objective marker')){
@@ -1203,6 +1208,7 @@ function parseLogText(text, out){
   }
   const costs = SC.costs || {};
   for(const a of accepts){
+    if(sharedIn.has(a.mid)) continue;   // 共有で受けた契約は、費用を払ったのは共有した人
     const dn = contractOf.get(a.mid); if(!dn) continue;
     const cost = costs[dn] || costs[dn.replace(/_\d+$/, '')];
     if(!cost) continue;
