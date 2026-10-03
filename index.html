@@ -231,12 +231,12 @@ code{font-family:var(--f-mono);font-size:12px;background:var(--surface-2);border
       <div class="sub"><span id="subtitle">STAR CITIZEN ・ 契約と所持金の記録</span><span class="ver" id="verTag" title=""></span></div>
     </div>
     <div class="hbtns">
-      <button class="btn" type="button" id="hdrImport" title="ゲームのログを読み、新しい記録をそのまま取り込みます">ログを取り込む</button>
-      <button class="btn ghost" type="button" id="hdrExe" aria-expanded="false" hidden title="この PC の取り込みプログラム（Windows）の設定とダウンロード">取り込みプログラム</button>
-      <button class="btn ghost" type="button" id="hdrShare" aria-expanded="false" hidden>共有URL</button>
       <button class="btn ghost iconbtn" type="button" id="hdrReload" title="ページを最新の状態に更新" aria-label="ページを更新">
         <svg viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 11a8 8 0 1 0-2.3 5.7"/><path d="M20 4v7h-7"/></svg>
       </button>
+      <button class="btn" type="button" id="hdrImport" title="ゲームのログを読み、新しい記録をそのまま取り込みます">ログを取り込む</button>
+      <button class="btn ghost" type="button" id="hdrExe" aria-expanded="false" hidden title="この PC の取り込みプログラム（Windows）の設定とダウンロード">取り込みプログラム</button>
+      <button class="btn ghost" type="button" id="hdrShare" aria-expanded="false" hidden>共有URL</button>
     </div>
     <div class="hmeta">
       <div class="peers" id="peers" hidden></div>
@@ -444,14 +444,14 @@ code{font-family:var(--f-mono);font-size:12px;background:var(--surface-2);border
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
-<script src="config.js?v=2.2.9"></script>
-<script src="web_backend.js?v=2.2.9"></script>
+<script src="config.js?v=2.2.10"></script>
+<script src="web_backend.js?v=2.2.10"></script>
 <script>
 /* 'solo' = 個人用, 'shared' = claude.ai で共有, 'web' = GitHub Pages + Firebase で共有（web_backend.js） */
 const MODE = 'web';
 /* 変更して公開するたびに上げる（表示はフッター） */
-const APP_VERSION = '2.2.9';
-const APP_UPDATED = '2026-10-04 00:48';   // 日本時間
+const APP_VERSION = '2.2.10';
+const APP_UPDATED = '2026-10-04 00:54';   // 日本時間
 const SHARED = MODE !== 'solo';
 
 const TYPES = [
