@@ -444,14 +444,14 @@ code{font-family:var(--f-mono);font-size:12px;background:var(--surface-2);border
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
-<script src="config.js?v=2.2.10"></script>
-<script src="web_backend.js?v=2.2.10"></script>
+<script src="config.js?v=2.2.11"></script>
+<script src="web_backend.js?v=2.2.11"></script>
 <script>
 /* 'solo' = 個人用, 'shared' = claude.ai で共有, 'web' = GitHub Pages + Firebase で共有（web_backend.js） */
 const MODE = 'web';
 /* 変更して公開するたびに上げる（表示はフッター） */
-const APP_VERSION = '2.2.10';
-const APP_UPDATED = '2026-10-04 00:54';   // 日本時間
+const APP_VERSION = '2.2.11';
+const APP_UPDATED = '2026-10-04 00:57';   // 日本時間
 const SHARED = MODE !== 'solo';
 
 const TYPES = [
@@ -1393,12 +1393,13 @@ function exeStateText(){
   return `この PC の取り込みプログラム: v${st.exeVersion}${verLt(st.exeVersion, MIN_EXE_VERSION) ? '（古い版です）' : ''}　最後の取り込み ${when}（${st.ok ? fmt(st.added||0) + '件を追加' : 'エラー'}）`
     + (st.shot ? `　スクリーンショットの所持金 ${fmt(st.shot.value)}（${new Date(st.shot.at).toLocaleString('ja-JP', {month:'2-digit', day:'2-digit', hour:'2-digit', minute:'2-digit'})}）` : '');
 }
-/* スクリーンショット（F1 → PrtSc）で読んだ所持金の結果を知らせる。ページを開いた時点ですでにあった結果は出さない */
-let lastShotAt = null;
+/* スクリーンショット（F1 → PrtSc）で読んだ所持金の結果を知らせる。
+   ページを開く前に撮ったものの結果は出さない（開いた直後は状況が遅れて届くことがあり、前回の結果を新しい知らせと取り違えないように、撮影時刻で判断する） */
+const PAGE_OPENED_AT = Date.now();
+let lastShotAt = 0;
 function shotNotice(st){
   const sh = st && st.shot;
-  if(!sh) { if(lastShotAt === null) lastShotAt = 0; return; }
-  if(lastShotAt === null || sh.at <= lastShotAt){ lastShotAt = Math.max(lastShotAt||0, sh.at); return; }
+  if(!sh || sh.at < PAGE_OPENED_AT || sh.at <= lastShotAt) return;
   lastShotAt = sh.at;
   const m = sh.recorded ? `スクリーンショットの所持金 ${fmt(sh.value)}：差額 ${sfmt(sh.diff)} を残高補正として記録しました`
     : sh.skipped ? `スクリーンショットの所持金 ${fmt(sh.value)}（帳簿 ${fmt(sh.ledger)}）: ${sh.skipped}`
