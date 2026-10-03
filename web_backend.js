@@ -80,6 +80,8 @@ async function initWeb(){
     firebase.initializeApp(cfg);
     await firebase.auth().signInAnonymously();
     fs = firebase.firestore();
+    // 読んだ記録をブラウザに残し、読み込み直したときは変わった分だけ読む（Firebase の無料枠の読み取り回数を節約）
+    fs.enablePersistence({synchronizeTabs: true}).catch(() => {});
   }catch(e){ fail('ログインできませんでした（' + esc(e.code || e.message || e) + '）。'); return; }
   const L = fs.collection('ledgers').doc(lid);
 

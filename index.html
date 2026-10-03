@@ -444,14 +444,14 @@ code{font-family:var(--f-mono);font-size:12px;background:var(--surface-2);border
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
-<script src="config.js?v=2.2.11"></script>
-<script src="web_backend.js?v=2.2.11"></script>
+<script src="config.js?v=2.2.12"></script>
+<script src="web_backend.js?v=2.2.12"></script>
 <script>
 /* 'solo' = 個人用, 'shared' = claude.ai で共有, 'web' = GitHub Pages + Firebase で共有（web_backend.js） */
 const MODE = 'web';
 /* 変更して公開するたびに上げる（表示はフッター） */
-const APP_VERSION = '2.2.11';
-const APP_UPDATED = '2026-10-04 00:57';   // 日本時間
+const APP_VERSION = '2.2.12';
+const APP_UPDATED = '2026-10-04 01:34';   // 日本時間
 const SHARED = MODE !== 'solo';
 
 const TYPES = [
@@ -1381,7 +1381,7 @@ const usePcTool = () => { try{ return MODE === 'web' && localStorage.getItem(PCT
 /* ---------- 取り込みプログラム（exe）の版の確認 ----------
    exe は取り込みのたびに「版・追加件数」を帳簿（presence/exe-名前）に書き残す。
    起動して25秒たっても返事がない（入っていない・古い）か、版が MIN_EXE_VERSION より古ければ、警告とダウンロードを出す */
-const MIN_EXE_VERSION = '2.2.8';
+const MIN_EXE_VERSION = '2.2.12';
 const verLt = (a, b) => { const x = String(a).split('.').map(Number), y = String(b).split('.').map(Number); for(let i=0;i<3;i++){ if((x[i]||0) !== (y[i]||0)) return (x[i]||0) < (y[i]||0); } return false; };
 let exeWait = null;
 const myExe = () => (window.exeStatus||{})[me];
@@ -1391,6 +1391,7 @@ function exeStateText(){
   if(!st) return 'この PC の取り込みプログラムからの記録はまだありません。';
   const when = st.at ? new Date(st.at).toLocaleString('ja-JP', {month:'2-digit', day:'2-digit', hour:'2-digit', minute:'2-digit'}) : '';
   return `この PC の取り込みプログラム: v${st.exeVersion}${verLt(st.exeVersion, MIN_EXE_VERSION) ? '（古い版です）' : ''}　最後の取り込み ${when}（${st.ok ? fmt(st.added||0) + '件を追加' : 'エラー'}）`
+    + (st.pending ? `　Firebase の上限などで未送信 ${fmt(st.pending)}件（この PC にためてあり、あとで自動で送ります）` : '')
     + (st.shot ? `　スクリーンショットの所持金 ${fmt(st.shot.value)}（${new Date(st.shot.at).toLocaleString('ja-JP', {month:'2-digit', day:'2-digit', hour:'2-digit', minute:'2-digit'})}）` : '');
 }
 /* スクリーンショット（F1 → PrtSc）で読んだ所持金の結果を知らせる。
@@ -1401,7 +1402,8 @@ function shotNotice(st){
   const sh = st && st.shot;
   if(!sh || sh.at < PAGE_OPENED_AT || sh.at <= lastShotAt) return;
   lastShotAt = sh.at;
-  const m = sh.recorded ? `スクリーンショットの所持金 ${fmt(sh.value)}：差額 ${sfmt(sh.diff)} を残高補正として記録しました`
+  const m = sh.queued ? `スクリーンショットの所持金 ${fmt(sh.value)}：Firebase の上限のため、送れるようになったら帳簿と比べて記録します`
+    : sh.recorded ? `スクリーンショットの所持金 ${fmt(sh.value)}：差額 ${sfmt(sh.diff)} を残高補正として記録しました`
     : sh.skipped ? `スクリーンショットの所持金 ${fmt(sh.value)}（帳簿 ${fmt(sh.ledger)}）: ${sh.skipped}`
     : `スクリーンショットの所持金 ${fmt(sh.value)}：帳簿と一致しています`;
   $('logStatus').textContent = m; toast(m);
