@@ -51,6 +51,10 @@ header{display:grid;grid-template-columns:1fr auto;align-items:center;gap:4px 16
 .hmeta b{color:var(--ink);font-weight:500}
 .hbtns{display:flex;flex-wrap:wrap;gap:6px;justify-content:flex-end}
 .hbtns .btn{padding:6px 14px;font-size:13px}
+.hbtns .iconbtn{padding:6px 9px;display:inline-flex;align-items:center;position:relative}
+.iconbtn svg{width:16px;height:16px}
+.iconbtn.has-update{border-color:var(--accent)}
+.iconbtn.has-update::after{content:'';position:absolute;top:2px;right:2px;width:8px;height:8px;border-radius:50%;background:var(--neg)}
 .peers{display:flex;flex-wrap:wrap;gap:6px;justify-content:flex-end;align-items:center}
 .peer{display:inline-flex;align-items:center;gap:5px;border:1px solid var(--line);background:var(--surface);border-radius:999px;padding:2px 9px 2px 7px;color:var(--ink)}
 .peer::before{content:"";width:7px;height:7px;border-radius:50%;background:var(--pos)}
@@ -230,6 +234,9 @@ code{font-family:var(--f-mono);font-size:12px;background:var(--surface-2);border
       <button class="btn" type="button" id="hdrImport" title="ゲームのログを読み、新しい記録をそのまま取り込みます">ログを取り込む</button>
       <button class="btn ghost" type="button" id="hdrExe" aria-expanded="false" hidden title="この PC の取り込みプログラム（Windows）の設定とダウンロード">取り込みプログラム</button>
       <button class="btn ghost" type="button" id="hdrShare" aria-expanded="false" hidden>共有URL</button>
+      <button class="btn ghost iconbtn" type="button" id="hdrReload" title="ページを最新の状態に更新" aria-label="ページを更新">
+        <svg viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 11a8 8 0 1 0-2.3 5.7"/><path d="M20 4v7h-7"/></svg>
+      </button>
     </div>
     <div class="hmeta">
       <div class="peers" id="peers" hidden></div>
@@ -437,14 +444,14 @@ code{font-family:var(--f-mono);font-size:12px;background:var(--surface-2);border
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
-<script src="config.js?v=2.2.8"></script>
-<script src="web_backend.js?v=2.2.8"></script>
+<script src="config.js?v=2.2.9"></script>
+<script src="web_backend.js?v=2.2.9"></script>
 <script>
 /* 'solo' = 個人用, 'shared' = claude.ai で共有, 'web' = GitHub Pages + Firebase で共有（web_backend.js） */
 const MODE = 'web';
 /* 変更して公開するたびに上げる（表示はフッター） */
-const APP_VERSION = '2.2.8';
-const APP_UPDATED = '2026-10-04 00:37';   // 日本時間
+const APP_VERSION = '2.2.9';
+const APP_UPDATED = '2026-10-04 00:48';   // 日本時間
 const SHARED = MODE !== 'solo';
 
 const TYPES = [
@@ -1691,6 +1698,24 @@ if(SHARED){
 }
 if(!SHARED) $('soloAdj').hidden = false;
 $('verTag').textContent = 'v' + APP_VERSION;
+/* ---------- 更新マーク: 押すとページを最新にする。Web版は新しい版が出ていたらマークに印を付ける ---------- */
+$('hdrReload').onclick = async ()=>{
+  // ブラウザに残った古いページを使わないよう、取り直してから読み込み直す
+  try{ if(MODE === 'web') await fetch(location.pathname, {cache:'reload'}); }catch(e){}
+  location.reload();
+};
+if(MODE === 'web'){
+  const checkNew = async ()=>{
+    try{
+      const t = await (await fetch(location.pathname + '?check=' + Date.now(), {cache:'no-store'})).text();
+      const v = (t.match(/const APP_VERSION = '([^']+)'/)||[])[1];
+      if(v && v !== APP_VERSION){ $('hdrReload').classList.add('has-update'); $('hdrReload').title = `新しい版 v${v} があります。押すと更新します`; }
+    }catch(e){}
+  };
+  setTimeout(checkNew, 5000);
+  setInterval(checkNew, 5 * 60 * 1000);
+  document.addEventListener('visibilitychange', ()=>{ if(!document.hidden) checkNew(); });
+}
 $('verTag').title = '更新日時 ' + APP_UPDATED.replace(/-/g,'.');
 $('appFoot').innerHTML = `<span>aUEC Ledger <b class="num">v${APP_VERSION}</b>（${{solo:'個人用',shared:'共有用',web:'共有用・Web'}[MODE]}）</span><span>更新日時 <span class="num">${APP_UPDATED.replace(/-/g,'.')}</span></span>`;
 $('date').value = today();
