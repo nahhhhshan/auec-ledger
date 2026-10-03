@@ -444,14 +444,14 @@ code{font-family:var(--f-mono);font-size:12px;background:var(--surface-2);border
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
-<script src="config.js?v=2.2.14"></script>
-<script src="web_backend.js?v=2.2.14"></script>
+<script src="config.js?v=2.2.15"></script>
+<script src="web_backend.js?v=2.2.15"></script>
 <script>
 /* 'solo' = 個人用, 'shared' = claude.ai で共有, 'web' = GitHub Pages + Firebase で共有（web_backend.js） */
 const MODE = 'web';
 /* 変更して公開するたびに上げる（表示はフッター） */
-const APP_VERSION = '2.2.14';
-const APP_UPDATED = '2026-10-04 02:53';   // 日本時間
+const APP_VERSION = '2.2.15';
+const APP_UPDATED = '2026-10-04 02:56';   // 日本時間
 const SHARED = MODE !== 'solo';
 
 const TYPES = [
@@ -1402,7 +1402,7 @@ const usePcTool = () => { try{ return MODE === 'web' && localStorage.getItem(PCT
 /* ---------- 取り込みプログラム（exe）の版の確認 ----------
    exe は取り込みのたびに「版・追加件数」を帳簿（presence/exe-名前）に書き残す。
    起動して25秒たっても返事がない（入っていない・古い）か、版が MIN_EXE_VERSION より古ければ、警告とダウンロードを出す */
-const MIN_EXE_VERSION = '2.2.14';
+const MIN_EXE_VERSION = '2.2.15';
 const verLt = (a, b) => { const x = String(a).split('.').map(Number), y = String(b).split('.').map(Number); for(let i=0;i<3;i++){ if((x[i]||0) !== (y[i]||0)) return (x[i]||0) < (y[i]||0); } return false; };
 let exeWait = null;
 const myExe = () => (window.exeStatus||{})[me];
