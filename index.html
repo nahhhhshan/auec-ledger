@@ -444,14 +444,14 @@ code{font-family:var(--f-mono);font-size:12px;background:var(--surface-2);border
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
-<script src="config.js?v=2.2.12"></script>
-<script src="web_backend.js?v=2.2.12"></script>
+<script src="config.js?v=2.2.13"></script>
+<script src="web_backend.js?v=2.2.13"></script>
 <script>
 /* 'solo' = 個人用, 'shared' = claude.ai で共有, 'web' = GitHub Pages + Firebase で共有（web_backend.js） */
 const MODE = 'web';
 /* 変更して公開するたびに上げる（表示はフッター） */
-const APP_VERSION = '2.2.12';
-const APP_UPDATED = '2026-10-04 01:34';   // 日本時間
+const APP_VERSION = '2.2.13';
+const APP_UPDATED = '2026-10-04 01:52';   // 日本時間
 const SHARED = MODE !== 'solo';
 
 const TYPES = [
@@ -1150,7 +1150,14 @@ function classifyContract(s){
 const shopLabel = s => s.replace(/^SCShop_(Entity_)?/,'').replace(/[-_]0*\d+$/,'');
 const isConsumable = s => /drink|food|consumable|healing|medpen|burrito|bar_|sandwich|oxypen|ammo|_mag\b|mag$/i.test(s);
 
+/* 貨物の売買のメモ（sc_import.py の com_memo と同じ書式） */
+function comMemo(m){
+  return (m.sell ? '貨物売却: ' : '貨物購入: ') + (m.item ? m.item + ' ' : '') + m.qty + ' SCU'
+    + (m.est ? '（推定 ' + m.est + ' SCU）' : '')
+    + (m.qty ? ' @' + Math.round(m.amt / m.qty).toLocaleString('en-US') : '') + '（' + m.shop + '）';
+}
 function parseLogText(text, out){
+  const coms = [];   // この回に読んだ貨物の売買 [記録, 中身]
   let loginHandle = '';         // ログインした人のゲーム内の名前（User Login Success - Handle[...]）
   const lines = text.split('\n');
   const groups = new Map();     // 秒 -> {t, rewards:[]}
@@ -1239,9 +1246,23 @@ function parseLogText(text, out){
       const sell = r[1] === 'Sell', amt = Math.round(+r[3]); if(!amt) continue;
       // 品目はログの resourceGUID を sc-data.json の commodities（Wiki の品目一覧）で名前にする
       const g = line.match(/resourceGUID\[([0-9a-f-]+)\]/), item = g && (SC.commodities||{})[g[1]];
-      const c = {key:`log-com${sell?'sell':'buy'}-${sec}-${amt}`, t, kind: sell?'sell':'buy', amount: sell?amt:-amt, type:'trade', checked:true,
-        memo:(sell?'貨物売却: ':'貨物購入: ') + (item ? item + ' ' : '') + r[4] + ' SCU' + (+r[4] ? ' @' + Math.round(amt / +r[4]).toLocaleString('en-US') : '') + '（' + shopLabel(r[2]) + '）'};
+      const com = {sell, item, qty: +r[4], amt, shop: shopLabel(r[2]), guid: g ? g[1] : '', est: null};
+      const c = {key:`log-com${sell?'sell':'buy'}-${sec}-${amt}`, t, kind: sell?'sell':'buy', amount: sell?amt:-amt, type:'trade', checked:true, memo: comMemo(com)};
       add(c); pend.push(out.get(c.key)); if(pend.length > 20) pend.shift();
+      if(out.get(c.key) === c) coms.push([c, com]);
+    }
+  }
+  /* 箱に満杯まで詰まっていない売却の推定 SCU: 同じログの同じ店・同じ品目の売却のうち、1 SCU あたりが一番高いものを満杯とみなし、
+     それの 8 割未満なら「推定 ○ SCU」を添える（品質の違いでも単価は少し変わるので、差が小さいものは添えない） */
+  const best = {};
+  for(const [, m] of coms) if(m.sell && m.qty && m.guid){ const k = m.guid + '|' + m.shop; best[k] = Math.max(best[k] || 0, m.amt / m.qty); }
+  for(const [c, m] of coms){
+    const ref = m.sell && m.qty && m.guid ? best[m.guid + '|' + m.shop] : 0;
+    if(ref && m.amt / m.qty < ref * 0.8){
+      // 0.1 未満は小数2桁、それ以外は1桁（丸めた整数から文字にするので sc_import.py と同じ表記になる）
+      const x = m.amt / ref, h = Math.round(x * 100), d = Math.round(x * 10);
+      m.est = h < 10 ? '0.0' + h : Math.floor(d / 10) + '.' + (d % 10);
+      c.memo = comMemo(m);
     }
   }
   const costs = SC.costs || {};
@@ -1381,7 +1402,7 @@ const usePcTool = () => { try{ return MODE === 'web' && localStorage.getItem(PCT
 /* ---------- 取り込みプログラム（exe）の版の確認 ----------
    exe は取り込みのたびに「版・追加件数」を帳簿（presence/exe-名前）に書き残す。
    起動して25秒たっても返事がない（入っていない・古い）か、版が MIN_EXE_VERSION より古ければ、警告とダウンロードを出す */
-const MIN_EXE_VERSION = '2.2.12';
+const MIN_EXE_VERSION = '2.2.13';
 const verLt = (a, b) => { const x = String(a).split('.').map(Number), y = String(b).split('.').map(Number); for(let i=0;i<3;i++){ if((x[i]||0) !== (y[i]||0)) return (x[i]||0) < (y[i]||0); } return false; };
 let exeWait = null;
 const myExe = () => (window.exeStatus||{})[me];
