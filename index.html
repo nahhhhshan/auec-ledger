@@ -286,7 +286,8 @@ code{font-family:var(--f-mono);font-size:12px;background:var(--surface-2);border
   </div>
 
   <section class="panel">
-    <h2><span>日別の収支<small class="scopetag" id="scope3"></small></span> <span class="range" id="range3"></span></h2>
+    <h2><span><span id="dailyTitle">日別の収支</span><small class="scopetag" id="scope3"></small></span> <span class="range" id="range3"></span></h2>
+    <div class="subtabs range" id="unitTabs"></div>
     <div class="chart" id="daily"></div>
     <div class="dstats" id="dailyStats"></div>
   </section>
@@ -444,14 +445,14 @@ code{font-family:var(--f-mono);font-size:12px;background:var(--surface-2);border
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
-<script src="config.js?v=2.2.17"></script>
-<script src="web_backend.js?v=2.2.17"></script>
+<script src="config.js?v=2.2.18"></script>
+<script src="web_backend.js?v=2.2.18"></script>
 <script>
 /* 'solo' = 個人用, 'shared' = claude.ai で共有, 'web' = GitHub Pages + Firebase で共有（web_backend.js） */
 const MODE = 'web';
 /* 変更して公開するたびに上げる（表示はフッター） */
-const APP_VERSION = '2.2.17';
-const APP_UPDATED = '2026-10-04 18:49';   // 日本時間
+const APP_VERSION = '2.2.18';
+const APP_UPDATED = '2026-10-04 20:33';   // 日本時間
 const SHARED = MODE !== 'solo';
 
 const TYPES = [
@@ -496,6 +497,10 @@ let entries = [], settings = {startBalance:0};
 /* 帳簿の設定ドキュメント全体（開始額・人ごとの開始額・ゲーム内の名前）。一部だけ書くと他が消えるので必ずこれで書く */
 const sdoc = (o={}) => ({startBalance:settings.startBalance||0, starts:settings.starts||{}, handles:settings.handles||{}, avatars:settings.avatars||{}, ...o});
 let group = 'type', selType = 'delivery', dir = 1;
+/* 日別の収支のまとめ方: day（日別）/ week（週別・月曜〜日曜）/ month（月別）。このブラウザで覚える */
+const UNITS = {day:{label:'日別', one:'日', cnt:'日'}, week:{label:'週別', one:'週', cnt:'週'}, month:{label:'月別', one:'月', cnt:'か月'}};
+let unit = 'day';
+try{ const u = localStorage.getItem('auec-ledger-unit'); if(UNITS[u]) unit = u; }catch(e){}
 let picked = null;            // 選んだミッション
 let SC = {missions:[], ships:[]};
 let me = null, names = {}, userApi = null, readOnly = false;
@@ -937,6 +942,8 @@ function renderTabs(){
   for(const id of ['scope1','scope2','scope3']) $(id).textContent = `（${pl}）`;
   const gs = [['type','種別ごと'],['ship','船ごと']].concat(SHARED?[['by','人ごと']]:[]);
   $('groupTabs').innerHTML = gs.map(([v,l])=>`<button type="button" data-g="${v}" aria-pressed="${group===v}">${l}</button>`).join('');
+  $('unitTabs').innerHTML = Object.entries(UNITS).map(([v,u])=>`<button type="button" data-unit="${v}" aria-pressed="${unit===v}">${u.label}</button>`).join('');
+  $('dailyTitle').textContent = UNITS[unit].label + 'の収支';
 }
 
 function renderBars(list){
@@ -1012,14 +1019,35 @@ function renderChart(days, start, allDays){
   </svg>${legend}`;
 }
 
-/* 日別の収支: 収入（上向き・緑）と支出（下向き・赤）の棒、その日の差引（点）。残高補正・メンバー間の送金は含めない */
+/* 日別・週別・月別の収支: 収入（上向き・緑）と支出（下向き・赤）の棒、その期間の差引（点）。残高補正・メンバー間の送金は含めない */
+// 週は月曜はじまり（月〜日）。週の行の date はその週の月曜日、月の行は 1 日
+function unitKey(date){
+  if(unit === 'month') return date.slice(0, 7) + '-01';
+  if(unit === 'week'){
+    const n = dayNum(date), dow = (new Date(n*864e5).getUTCDay() + 6) % 7;   // 月曜=0 … 日曜=6
+    return new Date((n - dow)*864e5).toISOString().slice(0, 10);
+  }
+  return date;
+}
+function unitLabel(date, long){
+  const [y, m, d] = date.split('-');
+  if(unit === 'month') return long ? `${y}年${+m}月` : `${+m}月`;
+  if(unit === 'week'){
+    const end = new Date((dayNum(date) + 6)*864e5).toISOString().slice(0, 10).split('-');
+    return long ? `${+m}/${+d}(月)〜${+end[1]}/${+end[2]}(日)` : `${+m}/${+d}〜`;
+  }
+  return `${m}/${d}`;
+}
 function renderDaily(days){
-  const el = $('daily');
-  const rows = days.map(d=>{
-    let inc = 0, out = 0;
-    for(const e of d.items){ if(isInternal(e)) continue; if(e.amount >= 0) inc += e.amount; else out += e.amount; }
-    return {date:d.date, inc, out, net:inc+out};
-  }).filter(r=>r.inc || r.out);
+  const el = $('daily'), U = UNITS[unit];
+  const agg = new Map();
+  for(const d of days){
+    const k = unitKey(d.date);
+    const r = agg.get(k) || {date:k, inc:0, out:0};
+    for(const e of d.items){ if(isInternal(e)) continue; if(e.amount >= 0) r.inc += e.amount; else r.out += e.amount; }
+    agg.set(k, r);
+  }
+  const rows = [...agg.values()].map(r=>({...r, net:r.inc+r.out})).filter(r=>r.inc || r.out).sort((a,b)=>a.date<b.date?-1:1);
   if(!rows.length){ el.innerHTML = '<div class="empty">この期間の収支はありません。</div>'; $('dailyStats').innerHTML = ''; return; }
   const W=760, H=230, L=78, R=14, T=12, B=28;
   let ymax = Math.max(...rows.map(r=>r.inc), 0), ymin = Math.min(...rows.map(r=>r.out), 0);
@@ -1036,17 +1064,17 @@ function renderDaily(days){
   }
   const every = Math.max(1, Math.ceil(rows.length/8));
   rows.forEach((r,i)=>{
-    const tip = `<title>${r.date}  収入 ${sfmt(r.inc)} / 支出 ${sfmt(r.out)} / 差引 ${sfmt(r.net)}</title>`;
+    const tip = `<title>${unit==='day' ? r.date : unitLabel(r.date, true)}  収入 ${sfmt(r.inc)} / 支出 ${sfmt(r.out)} / 差引 ${sfmt(r.net)}</title>`;
     if(r.inc) g += `<rect x="${X(i)-bw/2}" y="${Y(r.inc)}" width="${bw}" height="${Y(0)-Y(r.inc)}" rx="2" fill="var(--pos)" fill-opacity=".75">${tip}</rect>`;
     if(r.out) g += `<rect x="${X(i)-bw/2}" y="${Y(0)}" width="${bw}" height="${Y(r.out)-Y(0)}" rx="2" fill="var(--neg)" fill-opacity=".7">${tip}</rect>`;
     g += `<circle cx="${X(i)}" cy="${Y(r.net)}" r="3.5" fill="var(--gold)" stroke="var(--surface)" stroke-width="1.5">${tip}</circle>`;
-    if(i % every === 0 || i === rows.length-1) g += `<text x="${X(i)}" y="${H-8}" text-anchor="middle">${r.date.slice(5).replace('-','/')}</text>`;
+    if(i % every === 0 || i === rows.length-1) g += `<text x="${X(i)}" y="${H-8}" text-anchor="middle">${unitLabel(r.date)}</text>`;
   });
-  el.innerHTML = `<svg viewBox="0 0 ${W} ${H}" role="img" aria-label="日ごとの収入と支出">${g}</svg>
+  el.innerHTML = `<svg viewBox="0 0 ${W} ${H}" role="img" aria-label="${U.one}ごとの収入と支出">${g}</svg>
     <div class="legend"><span><i style="background:var(--pos)"></i>収入</span><span><i style="background:var(--neg)"></i>支出</span><span><i style="background:var(--gold)"></i>差引</span></div>`;
   const tot = rows.reduce((a,r)=>a+r.net, 0), best = rows.reduce((a,r)=>r.net>a.net?r:a, rows[0]);
-  $('dailyStats').innerHTML = `<span>記録のある日<b>${rows.length}日</b></span><span>1日あたりの差引<b class="${cls(tot)}">${sfmt(Math.round(tot/rows.length))}</b></span>`
-    + `<span>いちばん稼いだ日<b class="${cls(best.net)}">${best.date.slice(5).replace('-','/')} ${sfmt(best.net)}</b></span>`
+  $('dailyStats').innerHTML = `<span>記録のある${U.one}<b>${rows.length}${U.cnt}</b></span><span>1${U.cnt}あたりの差引<b class="${cls(tot)}">${sfmt(Math.round(tot/rows.length))}</b></span>`
+    + `<span>いちばん稼いだ${U.one}<b class="${cls(best.net)}">${unitLabel(best.date, true)} ${sfmt(best.net)}</b></span>`
     + `<span>収入の合計<b class="pos">${sfmt(rows.reduce((a,r)=>a+r.inc,0))}</b></span><span>支出の合計<b class="neg">${sfmt(rows.reduce((a,r)=>a+r.out,0))}</b></span>`;
 }
 
@@ -1595,6 +1623,8 @@ document.addEventListener('click', ev=>{
   if(c){ selType = c.dataset.type; setDir(typeOf(selType).dir); renderChips(); return; }
   const g = ev.target.closest('[data-g]');
   if(g){ group = g.dataset.g; render(); return; }
+  const un = ev.target.closest('[data-unit]');
+  if(un){ unit = un.dataset.unit; try{ localStorage.setItem('auec-ledger-unit', unit); }catch(e){} render(); return; }
   const del = ev.target.closest('[data-del]');
   if(del){
     if(!del.classList.contains('arm')){
