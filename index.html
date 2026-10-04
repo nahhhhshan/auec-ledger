@@ -445,14 +445,14 @@ code{font-family:var(--f-mono);font-size:12px;background:var(--surface-2);border
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
-<script src="config.js?v=2.2.18"></script>
-<script src="web_backend.js?v=2.2.18"></script>
+<script src="config.js?v=2.2.19"></script>
+<script src="web_backend.js?v=2.2.19"></script>
 <script>
 /* 'solo' = 個人用, 'shared' = claude.ai で共有, 'web' = GitHub Pages + Firebase で共有（web_backend.js） */
 const MODE = 'web';
 /* 変更して公開するたびに上げる（表示はフッター） */
-const APP_VERSION = '2.2.18';
-const APP_UPDATED = '2026-10-04 20:33';   // 日本時間
+const APP_VERSION = '2.2.19';
+const APP_UPDATED = '2026-10-04 20:57';   // 日本時間
 const SHARED = MODE !== 'solo';
 
 const TYPES = [
@@ -1755,7 +1755,7 @@ function toast(msg){ const t=$('toast'); t.textContent=msg; t.hidden=false; clea
 
 if(SHARED){
   document.title = 'aUEC 共有収支帳';
-  $('brand').innerHTML = 'aUEC <span>SHARED LEDGER</span>';
+  $('brand').innerHTML = 'StarCitizen <span>SHARED LEDGER</span>';
   $('subtitle').textContent = 'STAR CITIZEN ・ 二人の共有口座';
 }
 if(!SHARED) $('soloAdj').hidden = false;
