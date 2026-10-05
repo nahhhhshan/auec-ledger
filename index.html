@@ -518,14 +518,14 @@ code{font-family:var(--f-mono);font-size:12px;background:var(--surface-2);border
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
-<script src="config.js?v=3.1.3"></script>
-<script src="web_backend.js?v=3.1.3"></script>
+<script src="config.js?v=3.1.4"></script>
+<script src="web_backend.js?v=3.1.4"></script>
 <script>
 /* 'solo' = 個人用, 'shared' = claude.ai で共有, 'web' = GitHub Pages + Firebase で共有（web_backend.js） */
 const MODE = 'web';
 /* 変更して公開するたびに上げる（表示はフッター） */
-const APP_VERSION = '3.1.3';
-const APP_UPDATED = '2026-10-05 19:36';   // 日本時間
+const APP_VERSION = '3.1.4';
+const APP_UPDATED = '2026-10-05 19:37';   // 日本時間
 const SHARED = MODE !== 'solo';
 
 const TYPES = [
@@ -1302,7 +1302,7 @@ function renderDaily(days){
   }
   const rows = [...agg.values()].map(r=>({...r, net:r.inc+r.out})).filter(r=>r.inc || r.out).sort((a,b)=>a.date<b.date?-1:1);
   if(!rows.length){ el.innerHTML = '<div class="empty">この期間の収支はありません。</div>'; $('dailyStats').innerHTML = ''; return; }
-  const W=760, H=230, L=78, R=14, T=12, B=28;
+  const W=760, H=240, L=78, R=14, T=24, B=28;   // 上は王冠のぶん少し空ける
   let ymax = Math.max(...rows.map(r=>r.inc), 0), ymin = Math.min(...rows.map(r=>r.out), 0);
   if(ymax === ymin){ ymax += 1000; }
   const step = niceStep(ymax - ymin, 4);
@@ -1316,7 +1316,13 @@ function renderDaily(days){
     g += `<text x="${L-8}" y="${Y(v)+4}" text-anchor="end">${fmt(v)}</text>`;
   }
   const every = Math.max(1, Math.ceil(rows.length/8));
+  // いちばん稼いだ日・週・月（差引が最大でプラス）の棒の上に王冠
+  const top = rows.reduce((a, r)=> r.net > (a ? a.net : 0) ? r : a, null);
   rows.forEach((r,i)=>{
+    if(r === top){
+      const cy = Math.min(Y(r.inc || 0), Y(r.net)) - 6;
+      g += `<g transform="translate(${X(i) - 9} ${cy - 13})"><title>いちばん稼いだ${U.one}（${sfmt(r.net)}）</title><path d="M1 12h16l-1.6-8.5-4 3.8-2.4-6.3-2.4 6.3-4-3.8z" fill="#e8a92a" stroke="rgb(0 0 0 / .3)" stroke-width=".6" stroke-linejoin="round"/></g>`;
+    }
     const tip = `<title>${unit==='day' ? r.date : unitLabel(r.date, true)}  収入 ${sfmt(r.inc)} / 支出 ${sfmt(r.out)} / 差引 ${sfmt(r.net)}</title>`;
     if(r.inc) g += `<rect x="${X(i)-bw/2}" y="${Y(r.inc)}" width="${bw}" height="${Y(0)-Y(r.inc)}" rx="2" fill="var(--pos)" fill-opacity=".75">${tip}</rect>`;
     if(r.out) g += `<rect x="${X(i)-bw/2}" y="${Y(0)}" width="${bw}" height="${Y(r.out)-Y(0)}" rx="2" fill="var(--neg)" fill-opacity=".7">${tip}</rect>`;
@@ -1327,7 +1333,7 @@ function renderDaily(days){
     <div class="legend"><span><i style="background:var(--pos)"></i>収入</span><span><i style="background:var(--neg)"></i>支出</span><span><i style="background:var(--gold)"></i>差引</span></div>`;
   const tot = rows.reduce((a,r)=>a+r.net, 0), best = rows.reduce((a,r)=>r.net>a.net?r:a, rows[0]);
   $('dailyStats').innerHTML = `<span>記録のある${U.one}<b>${rows.length}${U.cnt}</b></span><span>1${U.cnt}あたりの差引<b class="${cls(tot)}">${sfmt(Math.round(tot/rows.length))}</b></span>`
-    + `<span>いちばん稼いだ${U.one}<b class="${cls(best.net)}">${unitLabel(best.date, true)} ${sfmt(best.net)}</b></span>`
+    + `<span>いちばん稼いだ${U.one}<b class="${cls(best.net)}">${best.net > 0 ? '<svg viewBox="0 0 18 13" width="16" height="12" aria-hidden="true" style="vertical-align:-1px;margin-right:4px"><path d="M1 12h16l-1.6-8.5-4 3.8-2.4-6.3-2.4 6.3-4-3.8z" fill="#e8a92a"/></svg>' : ''}${unitLabel(best.date, true)} ${sfmt(best.net)}</b></span>`
     + `<span>収入の合計<b class="pos">${sfmt(rows.reduce((a,r)=>a+r.inc,0))}</b></span><span>支出の合計<b class="neg">${sfmt(rows.reduce((a,r)=>a+r.out,0))}</b></span>`;
 }
 
