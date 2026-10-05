@@ -733,10 +733,26 @@ const exact = {
   '更新日時':'Updated', '（公開版）':' (public)', '（個人用）':' (personal)', '（共有用）':' (shared)', '（共有用・Web）':' (shared, web)',
   '非公式のファン作品です。Cloud Imperium Games とは関係ありません。Star Citizen® は Cloud Imperium Rights LLC の商標です。記録はこのブラウザ内に保存され、どこにも送信されません。':
     'Unofficial fan-made tool, not affiliated with Cloud Imperium Games. Star Citizen® is a trademark of Cloud Imperium Rights LLC. Your records are stored in this browser and never sent anywhere.',
+  '非公式のファン作品です。Cloud Imperium Games とは関係ありません。Star Citizen® は Cloud Imperium Rights LLC の商標です。共有帳簿の記録は Supabase に保存され、URL を知っている人だけが読み書きできます。':
+    'Unofficial fan-made tool, not affiliated with Cloud Imperium Games. Star Citizen® is a trademark of Cloud Imperium Rights LLC. Shared ledger records are stored in Supabase; only people with the URL can read or write them.',
   '接続中':'Online', 'あなた':'you', '（あなた）':' (you)', 'メンバー':'Member', '不明':'Unknown', '未割り当て':'Unassigned',
   '契約報酬':'Contract reward', 'スクリーンショットの所持金に合わせる':'Matched to screenshot balance',
   'ミッション・船データを読み込めませんでした（手入力はできます）':'Could not load mission/ship data (manual entry still works)',
   'おめでとう':'Congrats',
+  // 公開版の共有帳簿（Supabase）
+  '共有':'Share', '二人で共有する':'Share with a partner', '共有帳簿を作る':'Create shared ledger',
+  '共有帳簿を作ると専用の URL が発行されます。その URL を相手に送れば、二人で同じ帳簿を使えます（相手の追加もすぐ反映されます）。記録はインターネット上（Supabase）に保存され、URL を知っている人だけが読み書きできます。':
+    'Creating a shared ledger gives you a private URL. Send it to your partner and you can both use the same ledger (their additions appear instantly). Records are stored online (Supabase), and only people who know the URL can read or write them.',
+  'このブラウザの記録を共有帳簿に移す（このブラウザの記録も残ります）':'Move this browser\'s records into the shared ledger (they also stay in this browser)',
+  '相手から URL をもらった場合は、その URL を開くだけで参加できます。':'If your partner sent you a URL, just open it to join.',
+  'あなたの名前':'Your name', '共有帳簿で記録者として表示されます。ゲーム内の名前やニックネームで大丈夫です。':'Shown as the author of your records in the shared ledger. Your in-game name or a nickname is fine.',
+  '選んだ人の実際の所持金に合わせる (aUEC)':"Match the selected member's actual balance (aUEC)", '共有の所持金は変わりません（受け取った人に＋、送った人に−）':'The shared balance does not change (+ for the receiver, − for the sender)',
+  '名前':'Name', '決定':'OK', 'このブラウザだけの帳簿に戻る':'Back to this browser\'s own ledger', 'コピー':'Copy', 'URLをコピーしました':'URL copied',
+  'このURLを知っている人は誰でも読み書きできます。相手以外には教えないでください。':'Anyone with this URL can read and write. Share it only with your partner.',
+  '未接続':'not connected', '（名前を入れると共有帳簿に接続します）':' (enter a name to connect to the shared ledger)', '共有帳簿に接続中…':'connecting to the shared ledger…',
+  '共有帳簿（Supabase）':'shared ledger (Supabase)', '接続できません':'cannot connect', '共有帳簿に接続できませんでした':'Could not connect to the shared ledger',
+  'この状態では記録を保存できません。ページを読み込み直しても直らないときは、広告ブロックなどの拡張機能を一時的に止めて試してください。':'Records cannot be saved right now. If reloading does not help, try temporarily disabling ad blockers or similar extensions.',
+  '共有帳簿の記録は Supabase に保存され、URL を知っている人だけが読み書きできます。':'Shared ledger records are stored in Supabase; only people with the URL can read or write them.',
   // 実績の名前
   'はじめの一歩':'First Step', '書き始め':'Getting Started', '記録係':'Record Keeper', '几帳面':'Meticulous', '帳簿番':'Bookkeeper', '記録魔':'Record Fanatic', '千の記録':'A Thousand Records', '航海日誌':"Captain's Log",
   '10日目':'Day 10', '30日目':'Day 30', '100日目':'Day 100', '200日目':'Day 200', '三日坊主卒業':'Past Day Three', '皆勤賞':'Perfect Attendance', '二週間連続':'Two-Week Streak', '一か月連続':'One-Month Streak',
@@ -885,6 +901,16 @@ const re = [
   [/^新しい版 v(\S+) があります。押すと更新します$/, 'Version $1 is available. Click to update.'],
   [/^記録を読み込めませんでした（(.+)）。ページを再読み込みしてください。$/, 'Could not load records ($1). Please reload the page.'],
   [/^保存できませんでした（(.+)）$/, 'Could not save ($1)'],
+  [/^名前を変更（(.+)）$/, 'Change name ($1)'],
+  [/^(.+)（あなた）$/, '$1 (you)'],
+  [/^「(.+)」には記録がありません。一覧から外せます（開始額の登録も消えます）。$/, '"$1" has no records. You can remove them from the list (their starting balance is removed too).'],
+  [/^以前の共通の開始額 (\S+) aUEC が「未割り当て」になっています。上で選んだ人の開始額に移せます（合計は変わりません）。$/, 'The old shared starting balance of $1 aUEC is "Unassigned". You can move it to the starting balance of the member selected above (the total does not change).'],
+  [/^(\S+) aUEC を (.+) の開始額に移しました$/, 'Moved $1 aUEC to the starting balance of $2'],
+  [/^記録者なし(・共通の開始額)?$/, (m, x) => 'no author' + (x ? ', shared starting balance' : '')],
+  [/^接続できませんでした（(.+)）。$/, 'Could not connect ($1).'],
+  [/^このブラウザの ([\d,]+)件を共有帳簿に移しました$/, 'Moved $1 records from this browser into the shared ledger'],
+  [/^このブラウザの記録を共有帳簿に移せませんでした（(.+)）$/, 'Could not move this browser\'s records into the shared ledger ($1)'],
+  [/^記録を読み込めませんでした（(.+)）。ページを再読み込みしてください。$/, 'Could not load records ($1). Please reload the page.'],
   [/^削除できませんでした（(.+)）$/, 'Could not delete ($1)'],
   [/^途中で止まりました（(.+)）。もう一度「選んだ記録を取り込む」を押すと、残りから続けます。$/, 'Stopped partway ($1). Press "Import selected" again to continue with the rest.'],
 ];
@@ -915,14 +941,14 @@ window.I18N_EN = {exact, html, re, words};
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
-<script src="config.js?v=3.20.0"></script>
-<script src="web_backend.js?v=3.20.0"></script>
+<script src="config.js?v=3.21.0"></script>
+<script src="web_backend.js?v=3.21.0"></script>
 <script>
 /* 'solo' = 個人用, 'shared' = claude.ai で共有, 'web' = GitHub Pages + Firebase で共有（web_backend.js） */
 const MODE = 'web';
 /* 変更して公開するたびに上げる（表示はフッター） */
-const APP_VERSION = '3.20.0';
-const APP_UPDATED = '2026-10-06 08:11';   // 日本時間
+const APP_VERSION = '3.21.0';
+const APP_UPDATED = '2026-10-06 08:30';   // 日本時間
 const SHARED = MODE !== 'solo';
 /* 一般公開版（make_public.py で作る。このブラウザ内に保存、手入力欄とバックアップを出す） */
 const PUBLIC = false;
@@ -2327,7 +2353,7 @@ $('hdrImport').onclick = ()=>{
 };
 document.querySelector('label[for="logDir"]').addEventListener('click', ()=>{ autoNext = false; });
 const openExePop = open => { $('exePop').hidden = !open; $('hdrExe').setAttribute('aria-expanded', String(open)); if(open) $('exeState').textContent = exeStateText(); };
-if(MODE === 'web'){
+if(MODE === 'web' && !PUBLIC){
   $('hdrExe').hidden = false;
   $('hdrExe').onclick = ()=> openExePop($('exePop').hidden);
   $('exeClose').onclick = ()=> openExePop(false);
@@ -2583,7 +2609,7 @@ let tt;
 function toast(msg){ const t=$('toast'); t.textContent=msg; t.hidden=false; clearTimeout(tt); tt=setTimeout(()=>t.hidden=true, 3200); }
 
 if(SHARED){
-  document.title = 'aUEC 共有収支帳';
+  if(!PUBLIC) document.title = 'aUEC 共有収支帳';
   $('brand').innerHTML = 'StarCitizen <span>SHARED LEDGER</span>';
   $('subtitle').textContent = 'STAR CITIZEN ・ 共有口座';
 }
@@ -2593,7 +2619,30 @@ $('verTag').textContent = 'v' + APP_VERSION;
 /* ---------- 公開版: 手入力欄とバックアップ、ファン作品の表記 ---------- */
 if(PUBLIC){
   $('addPanel').hidden = false;
-  $('backupBox').hidden = false;
+  $('backupBox').hidden = MODE === 'web';
+}
+/* 公開版のブラウザ内の帳簿: 「共有」で二人用の共有帳簿（Supabase）を作る。作るときだけ、今の記録を移すか選べる
+   （人からもらった URL で参加するときは移さない。相手の帳簿に自分の記録が混ざらないように） */
+if(PUBLIC && MODE === 'solo'){
+  const hs = $('hdrShare');
+  hs.hidden = false; hs.textContent = '共有';
+  const sp = document.createElement('section');
+  sp.className = 'panel'; sp.hidden = true;
+  sp.innerHTML = `<h2>二人で共有する <button class="btn ghost" type="button" id="pubShareClose" style="padding:3px 10px;font-size:12px">閉じる</button></h2>
+    <p class="hint">共有帳簿を作ると専用の URL が発行されます。その URL を相手に送れば、二人で同じ帳簿を使えます（相手の追加もすぐ反映されます）。記録はインターネット上（Supabase）に保存され、URL を知っている人だけが読み書きできます。</p>
+    <label class="row" style="align-items:center;gap:6px;margin:10px 0"><input type="checkbox" id="pubMove" checked> <span>このブラウザの記録を共有帳簿に移す（このブラウザの記録も残ります）</span></label>
+    <div class="row"><button class="btn" type="button" id="pubMake">共有帳簿を作る</button></div>
+    <p class="hint">相手から URL をもらった場合は、その URL を開くだけで参加できます。</p>`;
+  document.querySelector('.wrap').insertBefore(sp, document.querySelector('.tiles'));
+  const open = v => { sp.hidden = !v; hs.setAttribute('aria-expanded', String(v)); };
+  hs.onclick = () => open(sp.hidden);
+  $('pubShareClose').onclick = () => open(false);
+  $('pubMake').onclick = () => {
+    const a = new Uint8Array(18); crypto.getRandomValues(a);
+    const lid = Array.from(a, b => 'abcdefghijklmnopqrstuvwxyz0123456789'[b % 36]).join('') + 'x' + Date.now().toString(36);
+    try{ if($('pubMove').checked && entries.length) sessionStorage.setItem('sc-ledger-migrate', lid); }catch(e){}
+    location.hash = lid; location.reload();
+  };
 }
 $('bkSave').onclick = ()=>{
   const blob = new Blob([JSON.stringify({app:'sc-ledger', version:1, savedAt:new Date().toISOString(), entries, settings})], {type:'application/json'});
@@ -2638,10 +2687,10 @@ $('skinSel').onchange = ()=>{ const v = $('skinSel').value; applySkin(v); try{ l
 /* ---------- 更新マーク: 押すとページを最新にする。Web版は新しい版が出ていたらマークに印を付ける ---------- */
 $('hdrReload').onclick = async ()=>{
   // ブラウザに残った古いページを使わないよう、取り直してから読み込み直す
-  try{ if(MODE === 'web') await fetch(location.pathname, {cache:'reload'}); }catch(e){}
+  try{ if(MODE === 'web' || PUBLIC) await fetch(location.pathname, {cache:'reload'}); }catch(e){}
   location.reload();
 };
-if(MODE === 'web'){
+if(MODE === 'web' || PUBLIC){
   const checkNew = async ()=>{
     try{
       const t = await (await fetch(location.pathname + '?check=' + Date.now(), {cache:'no-store'})).text();
@@ -2655,7 +2704,7 @@ if(MODE === 'web'){
 }
 $('verTag').title = '更新日時 ' + APP_UPDATED.replace(/-/g,'.');
 $('appFoot').innerHTML = `<span>aUEC Ledger <b class="num">v${APP_VERSION}</b>（${PUBLIC ? '公開版' : {solo:'個人用',shared:'共有用',web:'共有用・Web'}[MODE]}）</span><span>更新日時 <span class="num">${APP_UPDATED.replace(/-/g,'.')}</span></span>`
-  + (PUBLIC ? `<span class="fanote">非公式のファン作品です。Cloud Imperium Games とは関係ありません。Star Citizen® は Cloud Imperium Rights LLC の商標です。記録はこのブラウザ内に保存され、どこにも送信されません。</span>` : '');
+  + (PUBLIC ? `<span class="fanote">非公式のファン作品です。Cloud Imperium Games とは関係ありません。Star Citizen® は Cloud Imperium Rights LLC の商標です。${MODE === 'web' ? '共有帳簿の記録は Supabase に保存され、URL を知っている人だけが読み書きできます。' : '記録はこのブラウザ内に保存され、どこにも送信されません。'}</span>` : '');
 $('date').value = today();
 renderChips(); setDir(1);
 const scReady = loadGameData();
