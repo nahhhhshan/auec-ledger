@@ -1087,7 +1087,8 @@ let SC = {missions:[], ships:[]};
 let me = null, names = {}, userApi = null, readOnly = false;
 
 /* ---------- storage: db when available, else this browser ---------- */
-const LS_KEY = SHARED ? 'auec-ledger-shared-v1' : 'auec-ledger-v1';
+// 公開版は同じ github.io の共有版（auec-ledger）とブラウザの保存場所が共通なので、別の名前にして混ざらないようにする
+const LS_KEY = PUBLIC ? 'sc-ledger-public-v1' : SHARED ? 'auec-ledger-shared-v1' : 'auec-ledger-v1';
 const store = {
   db:null,
   loadLocal(){
