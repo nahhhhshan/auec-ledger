@@ -454,14 +454,14 @@ code{font-family:var(--f-mono);font-size:12px;background:var(--surface-2);border
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
-<script src="config.js?v=2.2.22"></script>
-<script src="web_backend.js?v=2.2.22"></script>
+<script src="config.js?v=2.2.23"></script>
+<script src="web_backend.js?v=2.2.23"></script>
 <script>
 /* 'solo' = 個人用, 'shared' = claude.ai で共有, 'web' = GitHub Pages + Firebase で共有（web_backend.js） */
 const MODE = 'web';
 /* 変更して公開するたびに上げる（表示はフッター） */
-const APP_VERSION = '2.2.22';
-const APP_UPDATED = '2026-10-05 19:14';   // 日本時間
+const APP_VERSION = '2.2.23';
+const APP_UPDATED = '2026-10-05 19:17';   // 日本時間
 const SHARED = MODE !== 'solo';
 
 const TYPES = [
@@ -510,7 +510,7 @@ function odo(key, value){
   const to = fmt(value), from = fmt(prev).padStart(to.length, ' ').slice(-to.length);
   const digits = '0123456789'.split('').map(d=>`<span>${d}</span>`).join('');
   return `<span class="odo"><span class="sr-only">${to}</span><span aria-hidden="true" class="odo">` + [...to].map((ch, i)=>
-    /\d/.test(ch) ? `<span class="odo-d"><span class="odo-col" style="transform:translateY(-${(/\d/.test(from[i]) ? +from[i] : 0)*10}%)" data-to="${ch}">${digits}</span></span>` : `<span>${ch}</span>`
+    /\d/.test(ch) ? `<span class="odo-d"><span class="odo-col" style="transform:translateY(-${(/\d/.test(from[i]) ? +from[i] : 0)*10}%)" data-to="${ch}">${digits}</span></span>` : `<span class="odo-d">${ch}</span>`   // カンマも数字と同じ高さの枠に入れて、並びの高さを揃える
   ).join('') + '</span></span>';
 }
 function odoRun(){
