@@ -533,14 +533,14 @@ code{font-family:var(--f-mono);font-size:12px;background:var(--surface-2);border
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
-<script src="config.js?v=3.3.0"></script>
-<script src="web_backend.js?v=3.3.0"></script>
+<script src="config.js?v=3.4.0"></script>
+<script src="web_backend.js?v=3.4.0"></script>
 <script>
 /* 'solo' = 個人用, 'shared' = claude.ai で共有, 'web' = GitHub Pages + Firebase で共有（web_backend.js） */
 const MODE = 'web';
 /* 変更して公開するたびに上げる（表示はフッター） */
-const APP_VERSION = '3.3.0';
-const APP_UPDATED = '2026-10-05 20:05';   // 日本時間
+const APP_VERSION = '3.4.0';
+const APP_UPDATED = '2026-10-05 20:08';   // 日本時間
 const SHARED = MODE !== 'solo';
 
 const TYPES = [
@@ -553,6 +553,7 @@ const TYPES = [
   {id:'recovery', label:'調査・回収', dir:1},
   {id:'trade',    label:'交易', dir:1},
   {id:'other_in', label:'その他収入', dir:1},
+  {id:'wikelo',   label:'Wikelo との交換', dir:1},   // 品物と交換（金額 0 で記録してよい）。メモに Polaris / Idris / Polaris Bit 15 / Quantainium など
   {id:'repair',   label:'修理・補給', dir:-1},
   {id:'purchase', label:'船・装備購入', dir:-1},
   {id:'fine',     label:'罰金・保険', dir:-1},
@@ -572,6 +573,7 @@ const ICONS = {
   recovery: '<circle cx="11" cy="11" r="6"/><path d="M20 20l-4.5-4.5"/>',
   trade:    '<path d="M4 8h15l-3-3M20 16H5l3 3"/>',
   other_in: '<circle cx="12" cy="12" r="9"/><path d="M12 8v8M8 12h8"/>',
+  wikelo:   '<path d="M3 9h18v4H3zM5 13v8h14v-8M12 9v12"/><path d="M12 9c-1.5-4-6-4-6-1.5S10 9 12 9zm0 0c1.5-4 6-4 6-1.5S14 9 12 9z"/>',
   repair:   '<path d="M14.7 6.3a4 4 0 0 0-5.4 5.4L3 18l3 3 6.3-6.3a4 4 0 0 0 5.4-5.4l-2.5 2.5-2.4-.6-.6-2.4z"/>',
   purchase: '<path d="M12 2l4 10-4 3-4-3z"/><path d="M8 12l-3 5h4M16 12l3 5h-4M10 20h4"/>',
   fine:     '<path d="M12 3l10 18H2z"/><path d="M12 10v5M12 18v.01"/>',
@@ -978,7 +980,7 @@ function trackFresh(){
 const normName = t => String(t||'').toLowerCase().replace(/[^a-z0-9]/g, '');
 // 10万 aUEC 以上の「船・装備購入」で、メモか船の欄にゲームデータの船名があれば、その船
 function shipBought(e){
-  if(e.type !== 'purchase' || e.amount > -100000) return null;
+  if(!((e.type === 'purchase' && e.amount <= -100000) || e.type === 'wikelo')) return null;
   const text = normName((e.memo||'') + ' ' + (e.ship||''));
   let best = null;
   for(const sh of SC.ships || []){
@@ -996,7 +998,7 @@ function celebrateShip(sh, e){
       ${sh.img ? `<img src="${esc(sh.img)}" alt="" onerror="this.remove()">` : ''}
       <div class="body"><span class="k">NEW SHIP ACQUIRED</span><span class="n">${esc(sh.n)}</span>
         <span class="hint">${esc(sh.m || '')}${sh.r ? ' ・ ' + esc(sh.r) : ''}</span>
-        <span>${SHARED && e.by ? esc(nameOf(e.by)) + ' が' : ''}${fmt(-e.amount)} aUEC で手に入れました</span>
+        <span>${SHARED && e.by ? esc(nameOf(e.by)) + ' が' : ''}${e.type === 'wikelo' ? 'Wikelo との交換で' : fmt(-e.amount) + ' aUEC で'}手に入れました</span>
         <div class="row" style="justify-content:flex-end;margin-top:6px"><button type="button" class="btn">おめでとう</button></div></div></div>`;
   const close = ()=> el.remove();
   el.addEventListener('click', ev=>{ if(ev.target === el || ev.target.closest('button')) close(); });
@@ -1037,7 +1039,7 @@ const ACHS = (()=>{
     .forEach(([v,n])=>add('稼ぎ', 'income'+v, n, `収入の合計が ${fmtM(v)} aUEC`, 'income', v));
   // 仕事（種類ごとの回数）
   const RANK = [[1,'デビュー'],[10,'見習い'],[50,'ベテラン'],[100,'達人']];
-  for(const t of TYPES.filter(t=>t.dir > 0 && t.id !== 'other_in'))
+  for(const t of TYPES.filter(t=>t.dir > 0 && !['other_in','wikelo'].includes(t.id)))
     RANK.forEach(([v,r])=>add('仕事', t.id + v, `${t.label}・${r}`, `${t.label}で ${v}回 稼ぐ`, 'type:' + t.id, v));
   // 品目・店
   [[3,'品目コレクター'],[10,'目利き'],[20,'市場通']].forEach(([v,n])=>add('交易', 'item'+v, n, `${v}種類の品目を売る`, 'items', v));
@@ -1063,6 +1065,12 @@ const ACHS = (()=>{
   [[10,'整備士の友'],[50,'修理工場の常連'],[100,'壊し屋'],[300,'修理工場の大株主']].forEach(([v,n])=>add('買い物', 'repair'+v, n, `修理・補給 ${v}回`, 'type:repair', v));
   add('買い物', 'fine1', '前科一犯', '罰金・保険を払う', 'type:fine', 1);
   add('買い物', 'fine5', '常習犯', '罰金・保険を 5回 払う', 'type:fine', 5);
+  // Wikelo との交換（手入力の記録のメモで判定）
+  [[1,'Wikelo の客'],[5,'Wikelo の常連'],[10,'Wikelo の友']].forEach(([v,n])=>add('Wikelo', 'wk'+v, n, `Wikelo と ${v}回 交換する`, 'wk', v));
+  [[1,'クアンタニウム納品'],[10,'クアンタニウム便']].forEach(([v,n])=>add('Wikelo', 'wkq'+v, n, `Quantainium を ${v}回 納品する`, 'wkq', v));
+  [[1,'Polaris Bit'],[15,'Polaris まであと少し'],[50,'Idris の材料']].forEach(([v,n])=>add('Wikelo', 'wkbit'+v, n, `Polaris Bit を合計 ${v}個 手に入れる`, 'wkbit', v));
+  add('Wikelo', 'wkpolaris', '北極星', 'Polaris を手に入れる', 'wkpolaris', 1);
+  add('Wikelo', 'wkidris', 'フリゲートの主', 'Idris を手に入れる', 'wkidris', 1);
   // 共有口座・スキャン
   [[1,'はじめての送金'],[10,'持ちつ持たれつ'],[50,'息ぴったり']].forEach(([v,n])=>add('共有', 'xfer'+v, n, `メンバー間の送金 ${v}回`, 'xfer', v, {shared:true}));
   [[1,'スキャナー'],[10,'スキャンの達人'],[50,'所持金ウォッチャー']].forEach(([v,n])=>add('共有', 'scan'+v, n, `スクリーンショットで所持金を ${v}回 合わせる`, 'scan', v));
@@ -1073,17 +1081,18 @@ const ACHS = (()=>{
   [[10,'週末パイロット'],[30,'週末の住人']].forEach(([v,n])=>add('時間', 'weekend'+v, n, `土日に記録した日が ${v}日`, 'weekend', v));
   return A;
 })();
-const ACH_CATS = ['記録','所持金','稼ぎ','仕事','交易','買い物','共有','時間'];
+const ACH_CATS = ['記録','所持金','稼ぎ','仕事','交易','買い物','Wikelo','共有','時間'];
 const TROPHY = '<svg viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M8 21h8M12 17v4M7 4h10v5a5 5 0 0 1-10 0z"/><path d="M17 5h3v2a3 3 0 0 1-3 3M7 5H4v2a3 3 0 0 0 3 3"/></svg>';
 const wkOf = date => { const n = dayNum(date), dow = (new Date(n*864e5).getUTCDay() + 6) % 7; return new Date((n - dow)*864e5).toISOString().slice(0, 10); };
-function achievements(){
-  const got = {}, M = {count:0, days:0, streak:0, bal:totalStart(null), bestDay:0, bestWeek:0, bestMonth:0, income:0, items:0, shops:0, bigBuy:0, xfer:0, scan:0, periods:1, night:0, morning:0, weekend:0};
+// sc: 数える範囲（第N期を選んでいればその期だけ、所持金はその期の開始額から。null なら全期間）
+function achievements(sc){
+  const got = {}, M = {wk:0, wkq:0, wkbit:0, count:0, days:0, streak:0, bal:totalStart(sc), bestDay:0, bestWeek:0, bestMonth:0, income:0, items:0, shops:0, bigBuy:0, xfer:0, scan:0, periods:1, night:0, morning:0, weekend:0};
   const net = {}, items = new Set(), shops = new Set(), weekendDays = new Set(), fleet = new Set();
   let prev = '', run = 0;
   // しきい値の低い順に並べておき、指標ごとに達成を確かめる
   const byM = {};
   for(const a of ACHS) (byM[a.m] = byM[a.m] || []).push(a);
-  for(const e of sorted(entries)){
+  for(const e of sorted(entries.filter(e=>inScope(sc, e.date)))){
     M.count++; M.bal += e.amount;
     if(e.date !== prev){
       M.days++;
@@ -1111,6 +1120,17 @@ function achievements(){
       const it = memo.match(/^貨物売却: (.+?) \d+ SCU/); if(it){ items.add(it[1]); M.items = items.size; }
       const sh = String(e.src||'').startsWith('log-') && memo.match(/（([^（）]+)）$/); if(sh){ shops.add(sh[1]); M.shops = shops.size; }
     }
+    if(e.type === 'wikelo'){
+      const t = (memo + ' ' + (e.ship||'')).toLowerCase();
+      M.wk++;
+      if(/quanta?i?nium|クアンタ/.test(t)) M.wkq++;
+      const bits = t.match(/polaris\s*bits?\D{0,4}(\d+)/);
+      if(bits) M.wkbit += +bits[1]; else if(/polaris\s*bits?/.test(t)) M.wkbit += 1;
+      if(/polaris/.test(t.replace(/polaris\s*bits?/g, ''))) M.wkpolaris = 1;
+      if(/idris/.test(t)) M.wkidris = 1;
+      const got = shipBought(e);
+      if(got){ fleet.add(got.ship.n); M.fleet = fleet.size; }
+    }
     if(e.type === 'transfer' && !String(e.src||'').endsWith('-out')) M.xfer++;
     if(String(e.src||'').startsWith('shot-')) M.scan++;
     if(e.createdAt > 1e12 && new Date(e.createdAt).toLocaleDateString('sv-SE') === e.date){
@@ -1121,7 +1141,7 @@ function achievements(){
   }
   return got;
 }
-const ACH_KEY = 'auec-ledger-ach-seen-v3';   // v3.2.0 で実績を作り直したので、新しい印で数え直す（初回は知らせずに既読）
+const ACH_KEY = 'auec-ledger-ach-seen-v3';   // 実績を足すだけのときは印を変えない（新しく達成した分だけ知らせる）   // v3.2.0 で実績を作り直したので、新しい印で数え直す（初回は知らせずに既読）
 // 実績は普段は閉じておき、上の「実績」ボタンで開く（開いたらそこまで移動）
 $('hdrAch').onclick = ()=>{
   const open = $('achPanel').hidden;
@@ -1130,10 +1150,12 @@ $('hdrAch').onclick = ()=>{
   if(open) $('achPanel').scrollIntoView({behavior:'smooth', block:'start'});
 };
 function renderAchievements(){
-  const list = ACHS.filter(a=>!a.shared || SHARED), got = achievements();
+  // 実績は上の「表示する期間」と連動: 第N期ならその期だけで数える（ワイプごとにやり直し）、全期間なら通算
+  const sc = balScope(), sname = scopeName();
+  const list = ACHS.filter(a=>!a.shared || SHARED), got = achievements(sc);
   const done = list.filter(a=>got[a.id]).length;
-  $('achCount').textContent = `（${done} / ${list.length}）`;
-  $('hdrAch').innerHTML = `${TROPHY}実績 ${done}/${list.length}`;
+  $('achCount').textContent = `（${sname || '全期間'} ${done} / ${list.length}）`;
+  $('hdrAch').innerHTML = `${TROPHY}実績${sname ? '・' + sname : ''} ${done}/${list.length}`;
   $('achs').innerHTML = ACH_CATS.map(c=>{
     const xs = list.filter(a=>a.cat === c);
     if(!xs.length) return '';
@@ -1143,7 +1165,8 @@ function renderAchievements(){
   // このブラウザで初めて見る実績は「実績解除」と知らせる（初めて開いたときは、今ある分をまとめて既読にする）
   if(seenIds === null) return;
   let seen = null;
-  try{ seen = JSON.parse(localStorage.getItem(ACH_KEY) || 'null'); }catch(e){}
+  const key = ACH_KEY + (sc ? '@' + sc.from : '');   // 期ごとに既読を分ける（期を切り替えただけで知らせが出ないように）
+  try{ seen = JSON.parse(localStorage.getItem(key) || 'null'); }catch(e){}
   const now = list.filter(a=>got[a.id]).map(a=>a.id);
   if(seen){
     const fresh = list.filter(a=>got[a.id] && !seen.includes(a.id));
@@ -1151,7 +1174,7 @@ function renderAchievements(){
     if(fresh.length > 3) setTimeout(()=>toast(`ほかに ${fresh.length - 3}件の実績を解除しました`), 7500);
   }
   // 以前の版の実績 ID（名前が変わったもの）も残しておく
-  try{ localStorage.setItem(ACH_KEY, JSON.stringify([...new Set([...(seen||[]), ...now])])); }catch(e){}
+  try{ localStorage.setItem(key, JSON.stringify([...new Set([...(seen||[]), ...now])])); }catch(e){}
 }
 // 隠しコマンド: ↑↑↓↓←→←→BA で量子ジャンプ
 const KONAMI = ['ArrowUp','ArrowUp','ArrowDown','ArrowDown','ArrowLeft','ArrowRight','ArrowLeft','ArrowRight','b','a'];
@@ -1291,7 +1314,7 @@ function renderBars(list){
   const keyOf = e => e.type;
   const labelOf = k => icon(k) + typeOf(k).label;
   for(const e of list){ if(isInternal(e)) continue; const k=keyOf(e); by.set(k,(by.get(k)||0)+e.amount); }
-  const rows = [...by.entries()].sort((a,b)=>b[1]-a[1]);
+  const rows = [...by.entries()].filter(r=>r[1] !== 0).sort((a,b)=>b[1]-a[1]);   // Wikelo との交換など 0 の種類は出さない
   if(!rows.length){ $('bars').innerHTML = '<div class="empty">この期間の記録はありません。</div>'; return; }
   const max = Math.max(...rows.map(r=>Math.abs(r[1]))) || 1;
   const tot = rows.reduce((a,r)=>a+r[1],0);
@@ -1433,7 +1456,7 @@ function entryTime(e){
 function renderDays(days){
   // その日に達成した実績（帳簿には保存せず、記録から計算して差し込む）
   const achOn = {};
-  { const got = achievements(); for(const a of ACHS) if(got[a.id] && (!a.shared || SHARED)) (achOn[got[a.id]] = achOn[got[a.id]] || []).push(a); }
+  { const got = achievements(balScope()); for(const a of ACHS) if(got[a.id] && (!a.shared || SHARED)) (achOn[got[a.id]] = achOn[got[a.id]] || []).push(a); }
   if(!days.length){ $('days').innerHTML='<div class="empty">記録はまだありません。「記録を追加」から最初の1件を入れてください。</div>'; return; }
   $('days').innerHTML = [...days].reverse().map(d=>{
     const net = d.inc + d.out;
@@ -1988,8 +2011,10 @@ $('dirOut').onclick = ()=>setDir(-1);
 $('amount').addEventListener('input', updatePreview);
 $('form').addEventListener('submit', async ev=>{
   ev.preventDefault();
-  const v = parseAmount($('amount').value);
-  if(isNaN(v) || v===0){ toast('金額を入力してください'); $('amount').focus(); return; }
+  let v = parseAmount($('amount').value);
+  if(selType === 'wikelo' && (isNaN(v) || !$('amount').value.trim())) v = 0;   // 交換は aUEC の出入りがないので 0 でよい
+  if(isNaN(v) || (v===0 && selType !== 'wikelo')){ toast('金額を入力してください'); $('amount').focus(); return; }
+  if(selType === 'wikelo' && !$('memo').value.trim() && !$('ship').value.trim()){ toast('メモに交換したもの（Polaris、Polaris Bit 15 など）を書いてください'); $('memo').focus(); return; }
   const e = {date:$('date').value||today(), type:selType, amount:dir*Math.abs(v), memo:$('memo').value.trim(), createdAt:Date.now()};
   const ship = $('ship').value.trim(); if(ship) e.ship = ship;
   if(picked) e.mission = picked.t;
