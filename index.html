@@ -109,6 +109,18 @@ button.peer{font:inherit;cursor:pointer}
 @keyframes qtstreak{to{transform:translateX(350%)}}
 @keyframes qtfade{0%{opacity:0}15%{opacity:1}80%{opacity:1}100%{opacity:0}}
 /* 実績 */
+.kingtally{display:flex;flex-wrap:wrap;gap:8px 18px;margin-bottom:10px;font-size:13px}
+.kingtally span{display:inline-flex;align-items:center;gap:6px}
+.kingtally .crown,.kinglist .crown{position:static;transform:none;width:16px;height:12px;filter:none}
+.kingtally b{font-family:var(--f-mono);font-size:15px}
+.kinglist{display:grid;gap:0}
+.kinglist .kw{display:grid;grid-template-columns:150px 1fr auto;gap:10px;align-items:center;padding:6px 2px;border-top:1px solid var(--line);font-size:13px}
+.kinglist .kw:first-child{border-top:0}
+.kinglist .kw .kwho{display:inline-flex;align-items:center;gap:6px}
+.kinglist .kw.now{background:var(--accent-soft)}
+.kingmore{font:inherit;font-size:12px;color:var(--accent);background:none;border:0;padding:6px 2px;cursor:pointer}
+.achbtn{display:inline-flex;align-items:center;gap:5px}
+.achbtn svg{width:15px;height:15px;color:var(--gold)}
 .achs{display:grid;grid-template-columns:repeat(auto-fill,minmax(170px,1fr));gap:8px}
 .ach{border:1px dashed var(--line);border-radius:4px;padding:8px 10px;display:grid;grid-template-columns:auto 1fr;column-gap:8px;align-items:center;color:var(--muted)}
 .ach svg{width:22px;height:22px;grid-row:1/span 2}
@@ -302,6 +314,7 @@ code{font-family:var(--f-mono);font-size:12px;background:var(--surface-2);border
       <button class="btn ghost iconbtn" type="button" id="hdrReload" title="ページを最新の状態に更新" aria-label="ページを更新">
         <svg viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 11a8 8 0 1 0-2.3 5.7"/><path d="M20 4v7h-7"/></svg>
       </button>
+      <button class="btn ghost achbtn" type="button" id="hdrAch" aria-expanded="false" aria-controls="achPanel" title="実績を表示"></button>
       <button class="btn" type="button" id="hdrImport" title="ゲームのログを読み、新しい記録をそのまま取り込みます">ログを取り込む</button>
       <button class="btn ghost" type="button" id="hdrExe" aria-expanded="false" hidden title="この PC の取り込みプログラム（Windows）の設定とダウンロード">取り込みプログラム</button>
       <button class="btn ghost" type="button" id="hdrShare" aria-expanded="false" hidden>共有URL</button>
@@ -401,7 +414,13 @@ code{font-family:var(--f-mono);font-size:12px;background:var(--surface-2);border
     </section>
   </div>
 
-  <section class="panel" id="achPanel">
+  <section class="panel" id="kingPanel" hidden>
+    <h2><span>週ごとの稼ぎ頭</span></h2>
+    <div class="kingtally" id="kingTally"></div>
+    <div class="kinglist" id="kingList"></div>
+  </section>
+
+  <section class="panel" id="achPanel" hidden>
     <h2><span>実績 <small class="scopetag" id="achCount"></small></span></h2>
     <div class="achs" id="achs"></div>
   </section>
@@ -517,14 +536,14 @@ code{font-family:var(--f-mono);font-size:12px;background:var(--surface-2);border
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
-<script src="config.js?v=3.1.0"></script>
-<script src="web_backend.js?v=3.1.0"></script>
+<script src="config.js?v=3.1.2"></script>
+<script src="web_backend.js?v=3.1.2"></script>
 <script>
 /* 'solo' = 個人用, 'shared' = claude.ai で共有, 'web' = GitHub Pages + Firebase で共有（web_backend.js） */
 const MODE = 'web';
 /* 変更して公開するたびに上げる（表示はフッター） */
-const APP_VERSION = '3.1.0';
-const APP_UPDATED = '2026-10-05 19:27';   // 日本時間
+const APP_VERSION = '3.1.2';
+const APP_UPDATED = '2026-10-05 19:35';   // 日本時間
 const SHARED = MODE !== 'solo';
 
 const TYPES = [
@@ -890,7 +909,7 @@ function renderPeople(){
   const king = weekKing();
   bar.hidden = !ps.length;
   bar.innerHTML = ps.map(p=>`<div class="pcard" style="--pc:${colorOf(p)}">
-      ${p===me ? `<button type="button" class="pav" data-avatar-me title="クリックでアイコンを設定">${avatarHtml(p, 'lg')}${king && king.who===p ? CROWN(king.amount) : ''}</button>` : `<span class="pav">${avatarHtml(p, 'lg')}${king && king.who===p ? CROWN(king.amount) : ''}</span>`}
+      ${p===me ? `<button type="button" class="pav" data-avatar-me title="クリックでアイコンを設定">${avatarHtml(p, 'lg')}${king && king.who===p ? CROWN(king.amount, king.label) : ''}</button>` : `<span class="pav">${avatarHtml(p, 'lg')}${king && king.who===p ? CROWN(king.amount, king.label) : ''}</span>`}
       <span class="pname">${esc(nameOf(p))}${p===me?'<small>（あなた）</small>':''}${(settings.handles||{})[p] ? `<small class="phandle">ゲーム内: ${esc(settings.handles[p])}</small>` : ''}</span>
       <span class="pbal num">${odo('p:' + p, each[p]||0)}<span class="u">aUEC</span></span>
       ${readOnly ? '' : `<button type="button" class="padj" data-adj="${esc(p)}" title="ゲーム内の所持金に合わせる">残高補正</button>`}</div>`).join('')
@@ -991,15 +1010,29 @@ function fxBanner(title, sub){
   document.body.appendChild(b);
   setTimeout(()=>b.remove(), 2300);
 }
-// 今週（月曜〜日曜）いちばん稼いだ人。二人以上いて、プラスのときだけ
+// 週（月曜〜日曜）ごとの稼ぎ頭。二人以上いて、その週プラスの人がいる週だけ。新しい週から順に [{week, who, amount}]
 function weekStart(date){ const n = dayNum(date), dow = (new Date(n*864e5).getUTCDay() + 6) % 7; return new Date((n - dow)*864e5).toISOString().slice(0, 10); }
-function weekKing(){
-  const ws = weekStart(today()), sum = {};
-  for(const e of entries) if(e.by && !isInternal(e) && e.date >= ws) sum[e.by] = (sum[e.by]||0) + e.amount;
-  const top = Object.entries(sum).sort((a,b)=>b[1]-a[1]);
-  return people().length >= 2 && top.length && top[0][1] > 0 ? {who:top[0][0], amount:top[0][1]} : null;
+function weeklyKings(){
+  if(people().length < 2) return [];
+  const weeks = {};
+  for(const e of entries){
+    if(!e.by || isInternal(e)) continue;
+    const w = weekStart(e.date), m = weeks[w] || (weeks[w] = {});
+    m[e.by] = (m[e.by]||0) + e.amount;
+  }
+  return Object.keys(weeks).sort().reverse().map(w=>{
+    const top = Object.entries(weeks[w]).sort((a,b)=>b[1]-a[1])[0];
+    return top && top[1] > 0 ? {week:w, who:top[0], amount:top[1]} : null;
+  }).filter(Boolean);
 }
-const CROWN = amt => `<svg class="crown" viewBox="0 0 24 18" aria-hidden="false" role="img"><title>今週の稼ぎ頭（${sfmt(amt)} aUEC）</title><path d="M2 16h20l-2-11-5 5-3-8-3 8-5-5z" fill="currentColor" stroke="rgb(0 0 0 / .25)" stroke-width=".8" stroke-linejoin="round"/></svg>`;
+// 王冠を付ける人: 今週の稼ぎ頭。今週まだ誰も稼いでいなければ先週の稼ぎ頭
+function weekKing(){
+  const ks = weeklyKings(), ws = weekStart(today());
+  const lastWs = new Date((dayNum(ws) - 7)*864e5).toISOString().slice(0, 10);
+  const k = ks.find(k=>k.week === ws) || ks.find(k=>k.week === lastWs);
+  return k ? {...k, label: k.week === ws ? '今週の稼ぎ頭' : '先週の稼ぎ頭'} : null;
+}
+const CROWN = (amt, label = '今週の稼ぎ頭') => `<svg class="crown" viewBox="0 0 24 18" aria-hidden="false" role="img"><title>${label}（${sfmt(amt)} aUEC）</title><path d="M2 16h20l-2-11-5 5-3-8-3 8-5-5z" fill="currentColor" stroke="rgb(0 0 0 / .25)" stroke-width=".8" stroke-linejoin="round"/></svg>`;
 
 // 実績。全期間の記録から、達成した日を求める
 const ACHS = [
@@ -1050,10 +1083,35 @@ function achievements(){
   }
   return got;
 }
+let kingAll = false;
+function renderKings(){
+  const ks = weeklyKings();
+  $('kingPanel').hidden = !ks.length;
+  if(!ks.length) return;
+  const ws = weekStart(today()), tally = {};
+  for(const k of ks) tally[k.who] = (tally[k.who]||0) + 1;
+  $('kingTally').innerHTML = Object.entries(tally).sort((a,b)=>b[1]-a[1]).map(([p, n])=>
+    `<span>${avatarHtml(p)}${esc(nameOf(p))} ${CROWN(0).replace(/<title>.*?<\/title>/, '')}<b>×${n}</b></span>`).join('');
+  const shown = kingAll ? ks : ks.slice(0, 8);
+  const range = w => { const e = new Date((dayNum(w) + 6)*864e5).toISOString().slice(0, 10); return `${w.slice(5).replace('-','/')}(月)〜${e.slice(5).replace('-','/')}(日)`; };
+  $('kingList').innerHTML = shown.map(k=>`<div class="kw ${k.week === ws ? 'now' : ''}"><span class="hint">${range(k.week)}${k.week === ws ? ' 今週' : ''}</span>
+      <span class="kwho">${avatarHtml(k.who)}${esc(nameOf(k.who))}</span><span class="num pos">${sfmt(k.amount)}</span></div>`).join('')
+    + (ks.length > 8 ? `<button type="button" class="kingmore" data-kingmore>${kingAll ? 'たたむ' : `すべて表示（${ks.length}週）`}</button>` : '');
+}
+document.addEventListener('click', ev=>{ if(ev.target.closest('[data-kingmore]')){ kingAll = !kingAll; renderKings(); } });
 const ACH_KEY = 'auec-ledger-ach-seen';
+// 実績は普段は閉じておき、上の「実績」ボタンで開く（開いたらそこまで移動）
+$('hdrAch').onclick = ()=>{
+  const open = $('achPanel').hidden;
+  $('achPanel').hidden = !open;
+  $('hdrAch').setAttribute('aria-expanded', String(open));
+  if(open) $('achPanel').scrollIntoView({behavior:'smooth', block:'start'});
+};
 function renderAchievements(){
   const list = ACHS.filter(a=>!a.shared || SHARED), got = achievements();
-  $('achCount').textContent = `（${list.filter(a=>got[a.id]).length} / ${list.length}）`;
+  const done = list.filter(a=>got[a.id]).length;
+  $('achCount').textContent = `（${done} / ${list.length}）`;
+  $('hdrAch').innerHTML = `${TROPHY}実績 ${done}/${list.length}`;
   $('achs').innerHTML = list.map(a=>`<div class="ach ${got[a.id] ? 'on' : ''}" title="${esc(a.desc)}">${TROPHY}
     <b>${esc(a.name)}</b><small>${got[a.id] ? got[a.id].replace(/-/g,'.') + ' 達成' : esc(a.desc)}</small></div>`).join('');
   // このブラウザで初めて見る実績は「実績解除」と知らせる（初めて開いたときは、今ある分をまとめて既読にする）
@@ -1118,6 +1176,7 @@ function render(){
   renderDays(days.filter(d=>inPeriod(d.date)));
   renderTabs();
   renderPeople();
+  renderKings();
   renderAchievements();
   if(window.redrawPeers) window.redrawPeers();
   // 光らせた記録は、光り終わったころに描き直して印を外す
