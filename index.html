@@ -121,7 +121,7 @@ function scCount(){ var gc = window.goatcounter; if(!gc || !gc.url || gc.filter(
 :root[data-skin="abyss"] #abyssLife,:root[data-skin="abyss"] #abyssFar{display:block;position:absolute;inset:0;pointer-events:none;z-index:-1;overflow:hidden}
 #abyssLife i{position:absolute;image-rendering:pixelated;background-repeat:no-repeat;background-size:100% 100%}
 #abyssLife .fish{top:36%;right:max(8px,calc(50% - 520px - 116px));width:104px;height:44px;background-image:/*LIFE:fish*/url('data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABoAAAALCAYAAABhwJ3wAAAApUlEQVR42mNkIAB0QtP+YxO/snoWIwMJgJEUw3EBXJZq+MX9Z2BgYLixaREjIyUW4LMQZgnMIiZsltzZv5ksi2BmIFuCEnSU+gQd/Pn5gwHZNwwMDAxM4gaW/1/fvsxACwCzBO4jq6wKqvno0+t32H3EwMDAcGxaByO1LEJPgbD4gicGalgGMwM5yPDmI1KDEpcjkfMRQUNUPKL+q3hE/SdWHBcAAER1Th6GNbwrAAAAAElFTkSuQmCC')}
-#abyssLife .eel{top:56%;left:0;width:256px;height:80px;background-image:/*LIFE:eel*/url('data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAEAAAAAUCAYAAAA9djs/AAABEUlEQVR42mNgGAWjYBSMZMA4EJa6Bmv9J6Rm99prjMMmANA9LCXLR1DPs8ef6BIgjPTwNDEeJiVAqBkYjAPp6dvXXzGoaoqRHRjUCAhGanqc0phGDhBiAocaqYIRPX8SYxApeRrdI7evv2Lg5uEg6DBSAxM5VcQXWOAsZBdOOIHiPwzF6IUPNR1HSSB//fKDpNSBDyAHAt7QIifpYotlauRVcgvV8vgUBhPbLIbQFCOsgYASAJSGLK1KakJlDrHuzgouYJi2dgJqAFi5K/0nRjO2WIbxqVkq0yJVrJ5zDkPs25dfjFgLQWSDcIUsvRop1K6JYO5uKahjMLeNYMRaDQ6mZiq1m9mD2d2jYBSMgoEBAOuxpA2od0EWAAAAAElFTkSuQmCC')}
+#abyssLife .eel{top:56%;left:max(-200px,calc(50% - 520px - 12px - 256px));width:256px;height:80px;background-image:/*LIFE:eel*/url('data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAEAAAAAUCAYAAAA9djs/AAABEUlEQVR42mNgGAWjYBSMZMA4EJa6Bmv9J6Rm99prjMMmANA9LCXLR1DPs8ef6BIgjPTwNDEeJiVAqBkYjAPp6dvXXzGoaoqRHRjUCAhGanqc0phGDhBiAocaqYIRPX8SYxApeRrdI7evv2Lg5uEg6DBSAxM5VcQXWOAsZBdOOIHiPwzF6IUPNR1HSSB//fKDpNSBDyAHAt7QIifpYotlauRVcgvV8vgUBhPbLIbQFCOsgYASAJSGLK1KakJlDrHuzgouYJi2dgJqAFi5K/0nRjO2WIbxqVkq0yJVrJ5zDkPs25dfjFgLQWSDcIUsvRop1K6JYO5uKahjMLeNYMRaDQ6mZiq1m9mD2d2jYBSMgoEBAOuxpA2od0EWAAAAAElFTkSuQmCC')}
 #abyssLife .oarfish{top:66%;right:max(10px,calc(50% - 520px - 70px));width:48px;height:368px;background-image:/*LIFE:oarfish*/url('data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAwAAABcCAYAAABa+1QQAAABIUlEQVR42mNkQANtk+b8Z2BgYFBRUWEI83JgRJdnYsABHjx4gFUcpwZcAKeG6qJshhNhHv+RxVY4Wf1nxuX+yIdXGVy27mdEVhyx7xgjUU6CKcbrJAkxPgzFeDW8ePWJgYGBgQFZMXVDCeYkojXAnES7iMPlJBZskcbWVcVgceAYI+2chMs5ODXgCqHB7qSqvBRGBgYGhjt37jD8Kmtj2OBg9X+4pqVh5yRiIg+vH7A5C68GbM6iXijRzkmEQoqgH9CdRVADurOoG0ojykn4Io8oPyA7iygNyM6ifijR30ks2ASRa1S5BR0oNepo8h4cTmIhJdKGfelNNSdhzQurth34T3LzZ7RxQomTsMYBev9t2La9B4+TsAKy8sNo8qarkwA6BLu4qbuNFAAAAABJRU5ErkJggg==')}
 /* 深海: 姿は見えず、遠くにアンコウの灯りだけがぽつんと（暗幕より手前） */
 #abyssFar .far{position:absolute;top:85%;left:max(30px,calc(50% - 520px - 60px));width:6px;height:6px;border-radius:50%;background:#dffbff;
@@ -662,14 +662,14 @@ code{font-family:var(--f-mono);font-size:12px;background:var(--surface-2);border
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
-<script src="config.js?v=3.19.1"></script>
-<script src="web_backend.js?v=3.19.1"></script>
+<script src="config.js?v=3.19.2"></script>
+<script src="web_backend.js?v=3.19.2"></script>
 <script>
 /* 'solo' = 個人用, 'shared' = claude.ai で共有, 'web' = GitHub Pages + Firebase で共有（web_backend.js） */
 const MODE = 'web';
 /* 変更して公開するたびに上げる（表示はフッター） */
-const APP_VERSION = '3.19.1';
-const APP_UPDATED = '2026-10-06 07:34';   // 日本時間
+const APP_VERSION = '3.19.2';
+const APP_UPDATED = '2026-10-06 07:40';   // 日本時間
 const SHARED = MODE !== 'solo';
 
 const TYPES = [
