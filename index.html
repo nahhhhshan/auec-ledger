@@ -234,6 +234,10 @@ input:focus-visible,button:focus-visible{outline:2px solid var(--accent);outline
 .dayhead .w{color:var(--muted);font-size:12px}
 .dayhead .net{margin-left:auto;font-weight:500}
 .dayhead .bal{color:var(--muted);font-size:12px}
+.achrow{display:flex;align-items:center;gap:6px;padding:5px 0 0 2px;font-size:12px;color:var(--gold)}
+.achrow svg{width:14px;height:14px;flex:none}
+.achrow b{font-weight:600}
+.achrow small{color:var(--muted)}
 .ent{display:grid;grid-template-columns:3.2em auto 1fr auto auto;gap:10px;align-items:center;padding:6px 0 0 2px;font-size:13px}
 .etime{font-family:var(--f-mono);font-variant-numeric:tabular-nums;font-size:12px;color:var(--muted)}
 .tag{font-size:11px;border:1px solid var(--line);border-radius:3px;padding:1px 7px;white-space:nowrap;background:var(--surface-2)}
@@ -529,14 +533,14 @@ code{font-family:var(--f-mono);font-size:12px;background:var(--surface-2);border
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
-<script src="config.js?v=3.2.1"></script>
-<script src="web_backend.js?v=3.2.1"></script>
+<script src="config.js?v=3.2.2"></script>
+<script src="web_backend.js?v=3.2.2"></script>
 <script>
 /* 'solo' = 個人用, 'shared' = claude.ai で共有, 'web' = GitHub Pages + Firebase で共有（web_backend.js） */
 const MODE = 'web';
 /* 変更して公開するたびに上げる（表示はフッター） */
-const APP_VERSION = '3.2.1';
-const APP_UPDATED = '2026-10-05 19:44';   // 日本時間
+const APP_VERSION = '3.2.2';
+const APP_UPDATED = '2026-10-05 20:03';   // 日本時間
 const SHARED = MODE !== 'solo';
 
 const TYPES = [
@@ -1399,6 +1403,9 @@ function entryTime(e){
   return d.toLocaleDateString('sv-SE') === e.date ? d.toTimeString().slice(0,5) : '';
 }
 function renderDays(days){
+  // その日に達成した実績（帳簿には保存せず、記録から計算して差し込む）
+  const achOn = {};
+  { const got = achievements(); for(const a of ACHS) if(got[a.id] && (!a.shared || SHARED)) (achOn[got[a.id]] = achOn[got[a.id]] || []).push(a); }
   if(!days.length){ $('days').innerHTML='<div class="empty">記録はまだありません。「記録を追加」から最初の1件を入れてください。</div>'; return; }
   $('days').innerHTML = [...days].reverse().map(d=>{
     const net = d.inc + d.out;
@@ -1413,7 +1420,7 @@ function renderDays(days){
     return `<div class="day"><div class="dayhead">
         <span class="d">${d.date.replace(/-/g,'.')}</span><span class="w">(${wday(d.date)})</span>
         <span class="bal num">終了時 ${fmt(d.end)}</span>
-        <span class="net num ${cls(net)}">${sfmt(net)}</span></div>${items}</div>`;
+        <span class="net num ${cls(net)}">${sfmt(net)}</span></div>${(achOn[d.date]||[]).map(a=>`<div class="achrow">${TROPHY}<span>実績解除: <b>${esc(a.name)}</b></span><small>${esc(a.desc)}</small></div>`).join('')}${items}</div>`;
   }).join('');
 }
 
