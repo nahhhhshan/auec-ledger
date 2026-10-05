@@ -7,6 +7,12 @@
 <link rel="icon" href="favicon-32.png" sizes="32x32" type="image/png">
 <link rel="apple-touch-icon" href="apple-touch-icon.png">
 <meta name="theme-color" content="#0c1219">
+<script>window.goatcounter = {no_onload: true};
+function scCount(){ var gc = window.goatcounter; if(!gc || !gc.url || gc.filter()) return;
+  var send = function(){ var u = gc.url(); if(u) new Image().src = u; };
+  if(!('visibilityState' in document) || document.visibilityState === 'visible') send();
+  else document.addEventListener('visibilitychange', function f(){ if(document.visibilityState !== 'visible') return; document.removeEventListener('visibilitychange', f); send(); }); }</script>
+<script data-goatcounter="https://nahshan.goatcounter.com/count" async src="https://gc.zgo.at/count.js" onload="scCount()"></script>
 <title>aUEC 共有収支帳</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -523,14 +529,14 @@ code{font-family:var(--f-mono);font-size:12px;background:var(--surface-2);border
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
-<script src="config.js?v=3.2.0"></script>
-<script src="web_backend.js?v=3.2.0"></script>
+<script src="config.js?v=3.2.1"></script>
+<script src="web_backend.js?v=3.2.1"></script>
 <script>
 /* 'solo' = 個人用, 'shared' = claude.ai で共有, 'web' = GitHub Pages + Firebase で共有（web_backend.js） */
 const MODE = 'web';
 /* 変更して公開するたびに上げる（表示はフッター） */
-const APP_VERSION = '3.2.0';
-const APP_UPDATED = '2026-10-05 19:39';   // 日本時間
+const APP_VERSION = '3.2.1';
+const APP_UPDATED = '2026-10-05 19:44';   // 日本時間
 const SHARED = MODE !== 'solo';
 
 const TYPES = [
