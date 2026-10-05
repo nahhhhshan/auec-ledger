@@ -56,8 +56,8 @@ body{background:var(--bg);color:var(--ink);font-family:var(--f-body);font-size:1
 .wrap{max-width:1040px;margin:0 auto;display:grid;gap:18px}
 .num{font-family:var(--f-mono);font-variant-numeric:tabular-nums}
 .pos{color:var(--pos)} .neg{color:var(--neg)}
-header{display:grid;grid-template-columns:1fr auto;align-items:center;gap:4px 16px}
-.brand{font-family:var(--f-disp);font-weight:600;font-size:26px;letter-spacing:.04em;margin:0}
+header{display:grid;grid-template-columns:auto minmax(0,1fr);align-items:center;gap:4px 16px}   /* 見出しは折り返さず、ボタンの方を折り返す */
+.brand{font-family:var(--f-disp);font-weight:600;font-size:26px;letter-spacing:.04em;margin:0;white-space:nowrap}
 .brand span{color:var(--accent)}
 .sub .ver{margin-left:10px;font-family:var(--f-mono);font-size:11px;letter-spacing:0;border:1px solid var(--line);border-radius:3px;padding:0 5px}
 .sub{color:var(--muted);font-size:12px;letter-spacing:.06em}
@@ -66,6 +66,7 @@ header{display:grid;grid-template-columns:1fr auto;align-items:center;gap:4px 16
 .hmeta #peers{order:3;margin-left:auto}
 .hmeta b{color:var(--ink);font-weight:500}
 .hbtns{display:flex;flex-wrap:wrap;gap:6px;justify-content:flex-end}
+@media (max-width:640px){header{grid-template-columns:minmax(0,1fr)} .brand{white-space:normal;font-size:22px} .hbtns{justify-content:flex-start}}
 .hbtns .btn{padding:6px 14px;font-size:13px}
 .hbtns .iconbtn{padding:6px 9px;display:inline-flex;align-items:center;position:relative}
 .skinsel{font:inherit;font-size:12px;color:var(--ink);background:var(--surface);border:1px solid var(--line);border-radius:4px;padding:5px 6px;cursor:pointer}
@@ -109,7 +110,11 @@ button.peer{font:inherit;cursor:pointer}
 /* 実績 */
 .achbtn{display:inline-flex;align-items:center;gap:5px}
 .achbtn svg{width:15px;height:15px;color:var(--gold)}
-.achs{display:grid;grid-template-columns:repeat(auto-fill,minmax(170px,1fr));gap:8px}
+.achs{display:grid;gap:4px}
+.achcat{font-size:13px;font-weight:600;margin:10px 0 4px;letter-spacing:.06em}
+.achcat:first-child{margin-top:0}
+.achcat small{font-weight:400;color:var(--muted);margin-left:6px;font-family:var(--f-mono)}
+.achgrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(160px,1fr));gap:6px}
 .ach{border:1px dashed var(--line);border-radius:4px;padding:8px 10px;display:grid;grid-template-columns:auto 1fr;column-gap:8px;align-items:center;color:var(--muted)}
 .ach svg{width:22px;height:22px;grid-row:1/span 2}
 .ach b{font-weight:500;font-size:13px}
@@ -518,14 +523,14 @@ code{font-family:var(--f-mono);font-size:12px;background:var(--surface-2);border
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
-<script src="config.js?v=3.1.4"></script>
-<script src="web_backend.js?v=3.1.4"></script>
+<script src="config.js?v=3.2.0"></script>
+<script src="web_backend.js?v=3.2.0"></script>
 <script>
 /* 'solo' = 個人用, 'shared' = claude.ai で共有, 'web' = GitHub Pages + Firebase で共有（web_backend.js） */
 const MODE = 'web';
 /* 変更して公開するたびに上げる（表示はフッター） */
-const APP_VERSION = '3.1.4';
-const APP_UPDATED = '2026-10-05 19:37';   // 日本時間
+const APP_VERSION = '3.2.0';
+const APP_UPDATED = '2026-10-05 19:39';   // 日本時間
 const SHARED = MODE !== 'solo';
 
 const TYPES = [
@@ -991,56 +996,94 @@ function fxBanner(title, sub){
   document.body.appendChild(b);
   setTimeout(()=>b.remove(), 2300);
 }
-// 実績。全期間の記録から、達成した日を求める
-const ACHS = [
-  {id:'first',   name:'はじめの一歩',   desc:'最初の記録をつける', count:1},
-  {id:'rec500',  name:'記録魔',         desc:'記録 500件', count:500},
-  {id:'bal1m',   name:'ミリオネア',     desc:'所持金 100万 aUEC に到達', bal:1e6},
-  {id:'bal5m',   name:'大富豪',         desc:'所持金 500万 aUEC に到達', bal:5e6},
-  {id:'bal10m',  name:'艦隊の資金',     desc:'所持金 1,000万 aUEC に到達', bal:1e7},
-  {id:'day500k', name:'稼ぎ日和',       desc:'1日で 50万 aUEC 稼ぐ', day:5e5},
-  {id:'day1m',   name:'ゴールドラッシュ', desc:'1日で 100万 aUEC 稼ぐ', day:1e6},
-  {id:'salv10',  name:'スクラップ屋',   desc:'サルベージで 10回 稼ぐ', type:'salvage', n:10},
-  {id:'salv50',  name:'鉄くずの王',     desc:'サルベージで 50回 稼ぐ', type:'salvage', n:50},
-  {id:'mine10',  name:'掘り師',         desc:'採掘で 10回 稼ぐ', type:'mining', n:10},
-  {id:'deliv50', name:'宇宙の宅配便',   desc:'配達で 50回 稼ぐ', type:'delivery', n:50},
-  {id:'bounty10',name:'賞金稼ぎ',       desc:'賞金首で 10回 稼ぐ', type:'bounty', n:10},
-  {id:'trade20', name:'商人',           desc:'交易で 20回 稼ぐ', type:'trade', n:20},
-  {id:'ship',    name:'新しい翼',       desc:'10万 aUEC 以上の船・装備を買う', big:true},
-  {id:'xfer10',  name:'持ちつ持たれつ', desc:'メンバー間の送金 10回', xfer:10, shared:true},
-  {id:'scan',    name:'スキャナー',     desc:'スクリーンショットで所持金を合わせる', scan:true},
-  {id:'streak7', name:'皆勤賞',         desc:'7日続けて記録する', streak:7},
-];
+// 実績。全期間の記録（共有口座全体）から、達成した日を求める。人同士を比べるものは入れない
+// 各実績は {id, cat, name, desc, m: 指標の名前, v: しきい値, shared: 共有の版だけ}
+const fmtM = v => v >= 1e8 ? (v/1e8) + '億' : v >= 1e4 ? (v/1e4).toLocaleString('en-US') + '万' : fmt(v);
+const ACHS = (()=>{
+  const A = [], add = (cat, id, name, desc, m, v, extra) => A.push({cat, id, name, desc, m, v, ...(extra||{})});
+  // 記録
+  [[1,'はじめの一歩'],[10,'書き始め'],[50,'記録係'],[100,'几帳面'],[250,'帳簿番'],[500,'記録魔'],[1000,'千の記録'],[2000,'航海日誌']]
+    .forEach(([v,n])=>add('記録', 'rec'+v, n, `記録 ${fmt(v)}件`, 'count', v));
+  [[10,'10日目'],[30,'30日目'],[100,'100日目'],[200,'200日目']]
+    .forEach(([v,n])=>add('記録', 'days'+v, n, `記録した日が ${v}日`, 'days', v));
+  [[3,'三日坊主卒業'],[7,'皆勤賞'],[14,'二週間連続'],[30,'一か月連続']]
+    .forEach(([v,n])=>add('記録', 'streak'+v, n, `${v}日続けて記録する`, 'streak', v));
+  // 所持金
+  [[1e5,'小銭持ち'],[5e5,'貯金家'],[1e6,'ミリオネア'],[2.5e6,'小金持ち'],[5e6,'大富豪'],[1e7,'艦隊の資金'],[2.5e7,'企業家'],[5e7,'財閥'],[1e8,'億万長者']]
+    .forEach(([v,n])=>add('所持金', 'bal'+v, n, `所持金 ${fmtM(v)} aUEC に到達`, 'bal', v));
+  // 稼ぎ
+  [[1e5,'いい日'],[2.5e5,'稼ぎ日'],[5e5,'稼ぎ日和'],[1e6,'ゴールドラッシュ'],[2e6,'大当たり'],[5e6,'伝説の一日']]
+    .forEach(([v,n])=>add('稼ぎ', 'day'+v, n, `1日で ${fmtM(v)} aUEC 稼ぐ`, 'bestDay', v));
+  [[5e5,'いい週'],[1e6,'週100万'],[3e6,'週300万'],[5e6,'週500万'],[1e7,'週1,000万']]
+    .forEach(([v,n])=>add('稼ぎ', 'week'+v, n, `1週間（月〜日）で ${fmtM(v)} aUEC 稼ぐ`, 'bestWeek', v));
+  [[1e6,'いい月'],[5e6,'月500万'],[1e7,'月1,000万'],[3e7,'月3,000万']]
+    .forEach(([v,n])=>add('稼ぎ', 'month'+v, n, `1か月で ${fmtM(v)} aUEC 稼ぐ`, 'bestMonth', v));
+  [[1e6,'収入100万'],[1e7,'収入1,000万'],[5e7,'収入5,000万'],[1e8,'収入1億']]
+    .forEach(([v,n])=>add('稼ぎ', 'income'+v, n, `収入の合計が ${fmtM(v)} aUEC`, 'income', v));
+  // 仕事（種類ごとの回数）
+  const RANK = [[1,'デビュー'],[10,'見習い'],[50,'ベテラン'],[100,'達人']];
+  for(const t of TYPES.filter(t=>t.dir > 0 && t.id !== 'other_in'))
+    RANK.forEach(([v,r])=>add('仕事', t.id + v, `${t.label}・${r}`, `${t.label}で ${v}回 稼ぐ`, 'type:' + t.id, v));
+  // 品目・店
+  [[3,'品目コレクター'],[10,'目利き'],[20,'市場通']].forEach(([v,n])=>add('交易', 'item'+v, n, `${v}種類の品目を売る`, 'items', v));
+  [[3,'寄り道'],[10,'常連'],[20,'星系めぐり']].forEach(([v,n])=>add('交易', 'shop'+v, n, `${v}か所の店で売り買いする`, 'shops', v));
+  // 買い物・支出
+  [[1e5,'新しい翼'],[1e6,'大きな買い物'],[5e6,'旗艦の主']].forEach(([v,n])=>add('買い物', 'buy'+v, n, `1回で ${fmtM(v)} aUEC 以上の船・装備を買う`, 'bigBuy', v));
+  [[10,'整備士の友'],[50,'修理工場の常連']].forEach(([v,n])=>add('買い物', 'repair'+v, n, `修理・補給 ${v}回`, 'type:repair', v));
+  add('買い物', 'fine1', '前科一犯', '罰金・保険を払う', 'type:fine', 1);
+  // 共有口座・スキャン
+  [[1,'はじめての送金'],[10,'持ちつ持たれつ'],[50,'息ぴったり']].forEach(([v,n])=>add('共有', 'xfer'+v, n, `メンバー間の送金 ${v}回`, 'xfer', v, {shared:true}));
+  [[1,'スキャナー'],[10,'スキャンの達人'],[50,'所持金ウォッチャー']].forEach(([v,n])=>add('共有', 'scan'+v, n, `スクリーンショットで所持金を ${v}回 合わせる`, 'scan', v));
+  add('共有', 'wipe', 'ワイプを越えて', '記録が2つ以上の期にまたがる', 'periods', 2);
+  // 時間
+  add('時間', 'night', '夜更かし', '深夜（0〜4時）の記録', 'night', 1);
+  add('時間', 'morning', '早起き', '早朝（5〜7時）の記録', 'morning', 1);
+  [[10,'週末パイロット'],[30,'週末の住人']].forEach(([v,n])=>add('時間', 'weekend'+v, n, `土日に記録した日が ${v}日`, 'weekend', v));
+  return A;
+})();
+const ACH_CATS = ['記録','所持金','稼ぎ','仕事','交易','買い物','共有','時間'];
 const TROPHY = '<svg viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M8 21h8M12 17v4M7 4h10v5a5 5 0 0 1-10 0z"/><path d="M17 5h3v2a3 3 0 0 1-3 3M7 5H4v2a3 3 0 0 0 3 3"/></svg>';
+const wkOf = date => { const n = dayNum(date), dow = (new Date(n*864e5).getUTCDay() + 6) % 7; return new Date((n - dow)*864e5).toISOString().slice(0, 10); };
 function achievements(){
-  const list = sorted(entries), got = {};
-  const hit = (id, date) => { if(!got[id]) got[id] = date; };
-  let n = 0, bal = totalStart(null), xfers = 0, streak = 0, prev = '';
-  const byType = {}, dayNet = {};
-  for(const e of list){
-    n++; bal += e.amount;
-    for(const a of ACHS){
-      if(a.count && n >= a.count) hit(a.id, e.date);
-      if(a.bal && bal >= a.bal) hit(a.id, e.date);
+  const got = {}, M = {count:0, days:0, streak:0, bal:totalStart(null), bestDay:0, bestWeek:0, bestMonth:0, income:0, items:0, shops:0, bigBuy:0, xfer:0, scan:0, periods:1, night:0, morning:0, weekend:0};
+  const net = {}, items = new Set(), shops = new Set(), weekendDays = new Set();
+  let prev = '', run = 0;
+  // しきい値の低い順に並べておき、指標ごとに達成を確かめる
+  const byM = {};
+  for(const a of ACHS) (byM[a.m] = byM[a.m] || []).push(a);
+  for(const e of sorted(entries)){
+    M.count++; M.bal += e.amount;
+    if(e.date !== prev){
+      M.days++;
+      if(prev && dayNum(e.date) - dayNum(prev) > 30) M.periods++;
+      run = prev && dayNum(e.date) - dayNum(prev) === 1 ? run + 1 : 1; M.streak = Math.max(M.streak, run);
+      const dow = new Date(dayNum(e.date)*864e5).getUTCDay();
+      if(dow === 0 || dow === 6){ weekendDays.add(e.date); M.weekend = weekendDays.size; }
+      prev = e.date;
     }
+    const memo = e.memo || '';
     if(!isInternal(e)){
-      dayNet[e.date] = (dayNet[e.date]||0) + e.amount;
-      if(e.amount > 0){ byType[e.type] = (byType[e.type]||0) + 1; }
-      if(e.type === 'purchase' && e.amount <= -100000) hit('ship', e.date);
+      for(const k of ['d' + e.date, 'w' + wkOf(e.date), 'm' + e.date.slice(0, 7)]) net[k] = (net[k]||0) + e.amount;
+      M.bestDay = Math.max(M.bestDay, net['d' + e.date]);
+      M.bestWeek = Math.max(M.bestWeek, net['w' + wkOf(e.date)]);
+      M.bestMonth = Math.max(M.bestMonth, net['m' + e.date.slice(0, 7)]);
+      if(e.amount > 0){ M.income += e.amount; M['type:' + e.type] = (M['type:' + e.type]||0) + 1; }
+      else if(['repair','fine'].includes(e.type)) M['type:' + e.type] = (M['type:' + e.type]||0) + 1;
+      if(e.type === 'purchase') M.bigBuy = Math.max(M.bigBuy, -e.amount);
+      const it = memo.match(/^貨物売却: (.+?) \d+ SCU/); if(it){ items.add(it[1]); M.items = items.size; }
+      const sh = String(e.src||'').startsWith('log-') && memo.match(/（([^（）]+)）$/); if(sh){ shops.add(sh[1]); M.shops = shops.size; }
     }
-    if(e.type === 'transfer' && !String(e.src||'').endsWith('-out')) xfers++;
-    if(String(e.src||'').startsWith('shot-')) hit('scan', e.date);
-    if(e.date !== prev){ streak = prev && dayNum(e.date) - dayNum(prev) === 1 ? streak + 1 : 1; prev = e.date; }
-    for(const a of ACHS){
-      if(a.type && (byType[a.type]||0) >= a.n) hit(a.id, e.date);
-      if(a.day && dayNet[e.date] >= a.day) hit(a.id, e.date);
-      if(a.xfer && xfers >= a.xfer) hit(a.id, e.date);
-      if(a.streak && streak >= a.streak) hit(a.id, e.date);
+    if(e.type === 'transfer' && !String(e.src||'').endsWith('-out')) M.xfer++;
+    if(String(e.src||'').startsWith('shot-')) M.scan++;
+    if(e.createdAt > 1e12 && new Date(e.createdAt).toLocaleDateString('sv-SE') === e.date){
+      const h = new Date(e.createdAt).getHours();
+      if(h < 5) M.night++; else if(h < 8) M.morning++;
     }
+    for(const m in byM) if((M[m]||0) > 0) for(const a of byM[m]) if(!got[a.id] && M[m] >= a.v) got[a.id] = e.date;
   }
   return got;
 }
-const ACH_KEY = 'auec-ledger-ach-seen';
+const ACH_KEY = 'auec-ledger-ach-seen-v2';   // v3.2.0 で実績を作り直したので、新しい印で数え直す（初回は知らせずに既読）
 // 実績は普段は閉じておき、上の「実績」ボタンで開く（開いたらそこまで移動）
 $('hdrAch').onclick = ()=>{
   const open = $('achPanel').hidden;
@@ -1053,8 +1096,12 @@ function renderAchievements(){
   const done = list.filter(a=>got[a.id]).length;
   $('achCount').textContent = `（${done} / ${list.length}）`;
   $('hdrAch').innerHTML = `${TROPHY}実績 ${done}/${list.length}`;
-  $('achs').innerHTML = list.map(a=>`<div class="ach ${got[a.id] ? 'on' : ''}" title="${esc(a.desc)}">${TROPHY}
-    <b>${esc(a.name)}</b><small>${got[a.id] ? got[a.id].replace(/-/g,'.') + ' 達成' : esc(a.desc)}</small></div>`).join('');
+  $('achs').innerHTML = ACH_CATS.map(c=>{
+    const xs = list.filter(a=>a.cat === c);
+    if(!xs.length) return '';
+    return `<h3 class="achcat">${c} <small>${xs.filter(a=>got[a.id]).length} / ${xs.length}</small></h3><div class="achgrid">` + xs.map(a=>
+      `<div class="ach ${got[a.id] ? 'on' : ''}" title="${esc(a.desc)}">${TROPHY}<b>${esc(a.name)}</b><small>${got[a.id] ? got[a.id].replace(/-/g,'.') + ' 達成' : esc(a.desc)}</small></div>`).join('') + '</div>';
+  }).join('');
   // このブラウザで初めて見る実績は「実績解除」と知らせる（初めて開いたときは、今ある分をまとめて既読にする）
   if(seenIds === null) return;
   let seen = null;
@@ -1062,9 +1109,11 @@ function renderAchievements(){
   const now = list.filter(a=>got[a.id]).map(a=>a.id);
   if(seen){
     const fresh = list.filter(a=>got[a.id] && !seen.includes(a.id));
-    fresh.forEach((a, i)=> setTimeout(()=>fxBanner('ACHIEVEMENT UNLOCKED', `実績解除: ${a.name}（${a.desc}）`), 2500 * i));
+    fresh.slice(0, 3).forEach((a, i)=> setTimeout(()=>fxBanner('ACHIEVEMENT UNLOCKED', `実績解除: ${a.name}（${a.desc}）`), 2500 * i));
+    if(fresh.length > 3) setTimeout(()=>toast(`ほかに ${fresh.length - 3}件の実績を解除しました`), 7500);
   }
-  try{ localStorage.setItem(ACH_KEY, JSON.stringify(now)); }catch(e){}
+  // 以前の版の実績 ID（名前が変わったもの）も残しておく
+  try{ localStorage.setItem(ACH_KEY, JSON.stringify([...new Set([...(seen||[]), ...now])])); }catch(e){}
 }
 // 隠しコマンド: ↑↑↓↓←→←→BA で量子ジャンプ
 const KONAMI = ['ArrowUp','ArrowUp','ArrowDown','ArrowDown','ArrowLeft','ArrowRight','ArrowLeft','ArrowRight','b','a'];
