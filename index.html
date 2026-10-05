@@ -947,14 +947,14 @@ window.I18N_EN = {exact, html, re, words};
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
-<script src="config.js?v=3.21.2"></script>
-<script src="web_backend.js?v=3.21.2"></script>
+<script src="config.js?v=3.21.3"></script>
+<script src="web_backend.js?v=3.21.3"></script>
 <script>
 /* 'solo' = 個人用, 'shared' = claude.ai で共有, 'web' = GitHub Pages + Firebase で共有（web_backend.js） */
 const MODE = 'web';
 /* 変更して公開するたびに上げる（表示はフッター） */
-const APP_VERSION = '3.21.2';
-const APP_UPDATED = '2026-10-06 08:45';   // 日本時間
+const APP_VERSION = '3.21.3';
+const APP_UPDATED = '2026-10-06 08:46';   // 日本時間
 const SHARED = MODE !== 'solo';
 /* 一般公開版（make_public.py で作る。このブラウザ内に保存、手入力欄とバックアップを出す） */
 const PUBLIC = false;
@@ -2286,7 +2286,8 @@ function drawLogSum(){
 }
 let autoNext = false;
 const PCTOOL_KEY = 'auec-sclog';
-const usePcTool = () => { try{ return MODE === 'web' && localStorage.getItem(PCTOOL_KEY) === '1'; }catch(e){ return false; } };
+// 公開版では使わない（同じ github.io の共有版とブラウザの設定が共通なので、そちらでオンにした設定を拾わないように）
+const usePcTool = () => { try{ return !PUBLIC && MODE === 'web' && localStorage.getItem(PCTOOL_KEY) === '1'; }catch(e){ return false; } };
 /* ---------- 取り込みプログラム（exe）の版の確認 ----------
    exe は取り込みのたびに「版・追加件数」を帳簿（presence/exe-名前）に書き残す。
    起動して25秒たっても返事がない（入っていない・古い）か、版が MIN_EXE_VERSION より古ければ、警告とダウンロードを出す */
