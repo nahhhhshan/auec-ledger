@@ -83,11 +83,12 @@ function scCount(){ var gc = window.goatcounter; if(!gc || !gc.url || gc.filter(
 /* さらに軽く（v3.15.0）: 絶えず動くもの（光の筋の揺れ・マリンスノー・泡）はやめ、すべて止まった絵にした。
    背景は画面に固定した層に1回描くだけ（body の background-attachment:fixed はスクロールのたびに全面を描き直すので使わない）。
    スクロールで暗くなるのは、専用の暗幕 #abyssShade の opacity を JS で変えるだけ（ページ全体のスタイル再計算を起こさない） */
-:root[data-skin="abyss"] body::before,:root[data-skin="abyss"] body::after{content:"";position:fixed;inset:0;pointer-events:none;z-index:-1}
-/* 海の色（上はかすかに光の届く青緑 → 下は真っ暗）と、止まった光の筋 */
-:root[data-skin="abyss"] body::before{background:
-  repeating-linear-gradient(100deg,rgba(150,230,255,0) 0 60px,rgba(150,230,255,.07) 80px,rgba(150,230,255,0) 120px,rgba(150,230,255,0) 190px) 0 0/100% 70% no-repeat,
-  linear-gradient(180deg,#0b4561 0%,#063049 18%,#03192d 48%,#010a16 78%,#00050b 100%)}
+:root[data-skin="abyss"]::before,:root[data-skin="abyss"] body::before,:root[data-skin="abyss"] body::after{content:"";position:fixed;inset:0;pointer-events:none;z-index:-1}
+/* 海の色（上はかすかに光の届く青緑 → 下は真っ暗）。一番奥の層 */
+:root[data-skin="abyss"]::before{background:linear-gradient(180deg,#0b4561 0%,#063049 18%,#03192d 48%,#010a16 78%,#00050b 100%)}
+/* 止まった光の筋: 下へ行くほど自然に消えるよう、上から下へ薄くなるマスクをかける（途中で切れて見えないように） */
+:root[data-skin="abyss"] body::before{background:repeating-linear-gradient(100deg,rgba(150,230,255,0) 0 60px,rgba(150,230,255,.08) 80px,rgba(150,230,255,0) 120px,rgba(150,230,255,0) 190px);
+  -webkit-mask-image:linear-gradient(180deg,#000 0%,rgba(0,0,0,.5) 30%,transparent 75%);mask-image:linear-gradient(180deg,#000 0%,rgba(0,0,0,.5) 30%,transparent 75%)}
 /* マリンスノー（止まっている）。暗幕より手前に描くので、深く潜っても粒だけは見える */
 :root[data-skin="abyss"] body::after{background-image:radial-gradient(2px 2px at 12% 18%,rgba(220,245,255,.85),transparent 70%),radial-gradient(1.5px 1.5px at 33% 72%,rgba(220,245,255,.7),transparent 70%),
     radial-gradient(2.2px 2.2px at 58% 36%,rgba(220,245,255,.75),transparent 70%),radial-gradient(1.5px 1.5px at 77% 84%,rgba(220,245,255,.65),transparent 70%),
@@ -95,6 +96,15 @@ function scCount(){ var gc = window.goatcounter; if(!gc || !gc.url || gc.filter(
     radial-gradient(1.2px 1.2px at 22% 44%,rgba(200,240,255,.5),transparent 70%),radial-gradient(1px 1px at 68% 12%,rgba(200,240,255,.45),transparent 70%),
     radial-gradient(1.1px 1.1px at 84% 58%,rgba(200,240,255,.5),transparent 70%),radial-gradient(1px 1px at 6% 88%,rgba(200,240,255,.45),transparent 70%);
   background-size:300px 300px,300px 300px,300px 300px,300px 300px,300px 300px,300px 300px,180px 180px,180px 180px,180px 180px,180px 180px}
+/* 泡（v3.16.2）: 直径 6〜12px の小さな粒を4つだけ、下から上へ昇らせる。動くのは粒の小さな範囲だけなので、描き直しはごく狭い。
+   1回昇ったら（全体の約4割の時間）、残りは見えないまま休む */
+#abyssBubbles{display:none}
+:root[data-skin="abyss"] #abyssBubbles{display:block;position:fixed;inset:0;pointer-events:none;z-index:-1;overflow:hidden}
+#abyssBubbles i{position:absolute;bottom:-20px;border-radius:50%;opacity:0;
+  background:radial-gradient(circle at 35% 30%,rgba(255,255,255,.75) 0 12%,transparent 18%),radial-gradient(circle,transparent 52%,rgba(170,235,255,.55) 64%,transparent 72%);
+  animation:abyssbub var(--d) linear var(--w) infinite}
+@keyframes abyssbub{0%{transform:translate3d(0,0,0);opacity:0}3%{opacity:.9}38%{transform:translate3d(var(--x),-110vh,0);opacity:.5}38.1%,100%{transform:translate3d(var(--x),-110vh,0);opacity:0}}
+@media (prefers-reduced-motion: reduce){#abyssBubbles i{animation:none}}
 #abyssShade{display:none}
 :root[data-skin="abyss"] #abyssShade{display:block;position:fixed;inset:0;pointer-events:none;z-index:-1;opacity:.3;
   background:radial-gradient(ellipse at 50% 35%,rgba(0,3,9,.55) 0%,rgba(0,2,7,.9) 70%,#000106 100%)}
@@ -385,6 +395,7 @@ code{font-family:var(--f-mono);font-size:12px;background:var(--surface-2);border
 <body>
 
 <div id="abyssShade" aria-hidden="true"></div>
+<div id="abyssBubbles" aria-hidden="true"><i style="left:14%;width:10px;height:10px;--d:26s;--w:-3s;--x:14px"></i><i style="left:41%;width:6px;height:6px;--d:21s;--w:-11s;--x:-8px"></i><i style="left:67%;width:12px;height:12px;--d:31s;--w:-19s;--x:10px"></i><i style="left:86%;width:7px;height:7px;--d:24s;--w:-7s;--x:-12px"></i></div>
 <div class="wrap">
   <header>
     <div>
@@ -627,14 +638,14 @@ code{font-family:var(--f-mono);font-size:12px;background:var(--surface-2);border
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
-<script src="config.js?v=3.16.1"></script>
-<script src="web_backend.js?v=3.16.1"></script>
+<script src="config.js?v=3.16.2"></script>
+<script src="web_backend.js?v=3.16.2"></script>
 <script>
 /* 'solo' = 個人用, 'shared' = claude.ai で共有, 'web' = GitHub Pages + Firebase で共有（web_backend.js） */
 const MODE = 'web';
 /* 変更して公開するたびに上げる（表示はフッター） */
-const APP_VERSION = '3.16.1';
-const APP_UPDATED = '2026-10-06 06:45';   // 日本時間
+const APP_VERSION = '3.16.2';
+const APP_UPDATED = '2026-10-06 06:48';   // 日本時間
 const SHARED = MODE !== 'solo';
 
 const TYPES = [
