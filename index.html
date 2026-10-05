@@ -79,7 +79,7 @@ function scCount(){ var gc = window.goatcounter; if(!gc || !gc.url || gc.filter(
   --accent:#3fd6e8; --accent-soft:rgba(63,214,232,.16); --gold:#7dfbd8; --pos:#62f7b4; --neg:#ff7d9c; --grid:rgba(90,180,220,.13); --p1:#3fd6e8; --p2:#ffb870; --p3:#b694ff;}
 /* 深海（画像なし・CSS で描く）: 上はかすかに光の届く青緑 → 下は真っ暗。光の筋が揺れ、マリンスノーが沈み、泡が浮かぶ。
    重くならないよう、動きはすべて層を transform で滑らせるだけ（毎コマの描き直し・ぼかしの計算をしない） */
-:root[data-skin="abyss"] body{background:#020c18;position:relative}
+:root[data-skin="abyss"] body{background:#020c18}
 /* さらに軽く（v3.15.0）: 絶えず動くもの（光の筋の揺れ・マリンスノー・泡）はやめ、すべて止まった絵にした。
    背景は画面に固定した層に1回描くだけ（body の background-attachment:fixed はスクロールのたびに全面を描き直すので使わない）。
    スクロールで暗くなるのは、専用の暗幕 #abyssShade の opacity を JS で変えるだけ（ページ全体のスタイル再計算を起こさない） */
@@ -115,17 +115,6 @@ function scCount(){ var gc = window.goatcounter; if(!gc || !gc.url || gc.filter(
 @keyframes abysslure{from{opacity:.55}to{opacity:1}}
 :root[data-skin="abyss"] #seabed{image-rendering:pixelated}
 @media (prefers-reduced-motion: reduce){#seabed .lure{animation:none}}
-/* 中盤〜下の生き物（v3.19.0、make_abyss_life.py でドット絵を作って埋め込む）。ページの中に止めて置くだけで、スクロールで通り過ぎていく。
-   暗幕より奥に置くので、深くなるほど暗く沈んで見える。上（浅い所）には何も置かない */
-#abyssLife,#abyssFar{display:none}
-:root[data-skin="abyss"] #abyssLife,:root[data-skin="abyss"] #abyssFar{display:block;position:absolute;inset:0;pointer-events:none;z-index:-1;overflow:hidden}
-#abyssLife i{position:absolute;image-rendering:pixelated;background-repeat:no-repeat;background-size:100% 100%}
-#abyssLife .fish{top:36%;right:max(8px,calc(50% - 520px - 116px));width:104px;height:44px;background-image:/*LIFE:fish*/url('data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABoAAAALCAYAAABhwJ3wAAAApUlEQVR42mNkIAB0QtP+YxO/snoWIwMJgJEUw3EBXJZq+MX9Z2BgYLixaREjIyUW4LMQZgnMIiZsltzZv5ksi2BmIFuCEnSU+gQd/Pn5gwHZNwwMDAxM4gaW/1/fvsxACwCzBO4jq6wKqvno0+t32H3EwMDAcGxaByO1LEJPgbD4gicGalgGMwM5yPDmI1KDEpcjkfMRQUNUPKL+q3hE/SdWHBcAAER1Th6GNbwrAAAAAElFTkSuQmCC')}
-#abyssLife .eel{top:56%;left:max(-200px,calc(50% - 520px - 12px - 256px));width:256px;height:80px;background-image:/*LIFE:eel*/url('data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAEAAAAAUCAYAAAA9djs/AAABEUlEQVR42mNgGAWjYBSMZMA4EJa6Bmv9J6Rm99prjMMmANA9LCXLR1DPs8ef6BIgjPTwNDEeJiVAqBkYjAPp6dvXXzGoaoqRHRjUCAhGanqc0phGDhBiAocaqYIRPX8SYxApeRrdI7evv2Lg5uEg6DBSAxM5VcQXWOAsZBdOOIHiPwzF6IUPNR1HSSB//fKDpNSBDyAHAt7QIifpYotlauRVcgvV8vgUBhPbLIbQFCOsgYASAJSGLK1KakJlDrHuzgouYJi2dgJqAFi5K/0nRjO2WIbxqVkq0yJVrJ5zDkPs25dfjFgLQWSDcIUsvRop1K6JYO5uKahjMLeNYMRaDQ6mZiq1m9mD2d2jYBSMgoEBAOuxpA2od0EWAAAAAElFTkSuQmCC')}
-#abyssLife .oarfish{top:66%;right:max(10px,calc(50% - 520px - 70px));width:48px;height:368px;background-image:/*LIFE:oarfish*/url('data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAwAAABcCAYAAABa+1QQAAABIUlEQVR42mNkQANtk+b8Z2BgYFBRUWEI83JgRJdnYsABHjx4gFUcpwZcAKeG6qJshhNhHv+RxVY4Wf1nxuX+yIdXGVy27mdEVhyx7xgjUU6CKcbrJAkxPgzFeDW8ePWJgYGBgQFZMXVDCeYkojXAnES7iMPlJBZskcbWVcVgceAYI+2chMs5ODXgCqHB7qSqvBRGBgYGhjt37jD8Kmtj2OBg9X+4pqVh5yRiIg+vH7A5C68GbM6iXijRzkmEQoqgH9CdRVADurOoG0ojykn4Io8oPyA7iygNyM6ifijR30ks2ASRa1S5BR0oNepo8h4cTmIhJdKGfelNNSdhzQurth34T3LzZ7RxQomTsMYBev9t2La9B4+TsAKy8sNo8qarkwA6BLu4qbuNFAAAAABJRU5ErkJggg==')}
-/* 深海: 姿は見えず、遠くにアンコウの灯りだけがぽつんと（暗幕より手前） */
-#abyssFar .far{position:absolute;top:85%;left:max(30px,calc(50% - 520px - 60px));width:6px;height:6px;border-radius:50%;background:#dffbff;
-  box-shadow:0 0 6px 2px rgba(150,240,255,.7),0 0 40px 14px rgba(110,210,240,.16)}
 #abyssShade{display:none}
 :root[data-skin="abyss"] #abyssShade{display:block;position:fixed;inset:0;pointer-events:none;z-index:-1;opacity:.15;
   background:radial-gradient(ellipse at 50% 35%,rgba(0,2,7,.86) 0%,rgba(0,2,7,.96) 70%,#000106 100%)}
@@ -415,10 +404,8 @@ code{font-family:var(--f-mono);font-size:12px;background:var(--surface-2);border
 </head>
 <body>
 
-<div id="abyssLife" aria-hidden="true"><i class="fish"></i><i class="eel"></i><i class="oarfish"></i></div>
 <div id="abyssBubbles" aria-hidden="true"><i style="left:6%;width:9px;height:9px;--d:15s;--w:-2s;--x:10px"></i><i style="left:14%;width:11px;height:11px;--d:19s;--w:-9s;--x:14px"></i><i style="left:22%;width:6px;height:6px;--d:14s;--w:-5s;--x:-6px"></i><i style="left:31%;width:8px;height:8px;--d:17s;--w:-12s;--x:8px"></i><i style="left:41%;width:6px;height:6px;--d:13s;--w:-1s;--x:-8px"></i><i style="left:49%;width:10px;height:10px;--d:18s;--w:-7s;--x:12px"></i><i style="left:58%;width:7px;height:7px;--d:16s;--w:-14s;--x:-10px"></i><i style="left:67%;width:12px;height:12px;--d:21s;--w:-4s;--x:10px"></i><i style="left:74%;width:6px;height:6px;--d:14s;--w:-10s;--x:-6px"></i><i style="left:82%;width:9px;height:9px;--d:17s;--w:-3s;--x:-12px"></i><i style="left:90%;width:7px;height:7px;--d:15s;--w:-8s;--x:8px"></i><i style="left:96%;width:5px;height:5px;--d:12s;--w:-6s;--x:-4px"></i></div>
 <div id="abyssShade" aria-hidden="true"></div>
-<div id="abyssFar" aria-hidden="true"><i class="far"></i></div>
 <div class="wrap">
   <header>
     <div>
@@ -662,13 +649,13 @@ code{font-family:var(--f-mono);font-size:12px;background:var(--surface-2);border
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
-<script src="config.js?v=3.19.2"></script>
-<script src="web_backend.js?v=3.19.2"></script>
+<script src="config.js?v=3.19.3"></script>
+<script src="web_backend.js?v=3.19.3"></script>
 <script>
 /* 'solo' = 個人用, 'shared' = claude.ai で共有, 'web' = GitHub Pages + Firebase で共有（web_backend.js） */
 const MODE = 'web';
 /* 変更して公開するたびに上げる（表示はフッター） */
-const APP_VERSION = '3.19.2';
+const APP_VERSION = '3.19.3';
 const APP_UPDATED = '2026-10-06 07:40';   // 日本時間
 const SHARED = MODE !== 'solo';
 
