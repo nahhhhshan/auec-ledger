@@ -47,19 +47,62 @@ function scCount(){ var gc = window.goatcounter; if(!gc || !gc.url || gc.filter(
 :root[data-skin="dusk"]{color-scheme:dark; --bg:#2a2d31; --surface:#33373c; --surface-2:#3a3e44; --ink:#d9dcdf; --muted:#9aa0a7; --line:#454a50; --accent:#7fb3c0; --accent-soft:#34474c; --gold:#d8b06a; --pos:#8fc99a; --neg:#e09a8f; --grid:#3c4046; --p1:#7fb3c0; --p2:#d8b06a; --p3:#b9a3d6;}
 :root[data-skin="navy"]{color-scheme:dark; --bg:#141b26; --surface:#1b2431; --surface-2:#212c3a; --ink:#cfd8e3; --muted:#8796a8; --line:#2b3747; --accent:#6fb7c9; --accent-soft:#1f3540; --gold:#d4a65a; --pos:#7dc79a; --neg:#e08e86; --grid:#243041; --p1:#6fb7c9; --p2:#d4a65a; --p3:#a99bd6;}
 :root[data-skin="forest"]{color-scheme:light; --bg:#e6ece4; --surface:#ffffff; --surface-2:#f5f7f9; --ink:#22302a; --muted:#5f6f66; --line:#cdd8cc; --accent:#3b7a64; --accent-soft:#d5e6dc; --gold:#8a6a1e; --pos:#3f7d3a; --neg:#a8473a; --grid:#dbe3d8; --p1:#3b7a64; --p2:#8a6a1e; --p3:#6a568f;}
+:root[data-skin="rain"]{color-scheme:dark; --bg:#0b131c; --surface:rgba(16,26,38,.84); --surface-2:rgba(24,36,50,.86); --ink:#e4edf6; --muted:#93a7bb; --line:rgba(170,200,230,.20);
+  --accent:#8ec6ff; --accent-soft:rgba(142,198,255,.15); --gold:#ffd27a; --pos:#8fe3ad; --neg:#ff9a9a; --grid:rgba(170,200,230,.12); --p1:#8ec6ff; --p2:#ffd27a; --p3:#c9a7ff;}
+/* 雨（画像なし・CSS で描く）: ガラスの向こうは夜の街のぼやけた灯り。雨筋は2層で斜めに降り、ガラスには水滴が付き、いくつかは筋を残して流れ落ちる。
+   動きはすべて層を transform で滑らせるだけ（毎コマの描き直し・ぼかしの計算をしない） */
+:root[data-skin="rain"] body{background:
+  radial-gradient(90px 90px at 14% 62%,rgba(255,196,110,.42),transparent 70%),radial-gradient(90px 90px at 27% 70%,rgba(255,150,90,.28),transparent 70%),
+  radial-gradient(70px 70px at 48% 58%,rgba(130,190,255,.32),transparent 70%),radial-gradient(110px 110px at 63% 66%,rgba(255,220,150,.26),transparent 70%),
+  radial-gradient(50px 50px at 79% 60%,rgba(255,120,150,.32),transparent 70%),radial-gradient(80px 80px at 90% 72%,rgba(140,220,255,.28),transparent 70%),
+  radial-gradient(140px 70px at 40% 82%,rgba(255,190,120,.12),transparent 70%),
+  linear-gradient(180deg,#0e1a27 0%,#122233 45%,#0c1622 75%,#070d14 100%) fixed;background-attachment:fixed}
+:root[data-skin="rain"] body::before,:root[data-skin="rain"] body::after,:root[data-skin="rain"]::before,:root[data-skin="rain"]::after{content:"";position:fixed;pointer-events:none;z-index:-1;will-change:transform}
+/* 雨筋（遠く・細く速い）: 縦の線を斜めに傾け、切れ目の帯で途切れさせて下へ滑らせる */
+:root[data-skin="rain"] body::before{inset:-30% -30%;
+  background:repeating-linear-gradient(90deg,transparent 0 19px,rgba(190,215,245,.18) 19px 20px,transparent 20px 41px,rgba(190,215,245,.12) 41px 42px,transparent 42px 67px);
+  -webkit-mask-image:repeating-linear-gradient(180deg,transparent 0 26px,#000 26px 58px,transparent 58px 96px,#000 96px 112px,transparent 112px 150px);
+  mask-image:repeating-linear-gradient(180deg,transparent 0 26px,#000 26px 58px,transparent 58px 96px,#000 96px 112px,transparent 112px 150px);
+  animation:rainfar .55s linear infinite}
+/* 雨筋（近く・太くゆっくり） */
+:root[data-skin="rain"] body::after{inset:-30% -30%;
+  background:repeating-linear-gradient(90deg,transparent 0 53px,rgba(210,230,255,.20) 53px 55px,transparent 55px 131px,rgba(210,230,255,.14) 131px 132px,transparent 132px 187px);
+  -webkit-mask-image:repeating-linear-gradient(180deg,transparent 0 60px,#000 60px 130px,transparent 130px 250px);
+  mask-image:repeating-linear-gradient(180deg,transparent 0 60px,#000 60px 130px,transparent 130px 250px);
+  animation:rainnear .8s linear infinite}
+/* ガラスに付いた水滴（動かない）と、ガラスのうっすらした映り込み */
+:root[data-skin="rain"]::before{inset:0;will-change:auto;
+  background-image:radial-gradient(circle 5px at 8% 12%,rgba(255,255,255,.8) 0,rgba(215,235,255,.34) 1.8px,rgba(140,170,205,.14) 3.5px,rgba(2,8,16,.55) 4.6px,transparent 5px),radial-gradient(circle 3px at 23% 64%,rgba(255,255,255,.8) 0,rgba(215,235,255,.34) 1.0px,rgba(140,170,205,.14) 2.1px,rgba(2,8,16,.55) 2.8px,transparent 3px),radial-gradient(circle 6px at 37% 28%,rgba(255,255,255,.8) 0,rgba(215,235,255,.34) 2.1px,rgba(140,170,205,.14) 4.2px,rgba(2,8,16,.55) 5.5px,transparent 6px),radial-gradient(circle 4px at 52% 81%,rgba(255,255,255,.8) 0,rgba(215,235,255,.34) 1.4px,rgba(140,170,205,.14) 2.8px,rgba(2,8,16,.55) 3.7px,transparent 4px),radial-gradient(circle 3px at 66% 17%,rgba(255,255,255,.8) 0,rgba(215,235,255,.34) 1.0px,rgba(140,170,205,.14) 2.1px,rgba(2,8,16,.55) 2.8px,transparent 3px),radial-gradient(circle 7px at 74% 52%,rgba(255,255,255,.8) 0,rgba(215,235,255,.34) 2.4px,rgba(140,170,205,.14) 4.9px,rgba(2,8,16,.55) 6.4px,transparent 7px),radial-gradient(circle 4px at 88% 33%,rgba(255,255,255,.8) 0,rgba(215,235,255,.34) 1.4px,rgba(140,170,205,.14) 2.8px,rgba(2,8,16,.55) 3.7px,transparent 4px),radial-gradient(circle 3px at 95% 77%,rgba(255,255,255,.8) 0,rgba(215,235,255,.34) 1.0px,rgba(140,170,205,.14) 2.1px,rgba(2,8,16,.55) 2.8px,transparent 3px),radial-gradient(circle 4px at 14% 90%,rgba(255,255,255,.8) 0,rgba(215,235,255,.34) 1.4px,rgba(140,170,205,.14) 2.8px,rgba(2,8,16,.55) 3.7px,transparent 4px),radial-gradient(circle 3px at 44% 46%,rgba(255,255,255,.8) 0,rgba(215,235,255,.34) 1.0px,rgba(140,170,205,.14) 2.1px,rgba(2,8,16,.55) 2.8px,transparent 3px),radial-gradient(circle 2px at 18% 30%,rgba(255,255,255,.8) 0,rgba(215,235,255,.34) 0.7px,rgba(140,170,205,.14) 1.4px,rgba(2,8,16,.55) 1.8px,transparent 2px),radial-gradient(circle 2.5px at 31% 8%,rgba(255,255,255,.8) 0,rgba(215,235,255,.34) 0.9px,rgba(140,170,205,.14) 1.8px,rgba(2,8,16,.55) 2.3px,transparent 2.5px),radial-gradient(circle 2px at 59% 59%,rgba(255,255,255,.8) 0,rgba(215,235,255,.34) 0.7px,rgba(140,170,205,.14) 1.4px,rgba(2,8,16,.55) 1.8px,transparent 2px),radial-gradient(circle 2.5px at 81% 88%,rgba(255,255,255,.8) 0,rgba(215,235,255,.34) 0.9px,rgba(140,170,205,.14) 1.8px,rgba(2,8,16,.55) 2.3px,transparent 2.5px),radial-gradient(circle 2px at 6% 52%,rgba(255,255,255,.8) 0,rgba(215,235,255,.34) 0.7px,rgba(140,170,205,.14) 1.4px,rgba(2,8,16,.55) 1.8px,transparent 2px),radial-gradient(circle 2px at 70% 4%,rgba(255,255,255,.8) 0,rgba(215,235,255,.34) 0.7px,rgba(140,170,205,.14) 1.4px,rgba(2,8,16,.55) 1.8px,transparent 2px),linear-gradient(180deg,rgba(200,220,240,.05),rgba(200,220,240,0) 30%,rgba(200,220,240,.04));
+  background-size:260px 260px,260px 260px,260px 260px,260px 260px,260px 260px,260px 260px,260px 260px,260px 260px,260px 260px,260px 260px,140px 140px,140px 140px,140px 140px,140px 140px,140px 140px,140px 140px,100% 100%}
+/* 筋を残して流れ落ちる水滴 */
+:root[data-skin="rain"]::after{left:0;right:0;top:-520px;height:calc(100vh + 520px);
+  background-image:radial-gradient(circle 5px at 7px 200px,rgba(255,255,255,.8) 0,rgba(210,232,252,.34) 2.0px,rgba(120,150,180,.12) 3.6px,rgba(4,10,18,.5) 4.7px,transparent 5px),linear-gradient(180deg,transparent 40px,rgba(200,225,250,0.3) 195px,transparent 196px),radial-gradient(circle 4px at 7px 430px,rgba(255,255,255,.8) 0,rgba(210,232,252,.34) 1.6px,rgba(120,150,180,.12) 2.9px,rgba(4,10,18,.5) 3.7px,transparent 4px),linear-gradient(180deg,transparent 270px,rgba(200,225,250,0.26) 425px,transparent 426px),radial-gradient(circle 4.5px at 7px 90px,rgba(255,255,255,.8) 0,rgba(210,232,252,.34) 1.8px,rgba(120,150,180,.12) 3.2px,rgba(4,10,18,.5) 4.2px,transparent 4.5px),linear-gradient(180deg,transparent -70px,rgba(200,225,250,0.26) 85px,transparent 86px);
+  background-size:14px 520px,1px 520px,14px 520px,1px 520px,14px 520px,1px 520px;background-repeat:repeat-y;background-position:23% 0,calc(23% + 7px) 0,61% 0,calc(61% + 7px) 0,86% 0,calc(86% + 7px) 0;
+  animation:raindrip 11s linear infinite}
+@keyframes rainfar{from{transform:rotate(14deg) translate3d(0,-150px,0)}to{transform:rotate(14deg) translate3d(0,0,0)}}
+@keyframes rainnear{from{transform:rotate(11deg) translate3d(0,-250px,0)}to{transform:rotate(11deg) translate3d(0,0,0)}}
+@keyframes raindrip{from{transform:translate3d(0,0,0)}to{transform:translate3d(0,520px,0)}}
+/* 欄は濡れたガラス板のように: 上辺がうっすら光り、縁が明るい（ぼかしは使わない） */
+:root[data-skin="rain"] .panel,:root[data-skin="rain"] .tiles{background-image:linear-gradient(180deg,rgba(255,255,255,.07),rgba(255,255,255,0) 38%);border-color:rgba(190,215,245,.22);
+  box-shadow:inset 0 1px 0 rgba(255,255,255,.10),0 10px 30px rgba(0,0,0,.35)}
+:root[data-skin="rain"] .avatarpop,:root[data-skin="rain"] .mlist,:root[data-skin="rain"] .toast{background:rgba(14,24,36,.96)}
+:root[data-skin="rain"] .tile.main .v{text-shadow:0 0 10px rgba(255,210,122,.35)}
+@media (prefers-reduced-motion: reduce){:root[data-skin="rain"] body::before,:root[data-skin="rain"] body::after,:root[data-skin="rain"]::after{animation:none}}
 :root[data-skin="anthro"]{color-scheme:dark; --bg:#160d29; --surface:#21143d; --surface-2:#2b1a4f; --ink:#f7ecff; --muted:#b3a8ee; --line:#4e44a0; --accent:#ff1493; --accent-soft:#4a1640; --gold:#ff00ff; --pos:#00ff00; --neg:#ff6fa8; --grid:#33215c; --p1:#ff1493; --p2:#00ff00; --p3:#6a5acd;}   /* アンスロさんの好きな色: #ff1493 #00ff00 #ff00ff #6a5acd */
 :root[data-skin="anthro-light"]{color-scheme:light; --bg:#fff0f8; --surface:#ffffff; --surface-2:#f7f2ff; --ink:#2a1640; --muted:#6a5acd; --line:#dcd2f6; --accent:#ff1493; --accent-soft:#ffe1f1; --gold:#d100d1; --pos:#00a300; --neg:#c2185b; --grid:#efe7fb; --p1:#ff1493; --p2:#00c800; --p3:#6a5acd;}   /* 明るいバージョン: 白地で読めるよう、文字に使う緑・マゼンタだけ少し濃く */
-:root[data-skin="abyss"]{color-scheme:dark; --bg:#020c18; --surface:rgba(5,28,46,.66); --surface-2:rgba(9,40,62,.62); --ink:#d8f4ff; --muted:#86b8cf; --line:rgba(90,180,220,.24);
+:root[data-skin="abyss"]{color-scheme:dark; --bg:#020c18; --surface:rgba(4,24,40,.86); --surface-2:rgba(8,36,56,.86); --ink:#d8f4ff; --muted:#86b8cf; --line:rgba(90,180,220,.24);
   --accent:#3fd6e8; --accent-soft:rgba(63,214,232,.16); --gold:#7dfbd8; --pos:#62f7b4; --neg:#ff7d9c; --grid:rgba(90,180,220,.13); --p1:#3fd6e8; --p2:#ffb870; --p3:#b694ff;}
-/* 深海: 上はかすかに光の届く青緑 → 下は真っ暗。光の筋が揺れ、マリンスノーが沈み、泡が浮かぶ。欄はすりガラス */
-/* 背景は深海の絵（abyss-bg.jpg、ローカルの ComfyUI で生成）。文字が読めるよう、上から暗さを重ねる */
-:root[data-skin="abyss"] body{background:linear-gradient(180deg,rgba(2,18,32,.35) 0%,rgba(1,12,24,.55) 45%,rgba(0,5,11,.85) 100%),url("abyss-bg.jpg") center top / cover no-repeat fixed,#020c18}
-:root[data-skin="abyss"] body::before,:root[data-skin="abyss"] body::after,:root[data-skin="abyss"]::after{content:"";position:fixed;inset:0;pointer-events:none;z-index:-1}
-:root[data-skin="abyss"] body::before{
-  background:repeating-linear-gradient(100deg,rgba(150,230,255,0) 0 60px,rgba(150,230,255,.07) 80px,rgba(150,230,255,0) 120px,rgba(150,230,255,0) 190px);
-  -webkit-mask-image:linear-gradient(180deg,#000 0%,rgba(0,0,0,.55) 30%,transparent 62%);mask-image:linear-gradient(180deg,#000 0%,rgba(0,0,0,.55) 30%,transparent 62%);
+/* 深海（画像なし・CSS で描く）: 上はかすかに光の届く青緑 → 下は真っ暗。光の筋が揺れ、マリンスノーが沈み、泡が浮かぶ。
+   重くならないよう、動きはすべて層を transform で滑らせるだけ（毎コマの描き直し・ぼかしの計算をしない） */
+:root[data-skin="abyss"] body{background:linear-gradient(180deg,#0b4561 0%,#063049 18%,#03192d 48%,#010a16 78%,#00050b 100%) fixed}
+:root[data-skin="abyss"] body::before,:root[data-skin="abyss"] body::after,:root[data-skin="abyss"]::before,:root[data-skin="abyss"]::after{content:"";position:fixed;pointer-events:none;z-index:-1;will-change:transform}
+/* 光の筋（ゆっくり揺れる） */
+:root[data-skin="abyss"] body::before{inset:-10% -20% 30% -20%;
+  background:repeating-linear-gradient(100deg,rgba(150,230,255,0) 0 60px,rgba(150,230,255,.13) 80px,rgba(150,230,255,0) 120px,rgba(150,230,255,0) 190px);
+  -webkit-mask-image:linear-gradient(180deg,#000 0%,rgba(0,0,0,.55) 35%,transparent 80%);mask-image:linear-gradient(180deg,#000 0%,rgba(0,0,0,.55) 35%,transparent 80%);
   transform-origin:50% 0;animation:abyssrays 14s ease-in-out infinite alternate}
-:root[data-skin="abyss"] body::after{
+/* マリンスノー（2層）: 画面より 900px 高い層を作り、上へずらしたところから下へ滑らせて繰り返す */
+:root[data-skin="abyss"] body::after{left:0;right:0;top:-900px;height:calc(100vh + 900px);
   background-image:
     radial-gradient(2px 2px at 12% 18%,rgba(220,245,255,.85),transparent 70%),radial-gradient(1.5px 1.5px at 33% 72%,rgba(220,245,255,.7),transparent 70%),
     radial-gradient(2.2px 2.2px at 58% 36%,rgba(220,245,255,.75),transparent 70%),radial-gradient(1.5px 1.5px at 77% 84%,rgba(220,245,255,.65),transparent 70%),
@@ -67,19 +110,22 @@ function scCount(){ var gc = window.goatcounter; if(!gc || !gc.url || gc.filter(
     radial-gradient(1.2px 1.2px at 22% 44%,rgba(200,240,255,.5),transparent 70%),radial-gradient(1px 1px at 68% 12%,rgba(200,240,255,.45),transparent 70%),
     radial-gradient(1.1px 1.1px at 84% 58%,rgba(200,240,255,.5),transparent 70%),radial-gradient(1px 1px at 6% 88%,rgba(200,240,255,.45),transparent 70%);
   background-size:300px 300px,300px 300px,300px 300px,300px 300px,300px 300px,300px 300px,180px 180px,180px 180px,180px 180px,180px 180px;
-  animation:abyssnow 50s linear infinite}
-/* 画面の四隅を暗くして奥行きを出す */
-:root[data-skin="abyss"]::before{content:"";position:fixed;inset:0;pointer-events:none;z-index:-1;background:radial-gradient(ellipse at 50% 35%,transparent 45%,rgba(0,4,10,.55) 100%)}
-:root[data-skin="abyss"]::after{
-  background-image:radial-gradient(circle at 50% 50%,transparent 55%,rgba(170,235,255,.5) 62%,transparent 70%),radial-gradient(circle at 50% 50%,transparent 55%,rgba(170,235,255,.4) 62%,transparent 70%),
-    radial-gradient(circle at 50% 50%,transparent 55%,rgba(170,235,255,.45) 62%,transparent 70%);
-  background-size:10px 10px,7px 7px,13px 13px;background-repeat:no-repeat;background-position:18% 110%,64% 115%,84% 120%;animation:abyssbubble 16s linear infinite}
+  animation:abyssnow 70s linear infinite}
+/* 四隅を暗くして奥行き（動かない） */
+:root[data-skin="abyss"]::before{inset:0;will-change:opacity;background:radial-gradient(ellipse at 50% 35%,rgba(0,3,9,.55) 0%,rgba(0,2,7,.9) 70%,#000106 100%);
+  opacity:calc(.3 + var(--abyss-depth,0) * .68)}   /* 一番上でも四隅は暗く、潜るほどほぼ真っ暗に */
+:root[data-skin="abyss"] body::before{opacity:calc(1 - var(--abyss-depth,0) * .95)}
+/* 泡: 画面の下から上へ層ごと滑らせる */
+:root[data-skin="abyss"]::after{left:0;right:0;top:100vh;height:100vh;
+  background-image:radial-gradient(circle,transparent 55%,rgba(170,235,255,.5) 62%,transparent 70%),radial-gradient(circle,transparent 55%,rgba(170,235,255,.4) 62%,transparent 70%),
+    radial-gradient(circle,transparent 55%,rgba(170,235,255,.45) 62%,transparent 70%);
+  background-size:10px 10px,7px 7px,13px 13px;background-repeat:no-repeat;background-position:18% 100%,64% 70%,84% 85%;animation:abyssbubble 18s linear infinite}
 @keyframes abyssrays{from{transform:skewX(-4deg)}to{transform:skewX(5deg)}}
-@keyframes abyssnow{from{background-position:0 0,0 0,0 0,0 0,0 0,0 0,0 0,0 0,0 0,0 0}to{background-position:-40px 600px,-40px 600px,-40px 600px,-40px 600px,-40px 600px,-40px 600px,-20px 360px,-20px 360px,-20px 360px,-20px 360px}}
-@keyframes abyssbubble{0%{background-position:18% 110%,64% 115%,84% 120%;opacity:0}8%{opacity:1}100%{background-position:21% -10%,61% -15%,87% -20%;opacity:.6}}
-:root[data-skin="abyss"] .panel,:root[data-skin="abyss"] .tiles,:root[data-skin="abyss"] .avatarpop,:root[data-skin="abyss"] .mlist,:root[data-skin="abyss"] .toast,:root[data-skin="abyss"] .celebrate .card{
-  -webkit-backdrop-filter:blur(8px) saturate(1.2);backdrop-filter:blur(8px) saturate(1.2);box-shadow:0 0 0 1px rgba(90,180,220,.08),0 10px 30px rgba(0,8,20,.45)}
-:root[data-skin="abyss"] .avatarpop,:root[data-skin="abyss"] .mlist,:root[data-skin="abyss"] .toast{background:rgba(4,22,38,.92)}
+@keyframes abyssnow{from{transform:translate3d(0,0,0)}to{transform:translate3d(0,900px,0)}}   /* 900px = 粒の模様の繰り返し（300px と 180px）の公倍数なので、つなぎ目が見えない */
+@keyframes abyssbubble{0%{transform:translate3d(0,0,0);opacity:0}8%{opacity:1}100%{transform:translate3d(12px,-210vh,0);opacity:.5}}
+/* 欄はぼかしを使わず、少し濃い半透明に（すりガラスのぼかしは重いため） */
+:root[data-skin="abyss"] .panel,:root[data-skin="abyss"] .tiles,:root[data-skin="abyss"] .celebrate .card{box-shadow:0 0 0 1px rgba(90,180,220,.08),0 10px 30px rgba(0,8,20,.45)}
+:root[data-skin="abyss"] .avatarpop,:root[data-skin="abyss"] .mlist,:root[data-skin="abyss"] .toast{background:rgba(4,22,38,.96)}
 :root[data-skin="abyss"] .tile.main .v,:root[data-skin="abyss"] .brand span{text-shadow:0 0 12px rgba(125,251,216,.45)}
 @media (prefers-reduced-motion: reduce){:root[data-skin="abyss"] body::before,:root[data-skin="abyss"] body::after,:root[data-skin="abyss"]::after{animation:none}}
 :root[data-skin="mobiglas"]{color-scheme:dark; --bg:#071219; --surface:#0b1a24; --surface-2:#0f2230; --ink:#cdeef8; --muted:#6fa3b6; --line:#1d4a5e; --accent:#4fd1f0; --accent-soft:#0f3442; --gold:#7fe3ff; --pos:#5ee0a8; --neg:#ff8a7a; --grid:#123444; --p1:#4fd1f0; --p2:#f0c060; --p3:#b79cff;}
@@ -379,7 +425,7 @@ code{font-family:var(--f-mono);font-size:12px;background:var(--surface-2);border
       <div class="hrow">
   <select class="skinsel" id="skinSel" aria-label="画面のテーマ" title="画面のテーマ（このブラウザで覚えます）">
           <option value="">テーマ: 自動</option><option value="light">明るい</option><option value="dark">暗い</option>
-          <option value="paper">紙</option><option value="dusk">夕暮れグレー</option><option value="navy">深い紺</option><option value="forest">森の緑</option><option value="mobiglas">mobiGlas 風</option><option value="anthro">アンスロさんがどうせ好きな色（暗い）</option><option value="anthro-light">アンスロさんがどうせ好きな色（明るい）</option><option value="abyss">アンスロさんがどうせ好きな深海</option>
+          <option value="paper">紙</option><option value="dusk">夕暮れグレー</option><option value="navy">深い紺</option><option value="forest">森の緑</option><option value="mobiglas">mobiGlas 風</option><option value="rain">俺がどうせ好きな雨テーマ</option><option value="anthro">アンスロさんがどうせ好きな色（暗い）</option><option value="anthro-light">アンスロさんがどうせ好きな色（明るい）</option><option value="abyss">アンスロさんがどうせ好きな深海</option>
         </select>
   <button class="btn ghost" type="button" id="hdrExe" aria-expanded="false" hidden title="この PC の取り込みプログラム（Windows）の設定とダウンロード">取り込みプログラム</button>
   <button class="btn" type="button" id="hdrImport" title="ゲームのログを読み、新しい記録をそのまま取り込みます">ログを取り込む</button>
@@ -610,14 +656,14 @@ code{font-family:var(--f-mono);font-size:12px;background:var(--surface-2);border
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
-<script src="config.js?v=3.12.0"></script>
-<script src="web_backend.js?v=3.12.0"></script>
+<script src="config.js?v=3.13.0"></script>
+<script src="web_backend.js?v=3.13.0"></script>
 <script>
 /* 'solo' = 個人用, 'shared' = claude.ai で共有, 'web' = GitHub Pages + Firebase で共有（web_backend.js） */
 const MODE = 'web';
 /* 変更して公開するたびに上げる（表示はフッター） */
-const APP_VERSION = '3.12.0';
-const APP_UPDATED = '2026-10-06 04:11';   // 日本時間
+const APP_VERSION = '3.13.0';
+const APP_UPDATED = '2026-10-06 04:18';   // 日本時間
 const SHARED = MODE !== 'solo';
 
 const TYPES = [
@@ -2226,7 +2272,14 @@ $('verTag').textContent = 'v' + APP_VERSION;
 const SKIN_KEY = 'auec-ledger-skin';
 const applySkin = v => { if(v) document.documentElement.dataset.skin = v; else delete document.documentElement.dataset.skin; $('skinSel').value = v; };
 try{ applySkin(localStorage.getItem(SKIN_KEY) || ''); }catch(e){ applySkin(''); }
-$('skinSel').onchange = ()=>{ const v = $('skinSel').value; applySkin(v); try{ localStorage.setItem(SKIN_KEY, v); }catch(e){} render(); };
+/* 深海テーマ: スクロールした深さ（1400px で最深）を --abyss-depth（0〜1）にする。1コマに1回だけ、値が変わったときだけ書き換える */
+let abyssTick = false, abyssLast = -1;
+const abyssDepth = ()=>{ abyssTick = false; if(document.documentElement.dataset.skin !== 'abyss') return;
+  const d = Math.min(1, Math.max(0, scrollY / 1400)); const v = Math.round(d * 50) / 50;
+  if(v !== abyssLast){ abyssLast = v; document.documentElement.style.setProperty('--abyss-depth', v); } };
+addEventListener('scroll', ()=>{ if(!abyssTick){ abyssTick = true; requestAnimationFrame(abyssDepth); } }, {passive:true});
+abyssDepth();
+$('skinSel').onchange = ()=>{ const v = $('skinSel').value; applySkin(v); try{ localStorage.setItem(SKIN_KEY, v); }catch(e){} abyssLast = -1; abyssDepth(); render(); };
 /* ---------- 更新マーク: 押すとページを最新にする。Web版は新しい版が出ていたらマークに印を付ける ---------- */
 $('hdrReload').onclick = async ()=>{
   // ブラウザに残った古いページを使わないよう、取り直してから読み込み直す
