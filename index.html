@@ -48,13 +48,15 @@ function scCount(){ var gc = window.goatcounter; if(!gc || !gc.url || gc.filter(
 :root[data-skin="navy"]{color-scheme:dark; --bg:#141b26; --surface:#1b2431; --surface-2:#212c3a; --ink:#cfd8e3; --muted:#8796a8; --line:#2b3747; --accent:#6fb7c9; --accent-soft:#1f3540; --gold:#d4a65a; --pos:#7dc79a; --neg:#e08e86; --grid:#243041; --p1:#6fb7c9; --p2:#d4a65a; --p3:#a99bd6;}
 :root[data-skin="forest"]{color-scheme:light; --bg:#e6ece4; --surface:#ffffff; --surface-2:#f5f7f9; --ink:#22302a; --muted:#5f6f66; --line:#cdd8cc; --accent:#3b7a64; --accent-soft:#d5e6dc; --gold:#8a6a1e; --pos:#3f7d3a; --neg:#a8473a; --grid:#dbe3d8; --p1:#3b7a64; --p2:#8a6a1e; --p3:#6a568f;}
 :root[data-skin="anthro"]{color-scheme:dark; --bg:#160d29; --surface:#21143d; --surface-2:#2b1a4f; --ink:#f7ecff; --muted:#b3a8ee; --line:#4e44a0; --accent:#ff1493; --accent-soft:#4a1640; --gold:#ff00ff; --pos:#00ff00; --neg:#ff6fa8; --grid:#33215c; --p1:#ff1493; --p2:#00ff00; --p3:#6a5acd;}   /* アンスロさんの好きな色: #ff1493 #00ff00 #ff00ff #6a5acd */
+:root[data-skin="anthro-light"]{color-scheme:light; --bg:#fff0f8; --surface:#ffffff; --surface-2:#f7f2ff; --ink:#2a1640; --muted:#6a5acd; --line:#dcd2f6; --accent:#ff1493; --accent-soft:#ffe1f1; --gold:#d100d1; --pos:#00a300; --neg:#c2185b; --grid:#efe7fb; --p1:#ff1493; --p2:#00c800; --p3:#6a5acd;}   /* 明るいバージョン: 白地で読めるよう、文字に使う緑・マゼンタだけ少し濃く */
 :root[data-skin="abyss"]{color-scheme:dark; --bg:#020c18; --surface:rgba(5,28,46,.66); --surface-2:rgba(9,40,62,.62); --ink:#d8f4ff; --muted:#86b8cf; --line:rgba(90,180,220,.24);
   --accent:#3fd6e8; --accent-soft:rgba(63,214,232,.16); --gold:#7dfbd8; --pos:#62f7b4; --neg:#ff7d9c; --grid:rgba(90,180,220,.13); --p1:#3fd6e8; --p2:#ffb870; --p3:#b694ff;}
 /* 深海: 上はかすかに光の届く青緑 → 下は真っ暗。光の筋が揺れ、マリンスノーが沈み、泡が浮かぶ。欄はすりガラス */
-:root[data-skin="abyss"] body{background:linear-gradient(180deg,#0b4561 0%,#063049 18%,#03192d 48%,#010a16 78%,#00050b 100%) fixed}
+/* 背景は深海の絵（abyss-bg.jpg、ローカルの ComfyUI で生成）。文字が読めるよう、上から暗さを重ねる */
+:root[data-skin="abyss"] body{background:linear-gradient(180deg,rgba(2,18,32,.35) 0%,rgba(1,12,24,.55) 45%,rgba(0,5,11,.85) 100%),url("abyss-bg.jpg") center top / cover no-repeat fixed,#020c18}
 :root[data-skin="abyss"] body::before,:root[data-skin="abyss"] body::after,:root[data-skin="abyss"]::after{content:"";position:fixed;inset:0;pointer-events:none;z-index:-1}
 :root[data-skin="abyss"] body::before{
-  background:repeating-linear-gradient(100deg,rgba(150,230,255,0) 0 60px,rgba(150,230,255,.13) 80px,rgba(150,230,255,0) 120px,rgba(150,230,255,0) 190px);
+  background:repeating-linear-gradient(100deg,rgba(150,230,255,0) 0 60px,rgba(150,230,255,.07) 80px,rgba(150,230,255,0) 120px,rgba(150,230,255,0) 190px);
   -webkit-mask-image:linear-gradient(180deg,#000 0%,rgba(0,0,0,.55) 30%,transparent 62%);mask-image:linear-gradient(180deg,#000 0%,rgba(0,0,0,.55) 30%,transparent 62%);
   transform-origin:50% 0;animation:abyssrays 14s ease-in-out infinite alternate}
 :root[data-skin="abyss"] body::after{
@@ -107,7 +109,7 @@ header{display:grid;grid-template-columns:auto minmax(0,1fr);align-items:center;
 .hbtns{display:flex;flex-direction:column;align-items:flex-end;gap:6px}
 .hrow{display:flex;flex-wrap:wrap;gap:6px;justify-content:flex-end;align-items:center}
 .hrow>*{height:32px}
-.hrow .skinsel{padding:0 8px;border-color:var(--line);color:var(--accent);font-size:13px;background:transparent}
+.hrow .skinsel{padding:0 8px;border-color:var(--line);color:var(--accent);font-size:13px;background:transparent;max-width:170px;text-overflow:ellipsis}
 @media (max-width:640px){header{grid-template-columns:minmax(0,1fr)} .brand{white-space:normal;font-size:22px} .hbtns{align-items:flex-start} .hrow{justify-content:flex-start}}
 .hbtns .btn{padding:6px 14px;font-size:13px}
 .hbtns .iconbtn{padding:6px 9px;display:inline-flex;align-items:center;position:relative}
@@ -377,7 +379,7 @@ code{font-family:var(--f-mono);font-size:12px;background:var(--surface-2);border
       <div class="hrow">
   <select class="skinsel" id="skinSel" aria-label="画面のテーマ" title="画面のテーマ（このブラウザで覚えます）">
           <option value="">テーマ: 自動</option><option value="light">明るい</option><option value="dark">暗い</option>
-          <option value="paper">紙</option><option value="dusk">夕暮れグレー</option><option value="navy">深い紺</option><option value="forest">森の緑</option><option value="mobiglas">mobiGlas 風</option><option value="anthro">アンスロさんがどうせ好きな色</option><option value="abyss">深海</option>
+          <option value="paper">紙</option><option value="dusk">夕暮れグレー</option><option value="navy">深い紺</option><option value="forest">森の緑</option><option value="mobiglas">mobiGlas 風</option><option value="anthro">アンスロさんがどうせ好きな色（暗い）</option><option value="anthro-light">アンスロさんがどうせ好きな色（明るい）</option><option value="abyss">アンスロさんがどうせ好きな深海</option>
         </select>
   <button class="btn ghost" type="button" id="hdrExe" aria-expanded="false" hidden title="この PC の取り込みプログラム（Windows）の設定とダウンロード">取り込みプログラム</button>
   <button class="btn" type="button" id="hdrImport" title="ゲームのログを読み、新しい記録をそのまま取り込みます">ログを取り込む</button>
@@ -608,14 +610,14 @@ code{font-family:var(--f-mono);font-size:12px;background:var(--surface-2);border
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
-<script src="config.js?v=3.11.0"></script>
-<script src="web_backend.js?v=3.11.0"></script>
+<script src="config.js?v=3.12.0"></script>
+<script src="web_backend.js?v=3.12.0"></script>
 <script>
 /* 'solo' = 個人用, 'shared' = claude.ai で共有, 'web' = GitHub Pages + Firebase で共有（web_backend.js） */
 const MODE = 'web';
 /* 変更して公開するたびに上げる（表示はフッター） */
-const APP_VERSION = '3.11.0';
-const APP_UPDATED = '2026-10-06 04:06';   // 日本時間
+const APP_VERSION = '3.12.0';
+const APP_UPDATED = '2026-10-06 04:11';   // 日本時間
 const SHARED = MODE !== 'solo';
 
 const TYPES = [
