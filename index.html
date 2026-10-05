@@ -941,14 +941,14 @@ window.I18N_EN = {exact, html, re, words};
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
-<script src="config.js?v=3.21.0"></script>
-<script src="web_backend.js?v=3.21.0"></script>
+<script src="config.js?v=3.21.1"></script>
+<script src="web_backend.js?v=3.21.1"></script>
 <script>
 /* 'solo' = 個人用, 'shared' = claude.ai で共有, 'web' = GitHub Pages + Firebase で共有（web_backend.js） */
 const MODE = 'web';
 /* 変更して公開するたびに上げる（表示はフッター） */
-const APP_VERSION = '3.21.0';
-const APP_UPDATED = '2026-10-06 08:30';   // 日本時間
+const APP_VERSION = '3.21.1';
+const APP_UPDATED = '2026-10-06 08:43';   // 日本時間
 const SHARED = MODE !== 'solo';
 /* 一般公開版（make_public.py で作る。このブラウザ内に保存、手入力欄とバックアップを出す） */
 const PUBLIC = false;
@@ -2616,10 +2616,9 @@ if(SHARED){
 if(!SHARED) $('soloAdj').hidden = false;
 $('verTag').textContent = 'v' + APP_VERSION;
 
-/* ---------- 公開版: 手入力欄とバックアップ、ファン作品の表記 ---------- */
+/* ---------- 公開版: バックアップ、ファン作品の表記 ---------- */
 if(PUBLIC){
-  $('addPanel').hidden = false;
-  $('backupBox').hidden = MODE === 'web';
+  $('backupBox').hidden = MODE === 'web';   // 手入力の欄は公開版でも出さない（取り込みは「ログを取り込む」で）
 }
 /* 公開版のブラウザ内の帳簿: 「共有」で二人用の共有帳簿（Supabase）を作る。作るときだけ、今の記録を移すか選べる
    （人からもらった URL で参加するときは移さない。相手の帳簿に自分の記録が混ざらないように） */
