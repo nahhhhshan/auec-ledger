@@ -342,7 +342,7 @@ code{font-family:var(--f-mono);font-size:12px;background:var(--surface-2);border
     <div class="hbtns">
       <!-- 1段目: 記録の操作（よく使う「ログを取り込む」を右端に） -->
       <div class="hrow">
-  <button class="btn ghost achbtn" type="button" id="hdrAch" aria-expanded="false" aria-controls="achPanel" title="実績を表示">実績</button>
+  <button class="btn ghost achbtn" type="button" id="hdrAch" title="実績の欄へ移動">実績</button>
   <button class="btn ghost" type="button" id="hdrExe" aria-expanded="false" hidden title="この PC の取り込みプログラム（Windows）の設定とダウンロード">取り込みプログラム</button>
   <button class="btn" type="button" id="hdrImport" title="ゲームのログを読み、新しい記録をそのまま取り込みます">ログを取り込む</button>
       </div>
@@ -457,12 +457,13 @@ code{font-family:var(--f-mono);font-size:12px;background:var(--surface-2);border
     </section>
   </div>
 
-  <section class="panel" id="achPanel" hidden>
+  <section class="panel" id="achPanel">
     <h2><span>実績 <small class="scopetag" id="achCount"></small></span></h2>
     <div class="achs" id="achs"></div>
   </section>
 
-  <section class="panel" id="logPanel">
+  <!-- ゲームのログから取り込む: 普段は隠す（取り込みは上の「ログを取り込む」で行う。読み込みの仕組みはこの欄のものを使う） -->
+  <section class="panel" id="logPanel" hidden>
     <h2>ゲームのログから取り込む</h2>
     <div class="logintro">
       <p class="hint">Star Citizen の <code>Game.log</code> から、契約の報酬・ショップでの購入・貨物の売却を拾って記録候補にします。過去のログは <code>logbackups</code> フォルダにあり、まとめて選べます。ファイルはこのブラウザの中で読むだけで、どこにも送りません。</p>
@@ -492,7 +493,8 @@ code{font-family:var(--f-mono);font-size:12px;background:var(--surface-2);border
     </div>
   </section>
 
-  <section class="panel">
+  <!-- 記録を追加（手入力）: 普段は隠す -->
+  <section class="panel" id="addPanel" hidden>
     <h2>記録を追加（手入力）</h2>
     <form id="form" autocomplete="off">
       <div class="msearch">
@@ -573,14 +575,14 @@ code{font-family:var(--f-mono);font-size:12px;background:var(--surface-2);border
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
-<script src="config.js?v=3.8.3"></script>
-<script src="web_backend.js?v=3.8.3"></script>
+<script src="config.js?v=3.9.0"></script>
+<script src="web_backend.js?v=3.9.0"></script>
 <script>
 /* 'solo' = 個人用, 'shared' = claude.ai で共有, 'web' = GitHub Pages + Firebase で共有（web_backend.js） */
 const MODE = 'web';
 /* 変更して公開するたびに上げる（表示はフッター） */
-const APP_VERSION = '3.8.3';
-const APP_UPDATED = '2026-10-05 20:42';   // 日本時間
+const APP_VERSION = '3.9.0';
+const APP_UPDATED = '2026-10-05 20:43';   // 日本時間
 const SHARED = MODE !== 'solo';
 
 const TYPES = [
@@ -1198,13 +1200,8 @@ function achievements(sc){
   return got;
 }
 const ACH_KEY = 'auec-ledger-ach-seen-v3';   // 実績を足すだけのときは印を変えない（新しく達成した分だけ知らせる）   // v3.2.0 で実績を作り直したので、新しい印で数え直す（初回は知らせずに既読）
-// 実績は普段は閉じておき、上の「実績」ボタンで開く（開いたらそこまで移動）
-$('hdrAch').onclick = ()=>{
-  const open = $('achPanel').hidden;
-  $('achPanel').hidden = !open;
-  $('hdrAch').setAttribute('aria-expanded', String(open));
-  if(open) $('achPanel').scrollIntoView({behavior:'smooth', block:'start'});
-};
+// 実績は常に表示し、上の「実績」ボタンはそこへ移動するだけ
+$('hdrAch').onclick = ()=> $('achPanel').scrollIntoView({behavior:'smooth', block:'start'});
 function renderAchievements(){
   // 実績は上の「表示する期間」と連動: 第N期ならその期だけで数える（ワイプごとにやり直し）、全期間なら通算
   const sc = balScope(), sname = scopeName();
