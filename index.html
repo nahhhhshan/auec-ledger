@@ -402,7 +402,11 @@ code{font-family:var(--f-mono);font-size:12px;background:var(--surface-2);border
 .appfoot{display:flex;flex-wrap:wrap;justify-content:space-between;gap:4px 16px;font-size:12px;color:var(--muted);border-top:1px solid var(--line);padding-top:12px}
 .danger{border-top:1px solid var(--line);padding-top:14px;display:grid;gap:10px}
 .backup{border-top:1px solid var(--line);padding-top:14px;display:grid;gap:8px}
-.logguide{font-size:13px;color:var(--ink);margin:0 0 4px}
+.impdlg{background:var(--surface);color:var(--ink);border:1px solid var(--line);border-radius:8px;padding:18px 20px;max-width:min(460px,calc(100% - 32px));box-shadow:0 12px 40px rgba(0,0,0,.35)}
+.impdlg::backdrop{background:rgba(0,0,0,.45)}
+.impdlg .t{font-size:15px;margin:0 0 8px}
+.impdlg .hint{margin:0 0 6px;overflow-wrap:anywhere}
+.impdlg .row{margin-top:12px}
 .backup .hint{margin:0}
 .danger-btn{color:var(--neg);justify-self:start}
 .confirm{border:1px solid var(--neg);border-radius:6px;padding:12px;display:grid;gap:10px;font-size:13px}
@@ -556,8 +560,7 @@ code{font-family:var(--f-mono);font-size:12px;background:var(--surface-2);border
 
   <!-- ゲームのログから取り込む: 普段は隠す（取り込みは上の「ログを取り込む」で行う。読み込みの仕組みはこの欄のものを使う） -->
   <section class="panel" id="logPanel" hidden>
-    <h2>ゲームのログから取り込む <button class="btn ghost" type="button" id="logPanelClose" hidden style="padding:3px 10px;font-size:12px">閉じる</button></h2>
-    <p class="hint logguide" id="logGuide" hidden><b>Star Citizen の LIVE フォルダ</b>を選んでください。ふつうは下の場所にあります（インストール先を変えた場合は、RSI Launcher の設定でゲームの場所を確認してください）。</p>
+    <h2>ゲームのログから取り込む</h2>
     <div class="logintro">
       <p class="hint">Star Citizen の <code>Game.log</code> から、契約の報酬・ショップでの購入・貨物の売却を拾って記録候補にします。過去のログは <code>logbackups</code> フォルダにあり、まとめて選べます。ファイルはこのブラウザの中で読むだけで、どこにも送りません。</p>
       <div class="row" style="align-items:center">
@@ -665,6 +668,12 @@ code{font-family:var(--f-mono);font-size:12px;background:var(--surface-2);border
   <div class="hint" id="adjPreview" role="status"></div>
 </div>
 <div class="toast" id="toast" hidden></div>
+<dialog class="impdlg" id="impDlg" aria-labelledby="impTitle">
+  <p class="t" id="impTitle">Star Citizen の <b>LIVE フォルダ</b>を選んでください</p>
+  <p class="hint">ふつうは <code>C:\Program Files\Roberts Space Industries\StarCitizen\LIVE</code> にあります。選ぶと新しい記録を自動で取り込みます。</p>
+  <p class="hint">ブラウザに「アップロード」と聞かれますが、どこにも送信しません。</p>
+  <div class="row" style="justify-content:flex-end"><button class="btn ghost" type="button" id="impNo">やめる</button><button class="btn" type="button" id="impGo">フォルダを選ぶ</button></div>
+</dialog>
 
 <script>/*I18N_EN*/
 /* 英語の翻訳辞書（embed_i18n.py で ledger.html に埋め込む）。
@@ -761,8 +770,7 @@ const exact = {
   '共有帳簿（Supabase）':'shared ledger (Supabase)', '接続できません':'cannot connect', '共有帳簿に接続できませんでした':'Could not connect to the shared ledger',
   'この状態では記録を保存できません。ページを読み込み直しても直らないときは、広告ブロックなどの拡張機能を一時的に止めて試してください。':'Records cannot be saved right now. If reloading does not help, try temporarily disabling ad blockers or similar extensions.',
   '共有帳簿の記録は Supabase に保存され、URL を知っている人だけが読み書きできます。':'Shared ledger records are stored in Supabase; only people with the URL can read or write them.',
-  'Star Citizen の LIVE フォルダ':'Star Citizen's LIVE folder',
-  'を選んでください。ふつうは下の場所にあります（インストール先を変えた場合は、RSI Launcher の設定でゲームの場所を確認してください）。':' — choose this folder. It is usually at the location below (if you installed the game elsewhere, check the game location in the RSI Launcher settings).',
+  'フォルダを選ぶ':'Choose folder', 'ブラウザに「アップロード」と聞かれますが、どこにも送信しません。':'Your browser will ask about "uploading", but nothing is sent anywhere.',
   // 実績の名前
   'はじめの一歩':'First Step', '書き始め':'Getting Started', '記録係':'Record Keeper', '几帳面':'Meticulous', '帳簿番':'Bookkeeper', '記録魔':'Record Fanatic', '千の記録':'A Thousand Records', '航海日誌':"Captain's Log",
   '10日目':'Day 10', '30日目':'Day 30', '100日目':'Day 100', '200日目':'Day 200', '三日坊主卒業':'Past Day Three', '皆勤賞':'Perfect Attendance', '二週間連続':'Two-Week Streak', '一か月連続':'One-Month Streak',
@@ -796,6 +804,9 @@ const exact = {
 };
 
 const html = {
+  'Star Citizen の <b>LIVE フォルダ</b>を選んでください':"Choose Star Citizen's <b>LIVE folder</b>",
+  'ふつうは <code>C:\\Program Files\\Roberts Space Industries\\StarCitizen\\LIVE</code> にあります。選ぶと新しい記録を自動で取り込みます。':
+    'It is usually at <code>C:\\Program Files\\Roberts Space Industries\\StarCitizen\\LIVE</code>. New records are imported automatically once you choose it.',
   'Star Citizen の <code>Game.log</code> から、契約の報酬・ショップでの購入・貨物の売却を拾って記録候補にします。過去のログは <code>logbackups</code> フォルダにあり、まとめて選べます。ファイルはこのブラウザの中で読むだけで、どこにも送りません。':
     'Finds contract rewards, shop purchases and cargo sales in Star Citizen\'s <code>Game.log</code> and lists them as records to import. Older logs are in the <code>logbackups</code> folder and can be selected all at once. Files are only read inside this browser and never sent anywhere.',
   'エクスプローラーから <b>logbackups</b> フォルダ（または <b>LIVE</b> フォルダや <b>Game.log</b>）を、ここにドラッグして落としても読み込めます':
@@ -951,14 +962,14 @@ window.I18N_EN = {exact, html, re, words};
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
-<script src="config.js?v=3.21.4"></script>
-<script src="web_backend.js?v=3.21.4"></script>
+<script src="config.js?v=3.21.5"></script>
+<script src="web_backend.js?v=3.21.5"></script>
 <script>
 /* 'solo' = 個人用, 'shared' = claude.ai で共有, 'web' = GitHub Pages + Firebase で共有（web_backend.js） */
 const MODE = 'web';
 /* 変更して公開するたびに上げる（表示はフッター） */
-const APP_VERSION = '3.21.4';
-const APP_UPDATED = '2026-10-06 08:47';   // 日本時間
+const APP_VERSION = '3.21.5';
+const APP_UPDATED = '2026-10-06 08:52';   // 日本時間
 const SHARED = MODE !== 'solo';
 /* 一般公開版（make_public.py で作る。このブラウザ内に保存、手入力欄とバックアップを出す） */
 const PUBLIC = false;
@@ -2629,13 +2640,10 @@ $('verTag').textContent = 'v' + APP_VERSION;
 
 /* ---------- 公開版: バックアップ、ファン作品の表記 ---------- */
 if(PUBLIC){
-  $('logGuide').hidden = false; $('logPanelClose').hidden = false;
-  $('hdrImport').onclick = ()=>{
-    const p = $('logPanel');
-    if(p.hidden){ p.hidden = false; document.querySelector('.periodbar').before(p); }
-    p.scrollIntoView({behavior:'smooth', block:'start'});
-  };
-  $('logPanelClose').onclick = ()=>{ $('logPanel').hidden = true; };
+  // 「ログを取り込む」: どのフォルダを選ぶかを短く伝えてからフォルダ選択を開き、選んだら新しい記録を自動で取り込む
+  $('hdrImport').onclick = ()=> $('impDlg').showModal();
+  $('impGo').onclick = ()=>{ $('impDlg').close(); autoNext = true; $('logDir').click(); };
+  $('impNo').onclick = ()=> $('impDlg').close();
   $('backupBox').hidden = MODE === 'web';   // 手入力の欄は公開版でも出さない（取り込みは「ログを取り込む」で）
 }
 /* 公開版のブラウザ内の帳簿: 「共有」で二人用の共有帳簿（Supabase）を作る。作るときだけ、今の記録を移すか選べる
