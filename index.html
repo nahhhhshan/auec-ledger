@@ -117,12 +117,20 @@ button.peer{font:inherit;cursor:pointer}
 @keyframes qtstreak{to{transform:translateX(350%)}}
 @keyframes qtfade{0%{opacity:0}15%{opacity:1}80%{opacity:1}100%{opacity:0}}
 /* 実績 */
-/* 共有の所持金の内訳（一人ひとりの所持金の足し算の式） */
-.comp{display:grid;gap:6px;margin-top:6px}
-.comp .ceq{display:flex;flex-wrap:wrap;align-items:center;gap:4px 8px;font-size:12px;color:var(--muted)}
-.comp .ceq span.p{display:inline-flex;align-items:center;gap:5px;color:var(--ink)}
-.comp .ceq .num{font-size:12px}
-.comp .ceq .sw{width:9px;height:9px;border-radius:2px;flex:none}
+/* 共有の所持金の内訳: 会計の帳簿のような小さな表。欄の右側に置き、合計は右下 */
+.tile.main.withcomp{grid-template-columns:1fr auto;column-gap:24px}
+.tile.main.withcomp>.k,.tile.main.withcomp>.v{grid-column:1}
+.tile.main .v{white-space:nowrap}
+.tiles:has(.withcomp){grid-template-columns:3fr 1fr 1fr 1fr}   /* 内訳の表のぶん、共有の所持金の欄を広く */
+.comp{grid-column:2;grid-row:1/span 3;align-self:end;display:grid;gap:3px;min-width:180px;font-size:12px}
+.comp .lr{display:flex;justify-content:space-between;align-items:center;gap:18px;color:var(--ink)}
+.comp .ln{display:inline-flex;align-items:center;gap:6px;color:var(--muted)}
+.comp .num{font-size:13px}
+.comp .sw{width:9px;height:9px;border-radius:2px;flex:none}
+.comp .lr.total{border-top:3px double var(--muted);padding-top:4px;margin-top:2px}
+.comp .lr.total .ln{color:var(--ink);font-weight:600}
+.comp .lr.total .num{font-size:15px;font-weight:600;color:var(--gold)}
+@media (max-width:720px){.tiles:has(.withcomp){grid-template-columns:1fr 1fr}.tile.main.withcomp{grid-template-columns:1fr}.comp{grid-column:1;grid-row:auto;min-width:0}}
 .achbtn{display:inline-flex;align-items:center;gap:5px}
 .achbtn svg{width:15px;height:15px;color:var(--gold)}
 .achs{display:grid;gap:4px}
@@ -143,13 +151,19 @@ button.pav:hover .av,button.pav:focus-visible .av{outline:2px solid var(--accent
 .avhead{display:flex;justify-content:space-between;align-items:center;font-family:var(--f-disp);letter-spacing:.04em}
 .avbody{display:grid;grid-template-columns:auto 1fr;gap:12px;align-items:center}
 
-.flow{display:block;width:100%;height:34px;margin:-10px 0;overflow:visible;pointer-events:none}
-.flow path{fill:none;stroke-width:2.5;stroke-linecap:round;stroke-linejoin:round;stroke-dasharray:1;stroke-dashoffset:0}
-.flow path.draw{animation:flowdraw 1.1s ease-out both}
-.flow path.merge{stroke:var(--gold);stroke-width:3}
-.flow circle{fill:var(--gold)}
+.flow{display:block;width:100%;height:40px;margin:-10px 0;overflow:visible;pointer-events:none}
+.flow .flowlines{filter:drop-shadow(0 0 3px color-mix(in srgb, var(--gold) 45%, transparent))}
+.flow path{fill:none;stroke-width:4;stroke-linecap:round;stroke-linejoin:round;stroke-dasharray:1;stroke-dashoffset:0}
+.flow path.draw{animation:flowdraw .9s cubic-bezier(.3,.7,.2,1) both}
+.flow path.merge{stroke:var(--gold);stroke-width:5}
+/* 金色の線の上を光の粒が上へ流れる */
+.flow path.spark{stroke:#fff;stroke-width:2.5;stroke-dasharray:2 14;opacity:.85;animation:flowspark 1.4s linear infinite}
+.flow circle.jn{fill:var(--gold);stroke:var(--surface);stroke-width:2}
+.flow circle.jn.main{animation:flowpulse 2.4s ease-in-out infinite;transform-origin:center;transform-box:fill-box}
 @keyframes flowdraw{from{stroke-dashoffset:1}to{stroke-dashoffset:0}}
-@media (prefers-reduced-motion: reduce){.flow path.draw{animation:none}}
+@keyframes flowspark{from{stroke-dashoffset:16}to{stroke-dashoffset:0}}
+@keyframes flowpulse{0%,100%{transform:scale(1)}50%{transform:scale(1.25)}}
+@media (prefers-reduced-motion: reduce){.flow path.draw,.flow path.spark,.flow circle.jn.main{animation:none}.flow path.spark{display:none}}
 .peoplebar{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:10px}
 .pcard{background:var(--surface);border:1px solid var(--line);border-left:4px solid var(--pc);border-radius:6px;padding:10px 14px;display:grid;grid-template-columns:auto 1fr;column-gap:12px;row-gap:2px}
 .pname{font-size:12px;color:var(--muted);letter-spacing:.04em}
@@ -558,14 +572,14 @@ code{font-family:var(--f-mono);font-size:12px;background:var(--surface-2);border
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
-<script src="config.js?v=3.6.1"></script>
-<script src="web_backend.js?v=3.6.1"></script>
+<script src="config.js?v=3.7.0"></script>
+<script src="web_backend.js?v=3.7.0"></script>
 <script>
 /* 'solo' = 個人用, 'shared' = claude.ai で共有, 'web' = GitHub Pages + Firebase で共有（web_backend.js） */
 const MODE = 'web';
 /* 変更して公開するたびに上げる（表示はフッター） */
-const APP_VERSION = '3.6.1';
-const APP_UPDATED = '2026-10-05 20:23';   // 日本時間
+const APP_VERSION = '3.7.0';
+const APP_UPDATED = '2026-10-05 20:26';   // 日本時間
 const SHARED = MODE !== 'solo';
 
 const TYPES = [
@@ -927,14 +941,18 @@ function personDaily(sc){
 // 共有の所持金 = 一人ひとりの所持金の合計、を上の欄で式で見せる（並びは名前順で固定、割合は出さない）
 function renderComposition(_, each, unassigned){
   const el = $('tComp'), ps = people();
-  if(!SHARED || ps.length < 2){ el.hidden = true; return; }
+  if(!SHARED || ps.length < 2){ el.hidden = true; $('tBal').closest('.tile').classList.remove('withcomp'); return; }
   const parts = ps.map(p=>({label:nameOf(p), color:colorOf(p), v:each[p]||0}));
   if(unassigned) parts.push({label:'未割り当て', color:'var(--line)', v:unassigned});
   const total = parts.reduce((a,b)=>a+b.v, 0);
-  el.innerHTML = `<div class="ceq">${parts.map(p=>`<span class="p"><i class="sw" style="background:${p.color}"></i>${esc(p.label)} <span class="num">${fmt(p.v)}</span></span>`).join('<span>＋</span>')}<span>＝</span><span class="p"><span class="num">${fmt(total)}</span></span></div>`;
+  // 会計の帳簿と同じ見方: 名前と金額を縦に並べ、二重線の下の右端に合計
+  el.innerHTML = parts.map(p=>`<div class="lr"><span class="ln"><i class="sw" style="background:${p.color}"></i>${esc(p.label)}</span><span class="num">${fmt(p.v)}</span></div>`).join('')
+    + `<div class="lr total"><span class="ln">合計</span><span class="num" id="compTotal">${fmt(total)}</span></div>`;
   el.hidden = false;
+  $('tBal').closest('.tile').classList.add('withcomp');
 }
-// あみだくじのような線: 各カードの上辺の中央 → 合流する高さ → 横に寄せる → 共有の所持金の欄の下辺の中央
+// あみだくじのような線: 各カードの上辺の中央から上へ → 合流する高さで横へ → 合計（右下の数字）の真下から上へ。
+// 同じ側から来る線は、内側のカードの線と合わさったところから先を金色の1本にする
 let flowKey = '';
 function drawFlow(){
   const svg = $('flow'), cards = [...document.querySelectorAll('#peopleBar .pcard')], tile = document.querySelector('.tile.main');
@@ -942,18 +960,41 @@ function drawFlow(){
   if(!SHARED || cards.length < 2 || $('peopleBar').hidden || !tile){ svg.setAttribute('hidden', ''); return; }
   svg.removeAttribute('hidden');
   const b = svg.getBoundingClientRect(), t = tile.getBoundingClientRect();
-  const ty = t.bottom - b.top, tx = t.left + t.width/2 - b.left;
+  const tot = $('compTotal'), tr = tot && !$('tComp').hidden ? tot.getBoundingClientRect() : null;
+  const tx = (tr ? tr.left + tr.width/2 : t.left + t.width/2) - b.left, ty = t.bottom - b.top;
   const cy = c => c.getBoundingClientRect().top - b.top;
   const midY = (ty + Math.min(...cards.map(cy))) / 2;
-  const xs = cards.map(c=>{ const r = c.getBoundingClientRect(); return r.left + r.width/2 - b.left; });
-  // 額が変わったときだけ描き直しの動きを付ける
-  const key = $('tBal').textContent + '|' + xs.map(Math.round).join(',');
-  const anim = key !== flowKey ? ' draw' : '';
+  const pts = cards.map(c=>{ const r = c.getBoundingClientRect(); return {x:r.left + r.width/2 - b.left, y:cy(c), color:getComputedStyle(c).getPropertyValue('--pc').trim() || 'var(--accent)'}; });
+  const key = $('tBal').textContent + '|' + pts.map(p=>Math.round(p.x)).join(',') + '|' + Math.round(tx);
+  const anim = key !== flowKey ? ' draw' : '';   // 額や位置が変わったときだけ描き直しの動き
   flowKey = key;
-  const colors = cards.map(c=>getComputedStyle(c).getPropertyValue('--pc').trim() || 'var(--accent)');
-  svg.innerHTML = cards.map((c, i)=>`<path class="${anim}" pathLength="1" style="stroke:${colors[i]}" d="M${xs[i].toFixed(1)} ${cy(c).toFixed(1)} V${midY.toFixed(1)} H${tx.toFixed(1)}"/>`).join('')
-    + `<path class="merge${anim}" pathLength="1" d="M${tx.toFixed(1)} ${midY.toFixed(1)} V${ty.toFixed(1)}" style="animation-delay:${anim ? '.6s' : '0s'}"/>`
-    + `<circle cx="${tx.toFixed(1)}" cy="${midY.toFixed(1)}" r="4"/>`;
+  const f = v => v.toFixed(1);
+  // 上へ伸びて、角を丸く曲がって横へ
+  const elbowUpTo = (x, y, toX) => {
+    const d = Math.sign(toX - x), r = Math.min(10, Math.abs(toX - x), Math.abs(y - midY));
+    return d ? `M${f(x)} ${f(y)} V${f(midY + r)} Q${f(x)} ${f(midY)} ${f(x + d*r)} ${f(midY)} H${f(toX)}` : `M${f(x)} ${f(y)} V${f(midY)}`;
+  };
+  let colored = '', gold = '', dots = [];
+  for(const side of [-1, 1]){
+    // 合計より左（-1）・右（1）のカードを、外側から順に
+    const xs = pts.filter(p=> side < 0 ? p.x < tx - 0.5 : p.x >= tx - 0.5).sort((a,b)=> Math.abs(b.x - tx) - Math.abs(a.x - tx));
+    xs.forEach((p, k)=>{
+      const next = xs[k + 1];   // 内側のカード（あれば、そこで合わさる）
+      colored += `<path class="${anim}" pathLength="1" style="stroke:${p.color}" d="${next ? elbowUpTo(p.x, p.y, next.x) : `M${f(p.x)} ${f(p.y)} V${f(midY)}`}"/>`;
+      if(next) dots.push(next.x);
+    });
+    // 内側のカードから合計の真下までは、合わさった線なので金色（1枚だけのときはその人の色）
+    if(xs.length){
+      const inner = xs[xs.length - 1];
+      if(Math.abs(inner.x - tx) > 0.5) (xs.length > 1 ? (gold += `<path class="merge${anim}" pathLength="1" style="animation-delay:${anim ? '.45s' : '0s'}" d="M${f(inner.x)} ${f(midY)} H${f(tx)}"/>`)
+                                                      : (colored += `<path class="${anim}" pathLength="1" style="stroke:${inner.color}" d="M${f(inner.x)} ${f(midY)} H${f(tx)}"/>`));
+    }
+  }
+  const up = `M${f(tx)} ${f(midY)} V${f(ty)}`;
+  svg.innerHTML = `<g class="flowlines">${colored}${gold}<path class="merge${anim}" pathLength="1" style="animation-delay:${anim ? '.8s' : '0s'}" d="${up}"/>`
+    + `<path class="spark" d="${up}"/></g>`
+    + dots.map(x=>`<circle class="jn" cx="${f(x)}" cy="${f(midY)}" r="4.5"/>`).join('')
+    + `<circle class="jn main" cx="${f(tx)}" cy="${f(midY)}" r="6"/>`;
 }
 window.addEventListener('resize', ()=>{ cancelAnimationFrame(drawFlow.raf); drawFlow.raf = requestAnimationFrame(drawFlow); });
 function renderPeople(){
