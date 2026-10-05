@@ -127,7 +127,7 @@ button.peer{font:inherit;cursor:pointer}
 .comp .ln{display:inline-flex;align-items:center;gap:6px;color:var(--muted)}
 .comp .num{font-size:13px}
 .comp .sw{width:9px;height:9px;border-radius:2px;flex:none}
-.comp .lr.total{border-top:3px double var(--muted);padding-top:4px;margin-top:2px}
+.comp .lr.total{border-top:1px solid var(--muted);border-bottom:3px double var(--muted);padding:4px 0 3px}
 .comp .lr.total .ln{color:var(--ink);font-weight:600}
 .comp .lr.total .num{font-size:15px;font-weight:600;color:var(--gold)}
 @media (max-width:720px){.tiles:has(.withcomp){grid-template-columns:1fr 1fr}.tile.main.withcomp{grid-template-columns:1fr}.comp{grid-column:1;grid-row:auto;min-width:0}}
@@ -572,14 +572,14 @@ code{font-family:var(--f-mono);font-size:12px;background:var(--surface-2);border
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
-<script src="config.js?v=3.7.0"></script>
-<script src="web_backend.js?v=3.7.0"></script>
+<script src="config.js?v=3.7.1"></script>
+<script src="web_backend.js?v=3.7.1"></script>
 <script>
 /* 'solo' = 個人用, 'shared' = claude.ai で共有, 'web' = GitHub Pages + Firebase で共有（web_backend.js） */
 const MODE = 'web';
 /* 変更して公開するたびに上げる（表示はフッター） */
-const APP_VERSION = '3.7.0';
-const APP_UPDATED = '2026-10-05 20:26';   // 日本時間
+const APP_VERSION = '3.7.1';
+const APP_UPDATED = '2026-10-05 20:29';   // 日本時間
 const SHARED = MODE !== 'solo';
 
 const TYPES = [
@@ -945,9 +945,8 @@ function renderComposition(_, each, unassigned){
   const parts = ps.map(p=>({label:nameOf(p), color:colorOf(p), v:each[p]||0}));
   if(unassigned) parts.push({label:'未割り当て', color:'var(--line)', v:unassigned});
   const total = parts.reduce((a,b)=>a+b.v, 0);
-  // 会計の帳簿と同じ見方: 名前と金額を縦に並べ、二重線の下の右端に合計
-  el.innerHTML = parts.map(p=>`<div class="lr"><span class="ln"><i class="sw" style="background:${p.color}"></i>${esc(p.label)}</span><span class="num">${fmt(p.v)}</span></div>`).join('')
-    + `<div class="lr total"><span class="ln">合計</span><span class="num" id="compTotal">${fmt(total)}</span></div>`;
+  // 各行は下の一人ひとりのカード（そこから線が伸びて合わさる）。ここは簿記の書き方で合計だけ: 上に1本線、下に二重線
+  el.innerHTML = `<div class="lr total" title="${esc(parts.map(p=>p.label + ' ' + fmt(p.v)).join(' ＋ '))}"><span class="ln">合計</span><span class="num" id="compTotal">${fmt(total)}</span></div>`;
   el.hidden = false;
   $('tBal').closest('.tile').classList.add('withcomp');
 }
