@@ -41,6 +41,15 @@
 :root[data-skin="dusk"]{color-scheme:dark; --bg:#2a2d31; --surface:#33373c; --surface-2:#3a3e44; --ink:#d9dcdf; --muted:#9aa0a7; --line:#454a50; --accent:#7fb3c0; --accent-soft:#34474c; --gold:#d8b06a; --pos:#8fc99a; --neg:#e09a8f; --grid:#3c4046; --p1:#7fb3c0; --p2:#d8b06a; --p3:#b9a3d6;}
 :root[data-skin="navy"]{color-scheme:dark; --bg:#141b26; --surface:#1b2431; --surface-2:#212c3a; --ink:#cfd8e3; --muted:#8796a8; --line:#2b3747; --accent:#6fb7c9; --accent-soft:#1f3540; --gold:#d4a65a; --pos:#7dc79a; --neg:#e08e86; --grid:#243041; --p1:#6fb7c9; --p2:#d4a65a; --p3:#a99bd6;}
 :root[data-skin="forest"]{color-scheme:light; --bg:#e6ece4; --surface:#f3f6f1; --surface-2:#ebf0e8; --ink:#22302a; --muted:#5f6f66; --line:#cdd8cc; --accent:#3b7a64; --accent-soft:#d5e6dc; --gold:#8a6a1e; --pos:#3f7d3a; --neg:#a8473a; --grid:#dbe3d8; --p1:#3b7a64; --p2:#8a6a1e; --p3:#6a568f;}
+:root[data-skin="mobiglas"]{color-scheme:dark; --bg:#071219; --surface:#0b1a24; --surface-2:#0f2230; --ink:#cdeef8; --muted:#6fa3b6; --line:#1d4a5e; --accent:#4fd1f0; --accent-soft:#0f3442; --gold:#7fe3ff; --pos:#5ee0a8; --neg:#ff8a7a; --grid:#123444; --p1:#4fd1f0; --p2:#f0c060; --p3:#b79cff;}
+/* mobiGlas 風の飾り: 枠の角に括弧、見出しは字間を広げる */
+:root[data-skin="mobiglas"] .panel,:root[data-skin="mobiglas"] .tiles,:root[data-skin="mobiglas"] .pcard{position:relative;border-radius:2px;border-color:var(--line)}
+:root[data-skin="mobiglas"] .panel::before,:root[data-skin="mobiglas"] .tiles::before,:root[data-skin="mobiglas"] .pcard::before,:root[data-skin="mobiglas"] .panel::after,:root[data-skin="mobiglas"] .tiles::after,:root[data-skin="mobiglas"] .pcard::after{content:"";position:absolute;width:12px;height:12px;pointer-events:none;z-index:1}
+:root[data-skin="mobiglas"] .panel::before,:root[data-skin="mobiglas"] .tiles::before,:root[data-skin="mobiglas"] .pcard::before{top:-1px;left:-1px;border-top:2px solid var(--accent);border-left:2px solid var(--accent)}
+:root[data-skin="mobiglas"] .panel::after,:root[data-skin="mobiglas"] .tiles::after,:root[data-skin="mobiglas"] .pcard::after{bottom:-1px;right:-1px;border-bottom:2px solid var(--accent);border-right:2px solid var(--accent)}
+:root[data-skin="mobiglas"] .panel h2,:root[data-skin="mobiglas"] .tile .k{letter-spacing:.14em}
+:root[data-skin="mobiglas"] .tiles{overflow:visible}
+:root[data-skin="mobiglas"] .btn,:root[data-skin="mobiglas"] .chip,:root[data-skin="mobiglas"] .range button{border-radius:2px}
 *{box-sizing:border-box}
 [hidden]{display:none!important}   /* .row などの display 指定より「隠す」を優先（Web 版にはこのリセットが無いため） */
 body{background:var(--bg);color:var(--ink);font-family:var(--f-body);font-size:14px;line-height:1.55;padding-inline:16px;padding-block:20px 48px}
@@ -251,7 +260,7 @@ code{font-family:var(--f-mono);font-size:12px;background:var(--surface-2);border
     <div class="hbtns">
       <select class="skinsel" id="skinSel" aria-label="画面のテーマ" title="画面のテーマ（このブラウザで覚えます）">
         <option value="">テーマ: 自動</option><option value="light">明るい</option><option value="dark">暗い</option>
-        <option value="paper">紙</option><option value="dusk">夕暮れグレー</option><option value="navy">深い紺</option><option value="forest">森の緑</option>
+        <option value="paper">紙</option><option value="dusk">夕暮れグレー</option><option value="navy">深い紺</option><option value="forest">森の緑</option><option value="mobiglas">mobiGlas 風</option>
       </select>
       <button class="btn ghost iconbtn" type="button" id="hdrReload" title="ページを最新の状態に更新" aria-label="ページを更新">
         <svg viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 11a8 8 0 1 0-2.3 5.7"/><path d="M20 4v7h-7"/></svg>
@@ -466,14 +475,14 @@ code{font-family:var(--f-mono);font-size:12px;background:var(--surface-2);border
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
-<script src="config.js?v=2.2.25"></script>
-<script src="web_backend.js?v=2.2.25"></script>
+<script src="config.js?v=3.0.0"></script>
+<script src="web_backend.js?v=3.0.0"></script>
 <script>
 /* 'solo' = 個人用, 'shared' = claude.ai で共有, 'web' = GitHub Pages + Firebase で共有（web_backend.js） */
 const MODE = 'web';
 /* 変更して公開するたびに上げる（表示はフッター） */
-const APP_VERSION = '2.2.25';
-const APP_UPDATED = '2026-10-05 19:21';   // 日本時間
+const APP_VERSION = '3.0.0';
+const APP_UPDATED = '2026-10-05 19:22';   // 日本時間
 const SHARED = MODE !== 'solo';
 
 const TYPES = [
