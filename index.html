@@ -575,14 +575,14 @@ code{font-family:var(--f-mono);font-size:12px;background:var(--surface-2);border
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
-<script src="config.js?v=3.9.0"></script>
-<script src="web_backend.js?v=3.9.0"></script>
+<script src="config.js?v=3.9.1"></script>
+<script src="web_backend.js?v=3.9.1"></script>
 <script>
 /* 'solo' = 個人用, 'shared' = claude.ai で共有, 'web' = GitHub Pages + Firebase で共有（web_backend.js） */
 const MODE = 'web';
 /* 変更して公開するたびに上げる（表示はフッター） */
-const APP_VERSION = '3.9.0';
-const APP_UPDATED = '2026-10-05 20:43';   // 日本時間
+const APP_VERSION = '3.9.1';
+const APP_UPDATED = '2026-10-05 20:48';   // 日本時間
 const SHARED = MODE !== 'solo';
 
 const TYPES = [
@@ -1252,7 +1252,7 @@ function render(){
   const sc = balScope(), sname = scopeName();
   const {balance, days} = compute(D.entries.filter(e=>inScope(sc, e.date)), totalStart(sc));
   // 共有の版は帳簿の「合計」の行（上にメンバーの行が並ぶ）
-  $('tBalLabel').innerHTML = SHARED ? `合計 <small>共有の所持金${sname ? '・' + sname : ''}</small>` : '現在の所持金' + (sname ? `・${sname}` : '');
+  $('tBalLabel').innerHTML = SHARED ? `合計${sname ? ` <small>${sname}</small>` : ''}` : '現在の所持金' + (sname ? `・${sname}` : '');
   $('startLabel').textContent = sname ? `${sname}の開始時の所持金 (aUEC)` : '記録開始時の所持金 (aUEC)';
   $('actualLabel').textContent = SHARED ? '選んだ人の実際の所持金に合わせる (aUEC)' : '実際の所持金に合わせる (aUEC)';
 
@@ -1270,7 +1270,7 @@ function render(){
     $('tCount').textContent = fmt(D.entries.length); $('tCount').className = 'v';
   } else {
     const net = D.entries.filter(e=>inP(e) && !isInternal(e)).reduce((a,b)=>a+b.amount,0);
-    $('tCountLabel').textContent = '選んだ期間の収支';
+    $('tCountLabel').textContent = periodLabel() + 'の収支';   // 第2期の収支 など
     $('tCount').textContent = sfmt(net); $('tCount').className = 'v '+cls(net);
   }
   if(!SHARED && document.activeElement!==$('startBal')){ const v = (sc && !isFirstScope(sc)) ? (startsFor(sc)['']||0) : (settings.startBalance||0); $('startBal').value = v ? fmt(v) : ''; }
