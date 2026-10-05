@@ -172,6 +172,16 @@ input:focus-visible,button:focus-visible{outline:2px solid var(--accent);outline
 .ent{display:grid;grid-template-columns:3.2em auto 1fr auto auto;gap:10px;align-items:center;padding:6px 0 0 2px;font-size:13px}
 .etime{font-family:var(--f-mono);font-variant-numeric:tabular-nums;font-size:12px;color:var(--muted)}
 .tag{font-size:11px;border:1px solid var(--line);border-radius:3px;padding:1px 7px;white-space:nowrap;background:var(--surface-2)}
+/* 記録の種類のアイコン（線画、文字色に合わせる） */
+.ico{width:1.15em;height:1.15em;vertical-align:-.2em;margin-right:.3em;flex:none}
+.tag .ico{width:12px;height:12px;vertical-align:-2px;margin-right:3px}
+/* 所持金のメーター表示: 数字ごとに 0〜9 の帯を縦に並べ、新しい数字まで回す */
+.odo{display:inline-flex;align-items:flex-end}
+.odo-d{display:inline-block;height:1.15em;line-height:1.15em;overflow:hidden}
+.odo-col{display:flex;flex-direction:column;transition:transform 1s cubic-bezier(.2,.8,.2,1)}
+.odo-col>span{height:1.15em;text-align:center}
+.sr-only{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap}
+@media (prefers-reduced-motion: reduce){.odo-col{transition:none}}
 .tag.adj{border-style:dashed}
 .memo{color:var(--muted);overflow-wrap:anywhere}
 .memo .ship{color:var(--ink);font-size:12px;margin-right:6px}
@@ -444,14 +454,14 @@ code{font-family:var(--f-mono);font-size:12px;background:var(--surface-2);border
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
-<script src="config.js?v=2.2.21"></script>
-<script src="web_backend.js?v=2.2.21"></script>
+<script src="config.js?v=2.2.22"></script>
+<script src="web_backend.js?v=2.2.22"></script>
 <script>
 /* 'solo' = 個人用, 'shared' = claude.ai で共有, 'web' = GitHub Pages + Firebase で共有（web_backend.js） */
 const MODE = 'web';
 /* 変更して公開するたびに上げる（表示はフッター） */
-const APP_VERSION = '2.2.21';
-const APP_UPDATED = '2026-10-05 19:06';   // 日本時間
+const APP_VERSION = '2.2.22';
+const APP_UPDATED = '2026-10-05 19:14';   // 日本時間
 const SHARED = MODE !== 'solo';
 
 const TYPES = [
@@ -472,6 +482,44 @@ const TYPES = [
 const ADJ = {id:'adjust', label:'残高補正', dir:0};
 const XFER = {id:'transfer', label:'メンバー間の送金', dir:0};
 const typeOf = id => TYPES.find(t=>t.id===id) || (id==='adjust'?ADJ:id==='transfer'?XFER:{id, label:id, dir:1});
+/* 記録の種類ごとのアイコン（24×24 の線画） */
+const ICONS = {
+  delivery: '<path d="M3 7l9-4 9 4v10l-9 4-9-4z"/><path d="M3 7l9 4 9-4M12 11v10"/>',
+  hauling:  '<path d="M2 7h12v9H2zM14 10h4l3 3v3h-7"/><circle cx="6" cy="18" r="2"/><circle cx="17" cy="18" r="2"/>',
+  salvage:  '<path d="M6 3v8a6 6 0 0 0 12 0V3"/><path d="M6 7h4M14 7h4"/>',
+  mining:   '<path d="M6 3h12l3 6-9 12L3 9z"/><path d="M3 9h18M9 3l3 6 3-6"/>',
+  bounty:   '<circle cx="12" cy="12" r="8"/><path d="M12 2v5M12 17v5M2 12h5M17 12h5"/>',
+  combat:   '<path d="M12 3l8 3v6c0 5-3.5 8-8 9-4.5-1-8-4-8-9V6z"/>',
+  recovery: '<circle cx="11" cy="11" r="6"/><path d="M20 20l-4.5-4.5"/>',
+  trade:    '<path d="M4 8h15l-3-3M20 16H5l3 3"/>',
+  other_in: '<circle cx="12" cy="12" r="9"/><path d="M12 8v8M8 12h8"/>',
+  repair:   '<path d="M14.7 6.3a4 4 0 0 0-5.4 5.4L3 18l3 3 6.3-6.3a4 4 0 0 0 5.4-5.4l-2.5 2.5-2.4-.6-.6-2.4z"/>',
+  purchase: '<path d="M12 2l4 10-4 3-4-3z"/><path d="M8 12l-3 5h4M16 12l3 5h-4M10 20h4"/>',
+  fine:     '<path d="M12 3l10 18H2z"/><path d="M12 10v5M12 18v.01"/>',
+  other_out:'<circle cx="12" cy="12" r="9"/><path d="M8 12h8"/>',
+  adjust:   '<path d="M4 21v-7M4 10V3M12 21v-9M12 8V3M20 21v-5M20 12V3M1 14h6M9 8h6M17 16h6"/>',
+  transfer: '<path d="M3 12h18M17 8l4 4-4 4M7 8l-4 4 4 4"/>',
+};
+const icon = id => ICONS[id] ? `<svg class="ico" viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">${ICONS[id]}</svg>` : '';
+
+/* 所持金のメーター表示。前に出した額（key ごと）から新しい額まで、数字の帯を回す */
+const odoPrev = new Map();
+function odo(key, value){
+  const prev = odoPrev.has(key) ? odoPrev.get(key) : value;
+  odoPrev.set(key, value);
+  const to = fmt(value), from = fmt(prev).padStart(to.length, ' ').slice(-to.length);
+  const digits = '0123456789'.split('').map(d=>`<span>${d}</span>`).join('');
+  return `<span class="odo"><span class="sr-only">${to}</span><span aria-hidden="true" class="odo">` + [...to].map((ch, i)=>
+    /\d/.test(ch) ? `<span class="odo-d"><span class="odo-col" style="transform:translateY(-${(/\d/.test(from[i]) ? +from[i] : 0)*10}%)" data-to="${ch}">${digits}</span></span>` : `<span>${ch}</span>`
+  ).join('') + '</span></span>';
+}
+function odoRun(){
+  // 表示した直後は前の額のまま。次の描画で新しい額へ回し始める
+  requestAnimationFrame(()=>requestAnimationFrame(()=>{
+    for(const c of document.querySelectorAll('.odo-col[data-to]')){ c.style.transform = `translateY(-${c.dataset.to*10}%)`; c.removeAttribute('data-to'); }
+  }));
+}
+
 /* 収入・支出の集計に入れない記録（残高補正、メンバー間の送金） */
 const isInternal = e => e.type==='adjust' || e.type==='transfer';
 const $ = id => document.getElementById(id);
@@ -780,7 +828,7 @@ function renderPeople(){
   bar.innerHTML = ps.map(p=>`<div class="pcard" style="--pc:${colorOf(p)}">
       ${p===me ? `<button type="button" class="pav" data-avatar-me title="クリックでアイコンを設定">${avatarHtml(p, 'lg')}</button>` : `<span class="pav">${avatarHtml(p, 'lg')}</span>`}
       <span class="pname">${esc(nameOf(p))}${p===me?'<small>（あなた）</small>':''}${(settings.handles||{})[p] ? `<small class="phandle">ゲーム内: ${esc(settings.handles[p])}</small>` : ''}</span>
-      <span class="pbal num">${fmt(each[p]||0)}<span class="u">aUEC</span></span>
+      <span class="pbal num">${odo('p:' + p, each[p]||0)}<span class="u">aUEC</span></span>
       ${readOnly ? '' : `<button type="button" class="padj" data-adj="${esc(p)}" title="ゲーム内の所持金に合わせる">残高補正</button>`}</div>`).join('')
     + (unassigned ? `<div class="pcard" style="--pc:var(--line)"><span class="pname">未割り当て<small>（記録者なし${sc?'':'・共通の開始額'}）</small></span><span class="pbal num">${fmt(unassigned)}<span class="u">aUEC</span></span></div>` : '');
   // 設定欄の「対象の人」
@@ -841,7 +889,8 @@ function render(){
   $('startLabel').textContent = sname ? `${sname}の開始時の所持金 (aUEC)` : '記録開始時の所持金 (aUEC)';
   $('actualLabel').textContent = SHARED ? '選んだ人の実際の所持金に合わせる (aUEC)' : '実際の所持金に合わせる (aUEC)';
 
-  $('tBal').innerHTML = fmt(balance)+'<span class="u">aUEC</span>';
+  $('tBal').innerHTML = odo('total', balance)+'<span class="u">aUEC</span>';
+  odoRun();
   const td = days.find(d=>d.date===today());
   const tdNet = td ? td.items.filter(i=>!isInternal(i)).reduce((a,b)=>a+b.amount,0) : 0;
   const wk = D.entries.filter(e=>!isInternal(e) && dayNum(e.date)>dayNum(today())-7).reduce((a,b)=>a+b.amount,0);
@@ -947,7 +996,7 @@ function renderBars(list){
   const by = new Map();
   // 収支の内訳は種別ごと（v2.2.21 で船ごと・人ごとの切り替えはやめた）
   const keyOf = e => e.type;
-  const labelOf = k => typeOf(k).label;
+  const labelOf = k => icon(k) + typeOf(k).label;
   for(const e of list){ if(isInternal(e)) continue; const k=keyOf(e); by.set(k,(by.get(k)||0)+e.amount); }
   const rows = [...by.entries()].sort((a,b)=>b[1]-a[1]);
   if(!rows.length){ $('bars').innerHTML = '<div class="empty">この期間の記録はありません。</div>'; return; }
@@ -1089,7 +1138,7 @@ function renderDays(days){
     const items = [...d.items].reverse().map(e=>{
       const t = typeOf(e.type);
       const who = SHARED && e.by ? `<span class="who" style="background:${colorOf(e.by)}">${esc(nameOf(e.by))}</span>` : '';
-      return `<div class="ent"><span class="etime">${entryTime(e)}</span><span class="tag ${isInternal(e)?'adj':''}">${t.label}</span>
+      return `<div class="ent"><span class="etime">${entryTime(e)}</span><span class="tag ${isInternal(e)?'adj':''}">${icon(t.id)}${t.label}</span>
         <span class="memo">${who}${e.ship?`<span class="ship">${esc(e.ship)}</span>`:''}${esc(e.memo||'')}</span>
         <span class="num ${cls(e.amount)}">${sfmt(e.amount)}</span>
         ${readOnly?'<span></span>':`<button type="button" class="del" data-del="${esc(e.id)}" aria-label="この記録を削除">削除</button>`}</div>`;
@@ -1604,7 +1653,7 @@ $('avRemove').onclick = async ()=>{
 
 /* ---------- form ---------- */
 function renderChips(){
-  const mk = t => `<button type="button" class="chip ${t.dir<0?'out':''}" data-type="${t.id}" aria-pressed="${selType===t.id}">${t.label}</button>`;
+  const mk = t => `<button type="button" class="chip ${t.dir<0?'out':''}" data-type="${t.id}" aria-pressed="${selType===t.id}">${icon(t.id)}${t.label}</button>`;
   $('chipsIn').innerHTML = TYPES.filter(t=>t.dir>0).map(mk).join('');
   $('chipsOut').innerHTML = TYPES.filter(t=>t.dir<0).map(mk).join('');
   if(readOnly) applyReadOnly();
