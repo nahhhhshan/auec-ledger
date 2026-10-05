@@ -117,20 +117,6 @@ button.peer{font:inherit;cursor:pointer}
 @keyframes qtstreak{to{transform:translateX(350%)}}
 @keyframes qtfade{0%{opacity:0}15%{opacity:1}80%{opacity:1}100%{opacity:0}}
 /* 実績 */
-/* 共有の所持金の内訳: 会計の帳簿のような小さな表。欄の右側に置き、合計は右下 */
-.tile.main.withcomp{grid-template-columns:1fr auto;column-gap:24px}
-.tile.main.withcomp>.k,.tile.main.withcomp>.v{grid-column:1}
-.tile.main .v{white-space:nowrap}
-.tiles:has(.withcomp){grid-template-columns:3fr 1fr 1fr 1fr}   /* 内訳の表のぶん、共有の所持金の欄を広く */
-.comp{grid-column:2;grid-row:1/span 3;align-self:end;display:grid;gap:3px;min-width:180px;font-size:12px}
-.comp .lr{display:flex;justify-content:space-between;align-items:center;gap:18px;color:var(--ink)}
-.comp .ln{display:inline-flex;align-items:center;gap:6px;color:var(--muted)}
-.comp .num{font-size:13px}
-.comp .sw{width:9px;height:9px;border-radius:2px;flex:none}
-.comp .lr.total{border-top:1px solid var(--muted);border-bottom:3px double var(--muted);padding:4px 0 3px}
-.comp .lr.total .ln{color:var(--ink);font-weight:600}
-.comp .lr.total .num{font-size:15px;font-weight:600;color:var(--gold)}
-@media (max-width:720px){.tiles:has(.withcomp){grid-template-columns:1fr 1fr}.tile.main.withcomp{grid-template-columns:1fr}.comp{grid-column:1;grid-row:auto;min-width:0}}
 .achbtn{display:inline-flex;align-items:center;gap:5px}
 .achbtn svg{width:15px;height:15px;color:var(--gold)}
 .achs{display:grid;gap:4px}
@@ -151,19 +137,6 @@ button.pav:hover .av,button.pav:focus-visible .av{outline:2px solid var(--accent
 .avhead{display:flex;justify-content:space-between;align-items:center;font-family:var(--f-disp);letter-spacing:.04em}
 .avbody{display:grid;grid-template-columns:auto 1fr;gap:12px;align-items:center}
 
-.flow{display:block;width:100%;height:40px;margin:-10px 0;overflow:visible;pointer-events:none}
-.flow .flowlines{filter:drop-shadow(0 0 3px color-mix(in srgb, var(--gold) 45%, transparent))}
-.flow path{fill:none;stroke-width:4;stroke-linecap:round;stroke-linejoin:round;stroke-dasharray:1;stroke-dashoffset:0}
-.flow path.draw{animation:flowdraw .9s cubic-bezier(.3,.7,.2,1) both}
-.flow path.merge{stroke:var(--gold);stroke-width:5}
-/* 金色の線の上を光の粒が上へ流れる */
-.flow path.spark{stroke:#fff;stroke-width:2.5;stroke-dasharray:2 14;opacity:.85;animation:flowspark 1.4s linear infinite}
-.flow circle.jn{fill:var(--gold);stroke:var(--surface);stroke-width:2}
-.flow circle.jn.main{animation:flowpulse 2.4s ease-in-out infinite;transform-origin:center;transform-box:fill-box}
-@keyframes flowdraw{from{stroke-dashoffset:1}to{stroke-dashoffset:0}}
-@keyframes flowspark{from{stroke-dashoffset:16}to{stroke-dashoffset:0}}
-@keyframes flowpulse{0%,100%{transform:scale(1)}50%{transform:scale(1.25)}}
-@media (prefers-reduced-motion: reduce){.flow path.draw,.flow path.spark,.flow circle.jn.main{animation:none}.flow path.spark{display:none}}
 .peoplebar{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:10px}
 .pcard{background:var(--surface);border:1px solid var(--line);border-left:4px solid var(--pc);border-radius:6px;padding:10px 14px;display:grid;grid-template-columns:auto 1fr;column-gap:12px;row-gap:2px}
 .pname{font-size:12px;color:var(--muted);letter-spacing:.04em}
@@ -183,12 +156,28 @@ button.pav:hover .av,button.pav:focus-visible .av{outline:2px solid var(--accent
 .periodcustom{display:inline-flex;align-items:center;gap:6px;font-size:13px}
 .periodcustom input{width:auto;background:var(--surface-2);border:1px solid var(--line);border-radius:4px;padding:3px 6px;font-size:12px}
 .tiles{display:grid;grid-template-columns:2fr 1fr 1fr 1fr;gap:1px;background:var(--line);border:1px solid var(--line);border-radius:6px;overflow:hidden}
+/* 上段（帳簿の形） */
+.tiles.ledgertop{display:grid;grid-template-columns:1fr;gap:0;background:var(--surface);padding:14px 16px}
+.ledgertop .peoplebar{grid-template-columns:1fr;gap:8px;margin-bottom:10px}
+.ledgertop .pcard{grid-template-columns:auto 1fr auto;align-items:center;padding:8px 14px}
+.ledgertop .pcard .pav{grid-row:1/span 2}
+.ledgertop .pcard .pname{grid-column:2}
+.ledgertop .pcard .pbal{grid-column:3;grid-row:1/span 2;text-align:right;font-size:22px}
+.ledgertop .pcard .padj{position:static;grid-column:2;justify-self:start;margin-top:2px}
+.ledgertop .tile.main{display:flex;justify-content:space-between;align-items:baseline;flex-wrap:wrap;gap:4px 16px;background:none;
+  border-top:1px solid var(--muted);border-bottom:4px double var(--muted);padding:10px 18px 10px 18px;margin:0}
+.ledgertop .tile.main .k{font-size:13px;color:var(--ink);font-weight:600;letter-spacing:.06em}
+.ledgertop .tile.main .k small{font-weight:400;color:var(--muted);margin-left:8px;font-size:11px}
+.ledgertop .tile.main .v{white-space:nowrap}
+.ledgertop .tile.main .padj{position:static}
+.ledgertop .statrow{display:grid;grid-template-columns:repeat(3,1fr);gap:1px;background:var(--line);border:1px solid var(--line);border-radius:4px;overflow:hidden;margin-top:12px}
+@media (max-width:560px){.ledgertop .statrow{grid-template-columns:1fr 1fr}}
 .tile{background:var(--surface);padding:14px 16px;display:grid;gap:4px;align-content:start}
 .tile .k{font-size:11px;letter-spacing:.08em;color:var(--muted)}
 .tile .v{font-family:var(--f-mono);font-variant-numeric:tabular-nums;font-size:20px;font-weight:500}
 .tile.main .v{font-size:32px;color:var(--gold)}
 .tile .u{font-size:12px;color:var(--muted);margin-left:4px;font-family:var(--f-disp)}
-@media (max-width:720px){.tiles{grid-template-columns:1fr 1fr}.tile.main{grid-column:1/-1}}
+@media (max-width:720px){.tiles:not(.ledgertop){grid-template-columns:1fr 1fr}.tile.main{grid-column:1/-1}}
 
 .panel{background:var(--surface);border:1px solid var(--line);border-radius:6px;padding:16px}
 .panel h2{font-family:var(--f-disp);font-weight:600;font-size:15px;letter-spacing:.06em;margin:0 0 12px;display:flex;align-items:center;justify-content:space-between;gap:8px;flex-wrap:wrap}
@@ -382,18 +371,17 @@ code{font-family:var(--f-mono);font-size:12px;background:var(--surface-2);border
     </span>
   </section>
 
-  <section class="tiles" aria-label="概要">
+  <!-- 上段は帳簿の形: 各行 = メンバーのカード（名前と所持金）、1本線、合計、二重線。その下に今日・直近7日・期間の収支 -->
+  <section class="tiles ledgertop" aria-label="概要">
+    <div class="peoplebar" id="peopleBar" aria-label="一人ひとりの所持金" hidden></div>
     <div class="tile main"><div class="k" id="tBalLabel">現在の所持金</div><div class="v" id="tBal">0<span class="u">aUEC</span></div>
-      <div class="comp" id="tComp" hidden></div>
       <button type="button" class="padj" data-adj="" id="soloAdj" hidden title="ゲーム内の所持金に合わせる">残高補正</button></div>
-    <div class="tile"><div class="k">今日の収支</div><div class="v" id="tToday">0</div></div>
-    <div class="tile"><div class="k">直近7日</div><div class="v" id="tWeek">0</div></div>
-    <div class="tile"><div class="k" id="tCountLabel">記録件数</div><div class="v" id="tCount">0</div></div>
+    <div class="statrow">
+      <div class="tile"><div class="k">今日の収支</div><div class="v" id="tToday">0</div></div>
+      <div class="tile"><div class="k">直近7日</div><div class="v" id="tWeek">0</div></div>
+      <div class="tile"><div class="k" id="tCountLabel">記録件数</div><div class="v" id="tCount">0</div></div>
+    </div>
   </section>
-
-  <!-- 一人ひとりのカードから線が伸びて合わさり、共有の所持金に入る（あみだくじのような線） -->
-  <svg class="flow" id="flow" aria-hidden="true" hidden></svg>
-  <section class="peoplebar" id="peopleBar" aria-label="一人ひとりの所持金" hidden></section>
 
   <div class="grid2">
     <section class="panel">
@@ -572,14 +560,14 @@ code{font-family:var(--f-mono);font-size:12px;background:var(--surface-2);border
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
-<script src="config.js?v=3.7.1"></script>
-<script src="web_backend.js?v=3.7.1"></script>
+<script src="config.js?v=3.8.0"></script>
+<script src="web_backend.js?v=3.8.0"></script>
 <script>
 /* 'solo' = 個人用, 'shared' = claude.ai で共有, 'web' = GitHub Pages + Firebase で共有（web_backend.js） */
 const MODE = 'web';
 /* 変更して公開するたびに上げる（表示はフッター） */
-const APP_VERSION = '3.7.1';
-const APP_UPDATED = '2026-10-05 20:29';   // 日本時間
+const APP_VERSION = '3.8.0';
+const APP_UPDATED = '2026-10-05 20:33';   // 日本時間
 const SHARED = MODE !== 'solo';
 
 const TYPES = [
@@ -938,70 +926,11 @@ function personDaily(sc){
   }
   return {start, byDate};
 }
-// 共有の所持金 = 一人ひとりの所持金の合計、を上の欄で式で見せる（並びは名前順で固定、割合は出さない）
-function renderComposition(_, each, unassigned){
-  const el = $('tComp'), ps = people();
-  if(!SHARED || ps.length < 2){ el.hidden = true; $('tBal').closest('.tile').classList.remove('withcomp'); return; }
-  const parts = ps.map(p=>({label:nameOf(p), color:colorOf(p), v:each[p]||0}));
-  if(unassigned) parts.push({label:'未割り当て', color:'var(--line)', v:unassigned});
-  const total = parts.reduce((a,b)=>a+b.v, 0);
-  // 各行は下の一人ひとりのカード（そこから線が伸びて合わさる）。ここは簿記の書き方で合計だけ: 上に1本線、下に二重線
-  el.innerHTML = `<div class="lr total" title="${esc(parts.map(p=>p.label + ' ' + fmt(p.v)).join(' ＋ '))}"><span class="ln">合計</span><span class="num" id="compTotal">${fmt(total)}</span></div>`;
-  el.hidden = false;
-  $('tBal').closest('.tile').classList.add('withcomp');
-}
-// あみだくじのような線: 各カードの上辺の中央から上へ → 合流する高さで横へ → 合計（右下の数字）の真下から上へ。
-// 同じ側から来る線は、内側のカードの線と合わさったところから先を金色の1本にする
-let flowKey = '';
-function drawFlow(){
-  const svg = $('flow'), cards = [...document.querySelectorAll('#peopleBar .pcard')], tile = document.querySelector('.tile.main');
-  // SVG の要素には .hidden が無いので、属性で切り替える
-  if(!SHARED || cards.length < 2 || $('peopleBar').hidden || !tile){ svg.setAttribute('hidden', ''); return; }
-  svg.removeAttribute('hidden');
-  const b = svg.getBoundingClientRect(), t = tile.getBoundingClientRect();
-  const tot = $('compTotal'), tr = tot && !$('tComp').hidden ? tot.getBoundingClientRect() : null;
-  const tx = (tr ? tr.left + tr.width/2 : t.left + t.width/2) - b.left, ty = t.bottom - b.top;
-  const cy = c => c.getBoundingClientRect().top - b.top;
-  const midY = (ty + Math.min(...cards.map(cy))) / 2;
-  const pts = cards.map(c=>{ const r = c.getBoundingClientRect(); return {x:r.left + r.width/2 - b.left, y:cy(c), color:getComputedStyle(c).getPropertyValue('--pc').trim() || 'var(--accent)'}; });
-  const key = $('tBal').textContent + '|' + pts.map(p=>Math.round(p.x)).join(',') + '|' + Math.round(tx);
-  const anim = key !== flowKey ? ' draw' : '';   // 額や位置が変わったときだけ描き直しの動き
-  flowKey = key;
-  const f = v => v.toFixed(1);
-  // 上へ伸びて、角を丸く曲がって横へ
-  const elbowUpTo = (x, y, toX) => {
-    const d = Math.sign(toX - x), r = Math.min(10, Math.abs(toX - x), Math.abs(y - midY));
-    return d ? `M${f(x)} ${f(y)} V${f(midY + r)} Q${f(x)} ${f(midY)} ${f(x + d*r)} ${f(midY)} H${f(toX)}` : `M${f(x)} ${f(y)} V${f(midY)}`;
-  };
-  let colored = '', gold = '', dots = [];
-  for(const side of [-1, 1]){
-    // 合計より左（-1）・右（1）のカードを、外側から順に
-    const xs = pts.filter(p=> side < 0 ? p.x < tx - 0.5 : p.x >= tx - 0.5).sort((a,b)=> Math.abs(b.x - tx) - Math.abs(a.x - tx));
-    xs.forEach((p, k)=>{
-      const next = xs[k + 1];   // 内側のカード（あれば、そこで合わさる）
-      colored += `<path class="${anim}" pathLength="1" style="stroke:${p.color}" d="${next ? elbowUpTo(p.x, p.y, next.x) : `M${f(p.x)} ${f(p.y)} V${f(midY)}`}"/>`;
-      if(next) dots.push(next.x);
-    });
-    // 内側のカードから合計の真下までは、合わさった線なので金色（1枚だけのときはその人の色）
-    if(xs.length){
-      const inner = xs[xs.length - 1];
-      if(Math.abs(inner.x - tx) > 0.5) (xs.length > 1 ? (gold += `<path class="merge${anim}" pathLength="1" style="animation-delay:${anim ? '.45s' : '0s'}" d="M${f(inner.x)} ${f(midY)} H${f(tx)}"/>`)
-                                                      : (colored += `<path class="${anim}" pathLength="1" style="stroke:${inner.color}" d="M${f(inner.x)} ${f(midY)} H${f(tx)}"/>`));
-    }
-  }
-  const up = `M${f(tx)} ${f(midY)} V${f(ty)}`;
-  svg.innerHTML = `<g class="flowlines">${colored}${gold}<path class="merge${anim}" pathLength="1" style="animation-delay:${anim ? '.8s' : '0s'}" d="${up}"/>`
-    + `<path class="spark" d="${up}"/></g>`
-    + dots.map(x=>`<circle class="jn" cx="${f(x)}" cy="${f(midY)}" r="4.5"/>`).join('')
-    + `<circle class="jn main" cx="${f(tx)}" cy="${f(midY)}" r="6"/>`;
-}
-window.addEventListener('resize', ()=>{ cancelAnimationFrame(drawFlow.raf); drawFlow.raf = requestAnimationFrame(drawFlow); });
 function renderPeople(){
   const bar = $('peopleBar');
   if(!SHARED){ bar.hidden = true; return; }
   const sc = balScope();
   const {each, unassigned} = personBalances(sc);
-  renderComposition(ps => ps, each, unassigned);
   const ps = people();
   bar.hidden = !ps.length;
   bar.innerHTML = ps.map(p=>`<div class="pcard" style="--pc:${colorOf(p)}">
@@ -1302,7 +1231,8 @@ function render(){
   periods = findPeriods(D.entries);
   const sc = balScope(), sname = scopeName();
   const {balance, days} = compute(D.entries.filter(e=>inScope(sc, e.date)), totalStart(sc));
-  $('tBalLabel').textContent = (SHARED ? '共有の所持金' : '現在の所持金') + (sname ? `・${sname}` : '');
+  // 共有の版は帳簿の「合計」の行（上にメンバーの行が並ぶ）
+  $('tBalLabel').innerHTML = SHARED ? `合計 <small>共有の所持金${sname ? '・' + sname : ''}</small>` : '現在の所持金' + (sname ? `・${sname}` : '');
   $('startLabel').textContent = sname ? `${sname}の開始時の所持金 (aUEC)` : '記録開始時の所持金 (aUEC)';
   $('actualLabel').textContent = SHARED ? '選んだ人の実際の所持金に合わせる (aUEC)' : '実際の所持金に合わせる (aUEC)';
 
@@ -1331,7 +1261,6 @@ function render(){
   renderDays(days.filter(d=>inPeriod(d.date)));
   renderTabs();
   renderPeople();
-  requestAnimationFrame(drawFlow);
   renderAchievements();
   if(window.redrawPeers) window.redrawPeers();
   // 光らせた記録は、光り終わったころに描き直して印を外す
