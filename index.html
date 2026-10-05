@@ -392,8 +392,11 @@ code{font-family:var(--f-mono);font-size:12px;background:var(--surface-2);border
 .logtable td.what{overflow-wrap:anywhere;min-width:12em}
 .logtable select{font:inherit;font-size:12px;background:var(--surface-2);border:1px solid var(--line);border-radius:3px;padding:2px 4px;color:var(--ink)}
 .logtable .note{display:block;font-size:11px;color:var(--muted)}
+.appfoot .fanote{flex-basis:100%}
 .appfoot{display:flex;flex-wrap:wrap;justify-content:space-between;gap:4px 16px;font-size:12px;color:var(--muted);border-top:1px solid var(--line);padding-top:12px}
 .danger{border-top:1px solid var(--line);padding-top:14px;display:grid;gap:10px}
+.backup{border-top:1px solid var(--line);padding-top:14px;display:grid;gap:8px}
+.backup .hint{margin:0}
 .danger-btn{color:var(--neg);justify-self:start}
 .confirm{border:1px solid var(--neg);border-radius:6px;padding:12px;display:grid;gap:10px;font-size:13px}
 .confirm p{margin:0}
@@ -424,6 +427,7 @@ code{font-family:var(--f-mono);font-size:12px;background:var(--surface-2);border
       </div>
       <!-- 2段目: 実績・共有URL・更新 -->
       <div class="hrow">
+  <select class="skinsel" id="langSel" aria-label="言語 / Language" title="言語 / Language" data-noi18n><option value="ja">日本語</option><option value="en">English</option></select>
   <button class="btn ghost achbtn" type="button" id="hdrAch" title="実績の欄へ移動">実績</button>
   <button class="btn ghost" type="button" id="hdrShare" aria-expanded="false" hidden>共有URL</button>
   <button class="btn ghost iconbtn" type="button" id="hdrReload" title="ページを最新の状態に更新" aria-label="ページを更新">
@@ -517,6 +521,14 @@ code{font-family:var(--f-mono);font-size:12px;background:var(--surface-2);border
         <button class="btn ghost" type="button" id="saveActual">補正を記録</button>
       </div>
       <p class="hint">記録し忘れや死亡時の損失などでズレたときに使います。差額を「残高補正」として今日の日付で記録します。</p>
+      <div class="backup" id="backupBox" hidden>
+        <p class="hint">記録はこのブラウザの中にだけ保存されています。ブラウザのデータを消すと記録も消えるので、ときどきバックアップを保存してください。</p>
+        <div class="row">
+          <button class="btn ghost" type="button" id="bkSave">バックアップを保存</button>
+          <label class="btn ghost" for="bkFile" style="display:inline-block">バックアップから復元</label>
+          <input type="file" id="bkFile" accept=".json,application/json" hidden>
+        </div>
+      </div>
       <div class="danger">
         <button class="btn ghost danger-btn" type="button" id="clearBtn">すべての記録を削除</button>
         <div id="clearConfirm" class="confirm" hidden>
@@ -646,18 +658,333 @@ code{font-family:var(--f-mono);font-size:12px;background:var(--surface-2);border
 </div>
 <div class="toast" id="toast" hidden></div>
 
+<script>/*I18N_EN*/
+/* 英語の翻訳辞書（embed_i18n.py で ledger.html に埋め込む）。
+   exact: 画面の文そのまま（前後の空白を除き、連続する空白は1つにした形）→ 英語
+   html : 文の途中に太字やコードがある段落（innerHTML）→ 英語の innerHTML
+   re   : 数字などが入る文。[正規表現, 置き換え（文字列か関数）]。上から順に最初に合ったもの
+   words: どれにも合わないときに部分的に置き換える語（種別名など） */
+(function(){
+const TYPE = {
+  '配達':'Delivery', '貨物輸送':'Hauling', 'サルベージ':'Salvage', '採掘':'Mining', '賞金首':'Bounty Hunting',
+  '傭兵・戦闘':'Mercenary / Combat', '調査・回収':'Investigation / Recovery', '交易':'Trading', 'その他収入':'Other Income',
+  'Wikelo との交換':'Wikelo Trade', '修理・補給':'Repair & Resupply', '船・装備購入':'Ships & Gear', '罰金・保険':'Fines & Insurance',
+  'その他支出':'Other Expenses', '残高補正':'Balance Adjustment', 'メンバー間の送金':'Member Transfer',
+};
+const TIER = {'デビュー':'Debut', '見習い':'Apprentice', 'ベテラン':'Veteran', '達人':'Master'};
+const WD = {'日':'Sun', '月':'Mon', '火':'Tue', '水':'Wed', '木':'Thu', '金':'Fri', '土':'Sat'};
+const MON = ['', 'Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+const UNIT1 = {'日':'day', '週':'week', '月':'month'};
+const UNITN = {'日':'days', '週':'weeks', 'か月':'months'};
+// 「1,000万」「1億」→ 10M / 100M
+const man = s => {
+  const m = String(s).match(/^([\d,.]+)(億|万)$/);
+  if(!m) return s;
+  const n = parseFloat(m[1].replace(/,/g, '')) * (m[2] === '億' ? 1e8 : 1e4);
+  return n >= 1e9 ? (n / 1e9) + 'B' : n >= 1e6 ? (n / 1e6) + 'M' : (n / 1e3) + 'K';
+};
+const T = s => (typeof tr === 'function' ? tr(s) : s);
+const paren = s => s.replace(/（/g, ' (').replace(/）/g, ')').replace(/推定 /g, 'est. ').replace(/報酬(\d+)件/g, '$1 rewards').replace(/、/g, ', ').replace(/^ /, '');
+
+const exact = {
+  // 見出し・ボタン
+  'aUEC 収支帳':'aUEC Ledger', 'aUEC 共有収支帳':'aUEC Shared Ledger', 'StarCitizen LEDGER':'StarCitizen LEDGER',
+  'STAR CITIZEN ・ 契約と所持金の記録':'STAR CITIZEN · Contracts & Balance Log', 'STAR CITIZEN ・ 共有口座':'STAR CITIZEN · Shared Account',
+  'テーマ: 自動':'Theme: Auto', '明るい':'Light', '暗い':'Dark', '紙':'Paper', '夕暮れグレー':'Dusk Gray', '深い紺':'Deep Navy', '森の緑':'Forest Green',
+  'mobiGlas 風':'mobiGlas', '雨の窓':'Rainy Window', 'ネオン（暗い）':'Neon (Dark)', 'ネオン（明るい）':'Neon (Light)', '深海':'Deep Sea',
+  '俺がどうせ好きな雨テーマ':'Rainy Window', 'アンスロさんがどうせ好きな色（暗い）':'Neon (Dark)', 'アンスロさんがどうせ好きな色（明るい）':'Neon (Light)', 'アンスロさんがどうせ好きな深海':'Deep Sea',
+  '画面のテーマ':'Theme', '画面のテーマ（このブラウザで覚えます）':'Theme (remembered in this browser)', '言語 / Language':'Language',
+  '取り込みプログラム':'Importer', 'この PC の取り込みプログラム（Windows）の設定とダウンロード':'Settings and download for the Windows importer on this PC',
+  'ログを取り込む':'Import Logs', 'ゲームのログを読み、新しい記録をそのまま取り込みます':'Read the game logs and import new records',
+  '実績':'Achievements', '実績の欄へ移動':'Jump to achievements', '共有URL':'Share URL', 'ページを更新':'Reload page', 'ページを最新の状態に更新':'Reload to the latest version',
+  '保存先を確認中…':'Checking storage…', '保存先:':'Storage:', 'このブラウザ内':'this browser', '（CSVで控えを取ってください）':' (keep a copy via CSV)',
+  'このアプリは閲覧のみの権限で開かれています。記録を追加するには、持ち主に「編集可能」以上で共有してもらってください。':'This app was opened with view-only access. To add records, ask the owner to share it with edit access.',
+  '取り込みプログラムをダウンロード':'Download importer', '使い方':'How to use', '閉じる':'Close',
+  '表示する期間':'Period', '全期間':'All time', '日付を指定':'Custom dates', '開始日':'Start date', '終了日（空欄なら今日まで）':'End date (blank = today)',
+  '概要':'Summary', '一人ひとりの所持金':'Balance per member', '現在の所持金':'Current balance', 'ゲーム内の所持金に合わせる':'Match in-game balance',
+  '今日の収支':'Today', '直近7日':'Last 7 days', '記録件数':'Records',
+  '収支の内訳':'Breakdown', '所持金の推移':'Balance history', '日別の収支':'Daily income & expenses', '週別の収支':'Weekly income & expenses', '月別の収支':'Monthly income & expenses',
+  '日別':'Daily', '週別':'Weekly', '月別':'Monthly', '日別の記録':'Daily log', 'CSVをコピー':'Copy CSV',
+  '所持金の設定':'Balance settings', '対象の人':'Member', '一覧から外す':'Remove from list', '記録開始時の所持金 (aUEC)':'Balance when you started recording (aUEC)',
+  '保存':'Save', '記録を始めた時点でゲーム内に持っていた金額です。推移はここから計算します。':'The in-game balance when you started recording. The history is calculated from here.',
+  '対象の人に移す':'Move to member', '実際の所持金に合わせる (aUEC)':'Match actual balance (aUEC)', 'ゲーム内の現在額':'Current in-game amount', '補正を記録':'Record adjustment',
+  '記録し忘れや死亡時の損失などでズレたときに使います。差額を「残高補正」として今日の日付で記録します。':'Use this when the balance drifts (missed records, losses on death, etc.). The difference is recorded as a "Balance Adjustment" dated today.',
+  'すべての記録を削除':'Delete all records', '削除する':'Delete', 'やめる':'Cancel', 'この記録を削除':'Delete this record', '削除':'Delete',
+  '記録はこのブラウザの中にだけ保存されています。ブラウザのデータを消すと記録も消えるので、ときどきバックアップを保存してください。':'Your records are stored only in this browser. Clearing browser data deletes them, so save a backup now and then.',
+  'バックアップを保存':'Save backup', 'バックアップから復元':'Restore from backup',
+  'ゲームのログから取り込む':'Import from game logs', '場所をコピー':'Copy path', 'LIVE フォルダごと選ぶ':'Choose the LIVE folder', 'ファイルを選ぶ':'Choose files',
+  'すべて選択':'Select all', '選択を解除':'Deselect', '選んだ記録を取り込む':'Import selected', 'すべて':'All', '取り込む':'Import', '取り込み済み':'Already imported',
+  '日時':'Date/time', '内容':'Details', '種別':'Type', '金額':'Amount',
+  '記録を追加（手入力）':'Add a record (manual)', 'ミッションから選ぶ（任意・英語名で検索）':'Pick a mission (optional, search by English name)',
+  '例: covalex / bounty / salvage':'e.g. covalex / bounty / salvage', '収入か支出か':'Income or expense', '＋ 収入':'+ Income', '− 支出':'− Expense',
+  '契約種別・収入':'Contract type / income', '金額 (aUEC) 例: 45000 / 45k / 1.2m':'Amount (aUEC) e.g. 45000 / 45k / 1.2m', '日付':'Date',
+  '使った船（任意）':'Ship used (optional)', '例: Vulture':'e.g. Vulture', 'メモ（任意）':'Memo (optional)', '例: Covalex 配達 x3、Hurston→ArcCorp':'e.g. Covalex delivery x3, Hurston→ArcCorp',
+  '記録する':'Add record', '例: 2498287 / 2.5m':'e.g. 2498287 / 2.5m', 'ゲーム内の所持金 (aUEC)':'In-game balance (aUEC)',
+  'アイコンの設定':'Avatar', '画像ファイルを選ぶ':'Choose image file', 'アイコンを外す':'Remove avatar', 'クリックでアイコンを設定':'Click to set your avatar',
+  '最新版をダウンロード':'Download latest version', 'この PC の取り込みプログラムを使う':'Use the importer on this PC', '取り込みプログラム（Windows）':'Importer (Windows)',
+  '合計':'Total', '収入':'Income', '支出':'Expenses', '差引':'Net', '開始':'Start', '収入の合計':'Total income', '支出の合計':'Total expenses',
+  '1日あたりの差引':'Net per day', '1週あたりの差引':'Net per week', '1か月あたりの差引':'Net per month',
+  'この期間の記録はありません。':'No records in this period.', 'この期間の収支はありません。':'No income or expenses in this period.',
+  '記録を追加すると、ここに日ごとの所持金の推移が表示されます。':'Add records to see your daily balance history here.',
+  '記録はまだありません。「記録を追加」から最初の1件を入れてください。':'No records yet. Add your first one with "Add a record".',
+  '日ごとの終了時所持金の推移':'Daily closing balance history', '日ごとの収入と支出':'Daily income and expenses', '週ごとの収入と支出':'Weekly income and expenses', '月ごとの収入と支出':'Monthly income and expenses',
+  '報酬変動':'variable', '違法':'Illegal', 'ミッションデータがありません':'No mission data', '見つかりません。種別と金額を手入力してください':'Not found. Enter the type and amount manually.',
+  '共有':'Shared', '仕事':'Work', '稼ぎ':'Earnings', '記録':'Records', '所持金':'Balance', '買い物':'Shopping', '時間':'Time', '実績解除:':'Unlocked:',
+  '更新日時':'Updated', '（公開版）':' (public)', '（個人用）':' (personal)', '（共有用）':' (shared)', '（共有用・Web）':' (shared, web)',
+  '非公式のファン作品です。Cloud Imperium Games とは関係ありません。Star Citizen® は Cloud Imperium Rights LLC の商標です。記録はこのブラウザ内に保存され、どこにも送信されません。':
+    'Unofficial fan-made tool, not affiliated with Cloud Imperium Games. Star Citizen® is a trademark of Cloud Imperium Rights LLC. Your records are stored in this browser and never sent anywhere.',
+  '接続中':'Online', 'あなた':'you', '（あなた）':' (you)', 'メンバー':'Member', '不明':'Unknown', '未割り当て':'Unassigned',
+  '契約報酬':'Contract reward', 'スクリーンショットの所持金に合わせる':'Matched to screenshot balance',
+  'ミッション・船データを読み込めませんでした（手入力はできます）':'Could not load mission/ship data (manual entry still works)',
+  'おめでとう':'Congrats',
+  // 実績の名前
+  'はじめの一歩':'First Step', '書き始め':'Getting Started', '記録係':'Record Keeper', '几帳面':'Meticulous', '帳簿番':'Bookkeeper', '記録魔':'Record Fanatic', '千の記録':'A Thousand Records', '航海日誌':"Captain's Log",
+  '10日目':'Day 10', '30日目':'Day 30', '100日目':'Day 100', '200日目':'Day 200', '三日坊主卒業':'Past Day Three', '皆勤賞':'Perfect Attendance', '二週間連続':'Two-Week Streak', '一か月連続':'One-Month Streak',
+  '小銭持ち':'Pocket Change', '貯金家':'Saver', 'ミリオネア':'Millionaire', '小金持ち':'Comfortable', '大富豪':'Tycoon', '艦隊の資金':'Fleet Fund', '企業家':'Entrepreneur', '財閥':'Conglomerate', '億万長者':'Billionaire',
+  'いい日':'Good Day', '稼ぎ日':'Payday', '稼ぎ日和':'Perfect Payday', 'ゴールドラッシュ':'Gold Rush', '大当たり':'Jackpot', '伝説の一日':'Legendary Day',
+  'いい週':'Good Week', 'いい月':'Good Month',
+  '品目コレクター':'Commodity Collector', '目利き':'Keen Eye', '市場通':'Market Expert', '寄り道':'Detour', '常連':'Regular', '星系めぐり':'System Tour',
+  '新しい翼':'New Wings', 'いい買い物':'Good Buy', '大きな買い物':'Big Purchase', '中型船オーナー':'Mid-size Owner', '旗艦の主':'Flagship Owner', '大型船オーナー':'Capital Owner',
+  '船団長':'Fleet Leader', '艦隊司令':'Fleet Admiral', '豪華客船の主':'Luxury Liner Owner', 'お得意様':'Valued Customer', '上客':'Premium Customer', '大口顧客':'Major Client',
+  '造船所の恩人':"Shipyard's Benefactor", '億の買い物':'Hundred-Million Buy', '買い物上手':'Smart Shopper', '買い物好き':'Shopaholic', '買い物の達人':'Master Shopper', 'カタログ制覇':'Catalog Complete',
+  '最初の愛機':'First Ship', '格納庫がにぎやか':'Busy Hangar', 'コレクター':'Collector', '艦隊':'Fleet',
+  'Cutlass 乗り':'Cutlass Pilot', '一人採掘':'Solo Miner', '一人サルベージ':'Solo Salvager', '海賊の美学':'Pirate Aesthetic', '三人採掘':'Crew Miner', 'コンステレーション':'Constellation',
+  'キャタピラー':'Caterpillar', '空飛ぶ給油所':'Flying Gas Station', '大型輸送':'Heavy Hauler', 'ハーキュリーズ':'Hercules', '解体屋の城':"Salvager's Castle", '探検家':'Explorer',
+  '鉄壁の護衛':'Iron Escort', '砲艦の主':'Gunship Owner', '超豪華ヨット':'Superyacht',
+  'はじめてのレンタル':'First Rental', 'レンタル常連':'Rental Regular', 'レンタル王':'Rental King',
+  '整備士の友':"Mechanic's Friend", '修理工場の常連':'Repair Shop Regular', '壊し屋':'Wrecker', '修理工場の大株主':'Repair Shop Shareholder',
+  '前科一犯':'First Offense', '常習犯':'Repeat Offender', '罰金・保険を払う':'Pay a fine or insurance', '罰金・保険を 5回 払う':'Pay fines or insurance 5 times',
+  'Wikelo の客':"Wikelo's Customer", 'Wikelo の常連':"Wikelo's Regular", 'Wikelo の友':"Wikelo's Friend",
+  'クアンタニウム納品':'Quantainium Delivery', 'クアンタニウム便':'Quantainium Run', 'Polaris まであと少し':'Almost a Polaris', 'Idris の材料':'Idris Materials',
+  '北極星':'North Star', 'Polaris を手に入れる':'Get a Polaris', 'フリゲートの主':'Frigate Owner', 'Idris を手に入れる':'Get an Idris',
+  'はじめての送金':'First Transfer', '持ちつ持たれつ':'Give and Take', '息ぴったり':'In Sync',
+  'スキャナー':'Scanner', 'スキャンの達人':'Scan Master', '所持金ウォッチャー':'Balance Watcher',
+  'ワイプを越えて':'Beyond the Wipe', '記録が2つ以上の期にまたがる':'Have records spanning two or more periods',
+  '夜更かし':'Night Owl', '深夜（0〜4時）の記録':'Record late at night (0–4 h)', '早起き':'Early Bird', '早朝（5〜7時）の記録':'Record early in the morning (5–7 h)',
+  '週末パイロット':'Weekend Pilot', '週末の住人':'Weekend Regular',
+  // 取り込みプログラム（exe）まわりの説明
+  'exe を別の場所に移したら、もう一度ダブルクリックしてください。共有URLや名前は exe には入っておらず、各 PC に保存されます。':'If you move the exe, double-click it again. The share URL and name are not in the exe; they are saved on each PC.',
+  '初めての場合は、共有帳簿のURL（右上「共有URL」→「コピー」）、このページで使っている名前、Star Citizen の LIVE フォルダ（自動で見つかれば Enter だけ）を入力':'On first run, enter the shared ledger URL (top right "Share URL" → "Copy"), the name you use on this page, and the Star Citizen LIVE folder (just press Enter if it is found automatically)',
+  '「この PC の取り込みプログラムを使う」にチェックを入れると、右上の「ログを取り込む」だけで取り込めます（初回はブラウザの確認で「常に許可」→「開く」）':'Check "Use the importer on this PC" to import with just "Import Logs" at the top right (the first time, choose "Always allow" → "Open" in the browser prompt)',
+  '（「ログを取り込む」でフォルダを選ばずに取り込みます。exe を入れた PC だけで有効にしてください）':' ("Import Logs" imports without picking a folder. Enable this only on a PC with the exe installed.)',
+};
+
+const html = {
+  'Star Citizen の <code>Game.log</code> から、契約の報酬・ショップでの購入・貨物の売却を拾って記録候補にします。過去のログは <code>logbackups</code> フォルダにあり、まとめて選べます。ファイルはこのブラウザの中で読むだけで、どこにも送りません。':
+    'Finds contract rewards, shop purchases and cargo sales in Star Citizen\'s <code>Game.log</code> and lists them as records to import. Older logs are in the <code>logbackups</code> folder and can be selected all at once. Files are only read inside this browser and never sent anywhere.',
+  'エクスプローラーから <b>logbackups</b> フォルダ（または <b>LIVE</b> フォルダや <b>Game.log</b>）を、ここにドラッグして落としても読み込めます':
+    'You can also drag the <b>logbackups</b> folder (or the <b>LIVE</b> folder or <b>Game.log</b>) from Explorer and drop it here',
+  'フォルダ選択の画面にパスを入れたいときは、下の「フォルダー:」欄に <code>C:\\Program Files\\Roberts Space Industries\\StarCitizen\\LIVE\\logbackups</code> を貼り付けて「アップロード」を押してください。':
+    'To type the path in the folder picker, paste <code>C:\\Program Files\\Roberts Space Industries\\StarCitizen\\LIVE\\logbackups</code> into the "Folder:" box and press "Upload".',
+  '<b>おすすめ:</b>「LIVE フォルダごと選ぶ」で上の場所の <code>LIVE</code> フォルダを選ぶと、今のログ（<code>Game.log</code>・最後の1回分）と過去のログ（<code>logbackups</code> 内）をまとめて読みます。ブラウザに「アップロードしますか」と聞かれますが、実際にはどこにも送らず、このページの中で読むだけです。':
+    '<b>Tip:</b> Choose the <code>LIVE</code> folder above with "Choose the LIVE folder" to read the current log (<code>Game.log</code>, your last session) and older logs (in <code>logbackups</code>) together. The browser asks whether to "upload", but nothing is sent; the files are only read inside this page.',
+  'Discord や Steam のアイコンを右クリック →「画像をコピー」して、ここで <b>Ctrl + V</b> で貼り付けてください。画像ファイルからも選べます。':
+    'Right-click your Discord or Steam avatar → "Copy image", then paste it here with <b>Ctrl + V</b>. You can also choose an image file.',
+  'ダウンロードした <code>SCLogImport.exe</code> を、ずっと置いておく場所（ドキュメントなど）に置いてダブルクリック（「PC が保護されました」と出たら「詳細情報」→「実行」）。古い exe があるときは、同じ場所に上書きしてからダブルクリック':
+    'Put the downloaded <code>SCLogImport.exe</code> somewhere permanent (e.g. Documents) and double-click it (if you see "Windows protected your PC", click "More info" → "Run anyway"). If you have an older exe, overwrite it in the same place, then double-click.',
+  'Star Citizen を起動してから取り込むと、遊んでいる間は、<b>F1（mobiGlas）を開いて PrtSc</b> で撮ると、左下の所持金を読んで帳簿とずれた分を「残高補正」として記録します（見張り中はタスクバー右下の通知領域にアイコンが出て、結果は Windows の通知でも知らせます。右クリックで「見張りをやめる」。ゲームを終えると見張りもアイコンも消えます）':
+    'If you import after starting Star Citizen, then while you play, <b>open F1 (mobiGlas) and press PrtSc</b>: the balance at the bottom left is read and any difference from the ledger is recorded as a "Balance Adjustment" (while watching, an icon appears in the notification area and results are shown as Windows notifications. Right-click it to stop. The watcher and icon go away when you quit the game).',
+  '<b>この PC の取り込みプログラムを使う</b>（「ログを取り込む」でフォルダを選ばずに取り込みます。exe を入れた PC だけで有効にしてください）':
+    '<b>Use the importer on this PC</b> ("Import Logs" imports without picking a folder. Enable this only on a PC with the exe installed.)',
+};
+
+const re = [
+  // 曜日・日付・期間
+  [/^\((日|月|火|水|木|金|土)\)$/, (m, d) => '(' + WD[d] + ')'],
+  [/^(\d+)\/(\d+)\((日|月|火|水|木|金|土)\)〜(\d+)\/(\d+)\((日|月|火|水|木|金|土)\)$/, (m, a, b, c, d, e, f) => `${a}/${b} (${WD[c]}) – ${d}/${e} (${WD[f]})`],
+  [/^(\d+)年(\d+)月$/, (m, y, mo) => MON[+mo] + ' ' + y],
+  [/^(\d+)月$/, (m, mo) => MON[+mo]],
+  [/^第(\d+)期$/, 'Period $1'],
+  [/^第(\d+)期（最新）$/, 'Period $1 (latest)'],
+  [/^第(\d+)期 (\S+)〜(\S*?)(（最新）)?$/, (m, n, a, b, l) => `Period ${n} ${a}–${b}${l ? ' (latest)' : ''}`],
+  [/^第(\d+)期の収支$/, 'Period $1 net'],
+  [/^(.+)の収支$/, (m, a) => T(a) + ' net'],
+  [/^更新日時 (.+)$/, 'Updated $1'],
+  [/^現在の所持金・(.+)$/, (m, a) => 'Current balance · ' + T(a)],
+  [/^合計・(.+)$/, (m, a) => 'Total · ' + T(a)],
+  [/^(.+)の開始時の所持金 \(aUEC\)$/, (m, a) => 'Balance at the start of ' + T(a) + ' (aUEC)'],
+  [/^指定した期間$/, 'Selected period'],
+  [/^（(.+)）$/, (m, a) => ' (' + T(a) + ')'],
+  [/^(.+) ([\d,]+) \/ ([\d,]+)$/, (m, a, b, c) => T(a) + ` ${b} / ${c}`],
+  [/^実績・(.+) ([\d,]+)\/([\d,]+)$/, 'Achievements $2/$3'],
+  [/^実績 ([\d,]+)\/([\d,]+)$/, 'Achievements $1/$2'],
+  [/^([\d.]+) 達成$/, 'Achieved $1'],
+  [/^終了時 (.+)$/, 'End $1'],
+  [/^([\d,]+)件$/, '$1 records'],
+  [/^([\d,]+)(日|週|か月)$/, (m, n, u) => n + ' ' + (n === '1' ? UNITN[u].replace(/s$/, '') : UNITN[u])],
+  [/^記録のある(日|週|月)$/, (m, u) => UNITN[u === '月' ? 'か月' : u].replace(/^./, c => c.toUpperCase()) + ' with records'],
+  [/^1(日|週|か月)あたりの差引$/, (m, u) => 'Net per ' + (u === 'か月' ? 'month' : UNIT1[u])],
+  [/^いちばん稼いだ(日|週|月)$/, (m, u) => 'Best ' + UNIT1[u]],
+  [/^いちばん稼いだ(日|週|月)（(.+)）$/, (m, u, v) => `Best ${UNIT1[u]} (${v})`],
+  [/^(日|週|月)ごとの収入と支出$/, (m, u) => (u === '日' ? 'Daily' : u === '週' ? 'Weekly' : 'Monthly') + ' income and expenses'],
+  [/^(\S+)\s+収入 (\S+) \/ 支出 (\S+) \/ 差引 (\S+)$/, (m, d, a, b, c) => `${T(d)}  Income ${a} / Expenses ${b} / Net ${c}`],
+  [/^ゲームデータ (\S+)（ミッション ([\d,]+)件・船 ([\d,]+)隻）$/, 'Game data $1 ($2 missions, $3 ships)'],
+  [/^基本報酬 (.+)$/, 'Base reward $1'],
+  // 実績の説明
+  [/^(.+)・(デビュー|見習い|ベテラン|達人)$/, (m, a, b) => T(a) + ': ' + TIER[b]],
+  [/^記録 ([\d,]+)件$/, 'Add $1 records'],
+  [/^記録した日が ([\d,]+)日$/, 'Record on $1 days'],
+  [/^([\d,]+)日続けて記録する$/, 'Record $1 days in a row'],
+  [/^所持金 (\S+) aUEC に到達$/, (m, v) => `Reach a balance of ${man(v)} aUEC`],
+  [/^1日で (\S+) aUEC 稼ぐ$/, (m, v) => `Earn ${man(v)} aUEC in one day`],
+  [/^1週間（月〜日）で (\S+) aUEC 稼ぐ$/, (m, v) => `Earn ${man(v)} aUEC in one week (Mon–Sun)`],
+  [/^1か月で (\S+) aUEC 稼ぐ$/, (m, v) => `Earn ${man(v)} aUEC in one month`],
+  [/^収入の合計が (\S+) aUEC$/, (m, v) => `Total income reaches ${man(v)} aUEC`],
+  [/^(週|月|収入)([\d,.]+(?:万|億))$/, (m, k, v) => ({'週':'Weekly ', '月':'Monthly ', '収入':'Income '})[k] + man(v)],
+  [/^(.+)で ([\d,]+)回 稼ぐ$/, (m, a, v) => `Earn from ${T(a)} ` + (v === '1' ? 'once' : `${v} times`)],
+  [/^([\d,]+)種類の品目を売る$/, 'Sell $1 kinds of commodities'],
+  [/^([\d,]+)か所の店で売り買いする$/, 'Trade at $1 different shops'],
+  [/^1回で (\S+) aUEC 以上の船・装備を買う$/, (m, v) => `Buy ships or gear worth ${man(v)} aUEC or more at once`],
+  [/^船・装備の買い物の合計が (\S+) aUEC$/, (m, v) => `Spend ${man(v)} aUEC in total on ships and gear`],
+  [/^10万 aUEC 以上の買い物 ([\d,]+)回$/, 'Make $1 purchases of 100K aUEC or more'],
+  [/^([\d,]+)種類の船を手に入れる$/, 'Own $1 different ships'],
+  [/^(.+) を手に入れる$/, 'Get a $1'],
+  [/^船のレンタル ([\d,]+)回$/, 'Rent ships $1 times'],
+  [/^修理・補給 ([\d,]+)回$/, 'Repair or resupply $1 times'],
+  [/^Wikelo と ([\d,]+)回 交換する$/, 'Trade with Wikelo $1 times'],
+  [/^Quantainium を ([\d,]+)回 納品する$/, 'Deliver Quantainium $1 times'],
+  [/^Polaris Bit を合計 ([\d,]+)個 手に入れる$/, 'Collect $1 Polaris Bits in total'],
+  [/^メンバー間の送金 ([\d,]+)回$/, 'Make $1 member transfers'],
+  [/^スクリーンショットで所持金を ([\d,]+)回 合わせる$/, 'Match your balance from a screenshot $1 times'],
+  [/^土日に記録した日が ([\d,]+)日$/, 'Record on $1 weekend days'],
+  [/^実績解除: (.+)（(.+)）$/, (m, a, b) => `Achievement unlocked: ${T(a)} (${T(b)})`],
+  [/^ほかに ([\d,]+)件の実績を解除しました$/, 'Unlocked $1 more achievements'],
+  // メモ（記録の中身は日本語のまま、表示だけ英語に）
+  [/^貨物売却: (.*)$/, (m, a) => 'Cargo sale: ' + paren(a)],
+  [/^貨物購入: (.*)$/, (m, a) => 'Cargo purchase: ' + paren(a)],
+  [/^購入: (.*)$/, (m, a) => 'Purchase: ' + paren(a)],
+  [/^売却: (.*)$/, (m, a) => 'Sale: ' + paren(a)],
+  [/^レンタル: (.*)$/, (m, a) => 'Rental: ' + paren(a)],
+  [/^契約の費用: (.*)$/, (m, a) => 'Contract fee: ' + a],
+  [/^送金の受け取り: (.*)$/, 'Transfer received: $1'],
+  [/^メンバー間の送金: (.*)$/, 'Member transfer: $1'],
+  [/^(.+)（報酬(\d+)件）$/, (m, a, n) => paren(a) + ` (${n} rewards)`],
+  // 通知など
+  [/^(.+) が (.+) (\S+) を追加しました$/, (m, a, b, c) => `${T(a)} added ${T(b)} ${c}`],
+  [/^(.+) (\S+) を記録しました$/, (m, a, b) => `Recorded ${T(a)} ${b}`],
+  [/^([\d,]+)件を取り込みました$/, 'Imported $1 records'],
+  [/^([\d,]+)件を取り込みました。所持金がゲーム内とずれている場合は「実際の所持金に合わせる」で補正してください。$/, 'Imported $1 records. If your balance differs from the game, fix it with "Match actual balance".'],
+  [/^取り込み中… ([\d,]+)\/([\d,]+)(件（このままお待ちください）)?$/, (m, a, b, w) => `Importing… ${a}/${b}` + (w ? ' (please wait)' : '')],
+  [/^読み込み中… ([\d,]+)\/([\d,]+)　(.+)$/, 'Reading… $1/$2  $3'],
+  [/^(.+) を読めませんでした$/, 'Could not read $1'],
+  [/^([\d,]+)個のファイルから ([\d,]+)件 見つかりました(（うち ([\d,]+)件は取り込み済み）)?(。種別は必要に応じて変えられます。)?$/,
+    (m, f, n, x, d, y) => `Found ${n} records in ${f} files` + (x ? ` (${d} already imported)` : '') + (y ? '. You can change the types as needed.' : '')],
+  [/^([\d,]+)個のファイルを読みましたが、取り込める記録は見つかりませんでした。(.*)$/, (m, f, rest) => `Read ${f} files but found nothing to import.` + (rest ? ' Game.log only covers your last session; older ones are in logbackups ("Choose the LIVE folder" reads them all).' : '')],
+  [/^選択中 ([\d,]+)件　合計$/, 'Selected $1  Total'],
+  [/^([\d,]+)件の記録をバックアップに保存しました$/, 'Saved $1 records to a backup'],
+  [/^([\d,]+)件の記録を復元しました$/, 'Restored $1 records'],
+  [/^([\d,]+)件の記録を削除しました$/, 'Deleted $1 records'],
+  [/^CSVをコピーしました（([\d,]+)件）$/, 'Copied CSV ($1 records)'],
+  [/^の記録をすべて削除します。(.*)$/, (m, rest) => ' records will all be deleted.' + (rest.includes('共有') ? ' They will also disappear for the people you share with.' : '') + ' This cannot be undone, so copy the CSV first if you need it. The starting balance setting is kept.'],
+  [/^(.+) のゲーム内最安値 (\S+) aUEC を入れました（UEX調べ）$/, 'Filled in the lowest in-game price of $1: $2 aUEC (via UEX)'],
+  [/^差額 (\S+) を補正として記録しました$/, 'Recorded the difference $1 as an adjustment'],
+  [/^(.*)開始時の所持金を (\S+) aUEC にしました$/, (m, a, v) => `Set the starting balance${a ? ' of ' + a.replace(/ ?の$/, '') : ''} to ${v} aUEC`],
+  [/^アプリ上の所持金(（(.+)）)?: (\S+) aUEC$/, (m, x, p, v) => `Balance in the app${p ? ' (' + T(p) + ')' : ''}: ${v} aUEC`],
+  [/^(.+) の残高補正$/, 'Balance adjustment for $1'],
+  [/^「(.+)」を一覧から外しました$/, 'Removed "$1" from the list'],
+  [/^新しい版 v(\S+) があります。押すと更新します$/, 'Version $1 is available. Click to update.'],
+  [/^記録を読み込めませんでした（(.+)）。ページを再読み込みしてください。$/, 'Could not load records ($1). Please reload the page.'],
+  [/^保存できませんでした（(.+)）$/, 'Could not save ($1)'],
+  [/^削除できませんでした（(.+)）$/, 'Could not delete ($1)'],
+  [/^途中で止まりました（(.+)）。もう一度「選んだ記録を取り込む」を押すと、残りから続けます。$/, 'Stopped partway ($1). Press "Import selected" again to continue with the rest.'],
+];
+
+const words = [
+  ...Object.entries(TYPE).sort((a, b) => b[0].length - a[0].length),
+  [' ・ ', ' · '], ['・', ' · '], ['（', ' ('], ['）', ')'], ['、', ', '], ['〜', '–'], ['：', ': '],
+];
+Object.assign(exact, TYPE, {
+  // 単独で出る短い通知
+  '削除しました':'Deleted', '本当に削除':'Really delete', '金額を入力してください':'Enter an amount', '数値で入力してください':'Enter a number',
+  'メモに交換したもの（Polaris、Polaris Bit 15 など）を書いてください':'Write what you traded in the memo (Polaris, Polaris Bit 15, etc.)',
+  'ゲーム内の現在額を入力してください':'Enter the current in-game amount', '記録と一致しています':'Matches your records', '削除する記録はありません':'There are no records to delete',
+  'コピーできませんでした':'Could not copy', 'アイコンを設定しました':'Avatar set', 'アイコンを外しました':'Avatar removed', '保存しています…':'Saving…',
+  '画像を貼り付けるか、画像ファイルを選んでください。':'Paste an image or choose an image file.',
+  'クリップボードに画像がありません。Discord などでアイコンを右クリック →「画像をコピー」してから貼り付けてください。':'No image on the clipboard. Right-click your avatar in Discord etc. → "Copy image", then paste.',
+  'ファイルを探しています…':'Looking for files…', '場所をコピーしました':'Path copied', '選択したのでコピーしてください':'Selected. Please copy it.',
+  '新しい記録はありませんでした（すべて取り込み済みです）。':'No new records (everything is already imported).',
+  'ログファイルが見つかりませんでした。logbackups フォルダか Game.log を落としてください。':'No log files found. Drop the logbackups folder or Game.log.',
+  'このフォルダには Game.log も logbackups もありませんでした。StarCitizen の中の LIVE フォルダを選んでください。':'This folder has neither Game.log nor logbackups. Choose the LIVE folder inside StarCitizen.',
+  'バックアップのファイルを読めませんでした':'Could not read the backup file', '対象の人がいません。先に名前を決めてください':'No member selected. Set a name first.',
+  'ゲーム内の所持金を数字で入れてください（例: 2498287 / 2.5m）':'Enter your in-game balance as a number (e.g. 2498287 / 2.5m)',
+});
+window.I18N_EN = {exact, html, re, words};
+})();
+
+</script>
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
-<script src="config.js?v=3.19.3"></script>
-<script src="web_backend.js?v=3.19.3"></script>
+<script src="config.js?v=3.20.0"></script>
+<script src="web_backend.js?v=3.20.0"></script>
 <script>
 /* 'solo' = 個人用, 'shared' = claude.ai で共有, 'web' = GitHub Pages + Firebase で共有（web_backend.js） */
 const MODE = 'web';
 /* 変更して公開するたびに上げる（表示はフッター） */
-const APP_VERSION = '3.19.3';
-const APP_UPDATED = '2026-10-06 07:40';   // 日本時間
+const APP_VERSION = '3.20.0';
+const APP_UPDATED = '2026-10-06 08:11';   // 日本時間
 const SHARED = MODE !== 'solo';
+/* 一般公開版（make_public.py で作る。このブラウザ内に保存、手入力欄とバックアップを出す） */
+const PUBLIC = false;
+
+/* ---------- 言語（日本語 / English） ----------
+   画面に出る文字を、表示の直前に辞書（I18N_EN、下の別の script）で置き換える。
+   記録の中身やプログラムが使う日本語（メモの書式・ログの読み取りなど）は変えない。英語を選んだときだけ動く */
+const LANG_KEY = 'auec-ledger-lang';
+let LANG = 'ja';
+try{ const v = localStorage.getItem(LANG_KEY); LANG = (v === 'en' || v === 'ja') ? v : ((navigator.language || '').toLowerCase().startsWith('ja') ? 'ja' : 'en'); }catch(e){}
+document.documentElement.lang = LANG;
+const JA_RE = /[\u3040-\u30ff\u3400-\u9fff\uff01-\uff60]/;
+const trCache = new Map(), trOut = new Set();   // trOut: 訳した結果（もう一度訳さない。日本語が残っても繰り返し書き換えないため）
+function tr(s){
+  if(LANG !== 'en' || !s || !JA_RE.test(s) || trOut.has(s)) return s;
+  if(trCache.has(s)) return trCache.get(s);
+  const D = window.I18N_EN || {exact:{}, re:[], words:[]};
+  const m = s.match(/^(\s*)([\s\S]*?)(\s*)$/), key = m[2].replace(/\s+/g, ' ');
+  let out = D.exact[key];
+  if(out === undefined){
+    for(const [re, rp] of D.re){ if(re.test(key)){ out = key.replace(re, rp); break; } }
+  }
+  if(out === undefined){ out = key; for(const [a, b] of D.words) out = out.split(a).join(b); }   // 部分的にでも訳す（種別名など）
+  out = typeof out === 'string' && JA_RE.test(out) && D.exact[out] !== undefined ? D.exact[out] : out;
+  const r = m[1] + out + m[3];
+  if(trCache.size < 5000){ trCache.set(s, r); trOut.add(r); }
+  return r;
+}
+const TR_ATTRS = ['title', 'aria-label', 'placeholder', 'alt'];
+function trTree(root){
+  if(LANG !== 'en' || !root) return;
+  if(root.nodeType === 3){ if(!root.parentElement?.closest('[data-noi18n],script,style,textarea')){ const t = tr(root.nodeValue); if(t !== root.nodeValue) root.nodeValue = t; } return; }
+  if(root.nodeType !== 1 || root.closest('[data-noi18n],script,style')) return;
+  const els = [root, ...root.querySelectorAll('*')];
+  for(const el of els){
+    if(el.closest('[data-noi18n]')) continue;
+    for(const a of TR_ATTRS){ const v = el.getAttribute(a); if(v && JA_RE.test(v)){ const t = tr(v); if(t !== v) el.setAttribute(a, t); } }
+    // 文の途中に太字などがある段落は、まとまり（innerHTML）ごと訳す
+    const H = window.I18N_EN && window.I18N_EN.html;
+    if(H && el.children.length && JA_RE.test(el.textContent)){
+      const k = el.innerHTML.replace(/\s+/g, ' ').trim();
+      if(H[k] !== undefined){ el.innerHTML = H[k]; continue; }
+    }
+  }
+  const w = document.createTreeWalker(root, NodeFilter.SHOW_TEXT);
+  for(let n = w.nextNode(); n; n = w.nextNode()){
+    if(!JA_RE.test(n.nodeValue) || n.parentElement?.closest('[data-noi18n],script,style,textarea')) continue;
+    const t = tr(n.nodeValue); if(t !== n.nodeValue) n.nodeValue = t;
+  }
+}
+if(LANG === 'en'){
+  trTree(document.body);
+  document.title = tr(document.title);
+  new MutationObserver(ms => {
+    for(const m of ms){
+      if(m.type === 'childList') m.addedNodes.forEach(trTree);
+      else if(m.type === 'characterData') trTree(m.target);
+      else if(m.type === 'attributes'){ const v = m.target.getAttribute(m.attributeName); if(v && JA_RE.test(v)){ const t = tr(v); if(t !== v) m.target.setAttribute(m.attributeName, t); } }
+    }
+  }).observe(document.body, {childList:true, subtree:true, characterData:true, attributes:true, attributeFilter:TR_ATTRS});
+}
+
 
 const TYPES = [
   {id:'delivery', label:'配達', dir:1},
@@ -2261,9 +2588,39 @@ if(SHARED){
 }
 if(!SHARED) $('soloAdj').hidden = false;
 $('verTag').textContent = 'v' + APP_VERSION;
+
+/* ---------- 公開版: 手入力欄とバックアップ、ファン作品の表記 ---------- */
+if(PUBLIC){
+  $('addPanel').hidden = false;
+  $('backupBox').hidden = false;
+}
+$('bkSave').onclick = ()=>{
+  const blob = new Blob([JSON.stringify({app:'sc-ledger', version:1, savedAt:new Date().toISOString(), entries, settings})], {type:'application/json'});
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob); a.download = `sc-ledger-backup-${today()}.json`;
+  document.body.appendChild(a); a.click(); a.remove();
+  setTimeout(()=>URL.revokeObjectURL(a.href), 5000);
+  toast(`${fmt(entries.length)}件の記録をバックアップに保存しました`);
+};
+// 復元は「足し合わせ」: 今ある記録は消さず、バックアップにあって今ない記録だけを加える（同じ記録は ID で見分ける）
+$('bkFile').onchange = async ev=>{
+  const f = ev.target.files[0]; ev.target.value = '';
+  if(!f) return;
+  let j; try{ j = JSON.parse(await f.text()); }catch(e){ j = null; }
+  if(!j || !Array.isArray(j.entries)){ toast('バックアップのファイルを読めませんでした'); return; }
+  const have = new Set(entries.map(e=>e.id));
+  const add = j.entries.filter(e=>e && e.id && e.date && typeof e.amount === 'number' && !have.has(e.id));
+  entries = entries.concat(add);
+  const empty = !(settings.startBalance) && !Object.keys(settings.starts||{}).length;
+  if(empty && j.settings) settings = {startBalance:0, ...j.settings};
+  store.saveLocal(); render();
+  toast(`${fmt(add.length)}件の記録を復元しました`);
+};
 /* ---------- 画面のテーマ（自動 = パソコンの明るい・暗い設定に合わせる）。このブラウザで覚える ---------- */
+$('langSel').value = LANG;
+$('langSel').onchange = ()=>{ try{ localStorage.setItem(LANG_KEY, $('langSel').value); }catch(e){} location.reload(); };
 const SKIN_KEY = 'auec-ledger-skin';
-const applySkin = v => { if(v) document.documentElement.dataset.skin = v; else delete document.documentElement.dataset.skin; $('skinSel').value = v; };
+const applySkin = v => { if(v && !$('skinSel').querySelector(`option[value="${v}"]`)) v = ''; if(v) document.documentElement.dataset.skin = v; else delete document.documentElement.dataset.skin; $('skinSel').value = v; };
 try{ applySkin(localStorage.getItem(SKIN_KEY) || ''); }catch(e){ applySkin(''); }
 /* 深海テーマ: ページ全体のどこまで下りたか（0〜1）で、暗幕を上から下まで均等に濃くする（以前は 1400px で真っ暗になり、急すぎた）。
    1コマに1回だけ、値が変わったときだけ書き換える */
@@ -2296,7 +2653,8 @@ if(MODE === 'web'){
   document.addEventListener('visibilitychange', ()=>{ if(!document.hidden) checkNew(); });
 }
 $('verTag').title = '更新日時 ' + APP_UPDATED.replace(/-/g,'.');
-$('appFoot').innerHTML = `<span>aUEC Ledger <b class="num">v${APP_VERSION}</b>（${{solo:'個人用',shared:'共有用',web:'共有用・Web'}[MODE]}）</span><span>更新日時 <span class="num">${APP_UPDATED.replace(/-/g,'.')}</span></span>`;
+$('appFoot').innerHTML = `<span>aUEC Ledger <b class="num">v${APP_VERSION}</b>（${PUBLIC ? '公開版' : {solo:'個人用',shared:'共有用',web:'共有用・Web'}[MODE]}）</span><span>更新日時 <span class="num">${APP_UPDATED.replace(/-/g,'.')}</span></span>`
+  + (PUBLIC ? `<span class="fanote">非公式のファン作品です。Cloud Imperium Games とは関係ありません。Star Citizen® は Cloud Imperium Rights LLC の商標です。記録はこのブラウザ内に保存され、どこにも送信されません。</span>` : '');
 $('date').value = today();
 renderChips(); setDir(1);
 const scReady = loadGameData();
