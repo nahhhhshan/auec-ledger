@@ -117,6 +117,15 @@ button.peer{font:inherit;cursor:pointer}
 @keyframes qtstreak{to{transform:translateX(350%)}}
 @keyframes qtfade{0%{opacity:0}15%{opacity:1}80%{opacity:1}100%{opacity:0}}
 /* 実績 */
+/* 共有の所持金の内訳（一人ひとりの所持金をつないだバーと式） */
+.comp{display:grid;gap:6px;margin-top:6px}
+.comp .cbar{display:flex;height:8px;border-radius:4px;overflow:hidden;background:var(--surface-2)}
+.comp .cbar i{display:block;height:100%;transition:width .8s ease}
+.comp .cbar i+i{box-shadow:inset 2px 0 0 var(--surface)}
+.comp .ceq{display:flex;flex-wrap:wrap;align-items:center;gap:4px 8px;font-size:12px;color:var(--muted)}
+.comp .ceq span.p{display:inline-flex;align-items:center;gap:5px;color:var(--ink)}
+.comp .ceq .num{font-size:12px}
+.comp .ceq .sw{width:9px;height:9px;border-radius:2px;flex:none}
 .achbtn{display:inline-flex;align-items:center;gap:5px}
 .achbtn svg{width:15px;height:15px;color:var(--gold)}
 .achs{display:grid;gap:4px}
@@ -357,6 +366,7 @@ code{font-family:var(--f-mono);font-size:12px;background:var(--surface-2);border
 
   <section class="tiles" aria-label="概要">
     <div class="tile main"><div class="k" id="tBalLabel">現在の所持金</div><div class="v" id="tBal">0<span class="u">aUEC</span></div>
+      <div class="comp" id="tComp" hidden></div>
       <button type="button" class="padj" data-adj="" id="soloAdj" hidden title="ゲーム内の所持金に合わせる">残高補正</button></div>
     <div class="tile"><div class="k">今日の収支</div><div class="v" id="tToday">0</div></div>
     <div class="tile"><div class="k">直近7日</div><div class="v" id="tWeek">0</div></div>
@@ -542,14 +552,14 @@ code{font-family:var(--f-mono);font-size:12px;background:var(--surface-2);border
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
-<script src="config.js?v=3.4.3"></script>
-<script src="web_backend.js?v=3.4.3"></script>
+<script src="config.js?v=3.5.0"></script>
+<script src="web_backend.js?v=3.5.0"></script>
 <script>
 /* 'solo' = 個人用, 'shared' = claude.ai で共有, 'web' = GitHub Pages + Firebase で共有（web_backend.js） */
 const MODE = 'web';
 /* 変更して公開するたびに上げる（表示はフッター） */
-const APP_VERSION = '3.4.3';
-const APP_UPDATED = '2026-10-05 20:17';   // 日本時間
+const APP_VERSION = '3.5.0';
+const APP_UPDATED = '2026-10-05 20:19';   // 日本時間
 const SHARED = MODE !== 'solo';
 
 const TYPES = [
@@ -908,11 +918,25 @@ function personDaily(sc){
   }
   return {start, byDate};
 }
+// 共有の所持金 = 一人ひとりの所持金の合計、を上の欄でバーと式で見せる（並びは名前順で固定、割合は出さない）
+function renderComposition(_, each, unassigned){
+  const el = $('tComp'), ps = people();
+  if(!SHARED || ps.length < 2){ el.hidden = true; return; }
+  const parts = ps.map(p=>({label:nameOf(p), color:colorOf(p), v:each[p]||0}));
+  if(unassigned) parts.push({label:'未割り当て', color:'var(--line)', v:unassigned});
+  const total = parts.reduce((a,b)=>a+b.v, 0), pos = parts.reduce((a,b)=>a + Math.max(0, b.v), 0);
+  // マイナスの人がいるとバーで合計を表せないので、その場合は式だけ
+  const bar = parts.every(p=>p.v >= 0) && pos > 0
+    ? `<div class="cbar" aria-hidden="true">${parts.map(p=>`<i style="width:${(p.v/pos*100).toFixed(2)}%;background:${p.color}" title="${esc(p.label)} ${fmt(p.v)} aUEC"></i>`).join('')}</div>` : '';
+  el.innerHTML = bar + `<div class="ceq">${parts.map(p=>`<span class="p"><i class="sw" style="background:${p.color}"></i>${esc(p.label)} <span class="num">${fmt(p.v)}</span></span>`).join('<span>＋</span>')}<span>＝</span><span class="p"><span class="num">${fmt(total)}</span></span></div>`;
+  el.hidden = false;
+}
 function renderPeople(){
   const bar = $('peopleBar');
   if(!SHARED){ bar.hidden = true; return; }
   const sc = balScope();
   const {each, unassigned} = personBalances(sc);
+  renderComposition(ps => ps, each, unassigned);
   const ps = people();
   bar.hidden = !ps.length;
   bar.innerHTML = ps.map(p=>`<div class="pcard" style="--pc:${colorOf(p)}">
