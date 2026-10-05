@@ -73,6 +73,8 @@ header{display:grid;grid-template-columns:auto minmax(0,1fr);align-items:center;
 .hmeta b{color:var(--ink);font-weight:500}
 .hbtns{display:flex;flex-direction:column;align-items:flex-end;gap:6px}
 .hrow{display:flex;flex-wrap:wrap;gap:6px;justify-content:flex-end;align-items:center}
+.hrow>*{height:32px}
+.hrow .skinsel{padding:0 8px;border-color:var(--line);color:var(--accent);font-size:13px;background:transparent}
 @media (max-width:640px){header{grid-template-columns:minmax(0,1fr)} .brand{white-space:normal;font-size:22px} .hbtns{align-items:flex-start} .hrow{justify-content:flex-start}}
 .hbtns .btn{padding:6px 14px;font-size:13px}
 .hbtns .iconbtn{padding:6px 9px;display:inline-flex;align-items:center;position:relative}
@@ -307,25 +309,26 @@ code{font-family:var(--f-mono);font-size:12px;background:var(--surface-2);border
 <div class="wrap">
   <header>
     <div>
-      <h1 class="brand" id="brand">aUEC <span>LEDGER</span></h1>
+      <h1 class="brand" id="brand">StarCitizen <span>LEDGER</span></h1>
       <div class="sub"><span id="subtitle">STAR CITIZEN ・ 契約と所持金の記録</span><span class="ver" id="verTag" title=""></span></div>
     </div>
     <div class="hbtns">
+      <!-- 1段目: 記録の操作（よく使う「ログを取り込む」を右端に） -->
       <div class="hrow">
-        <button class="btn ghost iconbtn" type="button" id="hdrReload" title="ページを最新の状態に更新" aria-label="ページを更新">
-          <svg viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 11a8 8 0 1 0-2.3 5.7"/><path d="M20 4v7h-7"/></svg>
-        </button>
-        <button class="btn" type="button" id="hdrImport" title="ゲームのログを読み、新しい記録をそのまま取り込みます">ログを取り込む</button>
-        <button class="btn ghost" type="button" id="hdrExe" aria-expanded="false" hidden title="この PC の取り込みプログラム（Windows）の設定とダウンロード">取り込みプログラム</button>
+  <button class="btn ghost achbtn" type="button" id="hdrAch" aria-expanded="false" aria-controls="achPanel" title="実績を表示">実績</button>
+  <button class="btn ghost" type="button" id="hdrExe" aria-expanded="false" hidden title="この PC の取り込みプログラム（Windows）の設定とダウンロード">取り込みプログラム</button>
+  <button class="btn" type="button" id="hdrImport" title="ゲームのログを読み、新しい記録をそのまま取り込みます">ログを取り込む</button>
       </div>
-      <!-- 2段目: テーマ・実績・共有URL -->
+      <!-- 2段目: ページの設定 -->
       <div class="hrow">
-        <select class="skinsel" id="skinSel" aria-label="画面のテーマ" title="画面のテーマ（このブラウザで覚えます）">
+  <select class="skinsel" id="skinSel" aria-label="画面のテーマ" title="画面のテーマ（このブラウザで覚えます）">
           <option value="">テーマ: 自動</option><option value="light">明るい</option><option value="dark">暗い</option>
           <option value="paper">紙</option><option value="dusk">夕暮れグレー</option><option value="navy">深い紺</option><option value="forest">森の緑</option><option value="mobiglas">mobiGlas 風</option>
         </select>
-        <button class="btn ghost achbtn" type="button" id="hdrAch" aria-expanded="false" aria-controls="achPanel" title="実績を表示"></button>
-        <button class="btn ghost" type="button" id="hdrShare" aria-expanded="false" hidden>共有URL</button>
+  <button class="btn ghost" type="button" id="hdrShare" aria-expanded="false" hidden>共有URL</button>
+  <button class="btn ghost iconbtn" type="button" id="hdrReload" title="ページを最新の状態に更新" aria-label="ページを更新">
+          <svg viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 11a8 8 0 1 0-2.3 5.7"/><path d="M20 4v7h-7"/></svg>
+        </button>
       </div>
     </div>
     <div class="hmeta">
@@ -539,14 +542,14 @@ code{font-family:var(--f-mono);font-size:12px;background:var(--surface-2);border
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
-<script src="config.js?v=3.4.2"></script>
-<script src="web_backend.js?v=3.4.2"></script>
+<script src="config.js?v=3.4.3"></script>
+<script src="web_backend.js?v=3.4.3"></script>
 <script>
 /* 'solo' = 個人用, 'shared' = claude.ai で共有, 'web' = GitHub Pages + Firebase で共有（web_backend.js） */
 const MODE = 'web';
 /* 変更して公開するたびに上げる（表示はフッター） */
-const APP_VERSION = '3.4.2';
-const APP_UPDATED = '2026-10-05 20:15';   // 日本時間
+const APP_VERSION = '3.4.3';
+const APP_UPDATED = '2026-10-05 20:17';   // 日本時間
 const SHARED = MODE !== 'solo';
 
 const TYPES = [
