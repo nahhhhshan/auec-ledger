@@ -19,7 +19,7 @@ function scCount(){ var gc = window.goatcounter; if(!gc || !gc.url || gc.filter(
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Chakra+Petch:wght@500;600&family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans+JP:wght@400;500;600&display=swap">
 <style>
 :root{
-  --bg:#eef1f4; --surface:#ffffff; --surface-2:#ffffff; --ach-bg:#ffffff;   /* 明るいテーマは欄の中の部品も白でそろえる */ --ink:#16202b; --muted:#5b6878; --line:#d5dce4;
+  --bg:#eef1f4; --surface:#ffffff; --surface-2:#f5f7f9; --ink:#16202b; --muted:#5b6878; --line:#d5dce4;
   --accent:#0e7490; --accent-soft:#d8eef3; --gold:#9a5b00; --pos:#15803d; --neg:#b42318;
   --grid:#e3e8ee; --p1:#0e7490; --p2:#9a5b00; --p3:#6d28d9;
   --f-disp:"Chakra Petch","IBM Plex Sans JP",system-ui,sans-serif;
@@ -30,19 +30,19 @@ function scCount(){ var gc = window.goatcounter; if(!gc || !gc.url || gc.filter(
   :root:not([data-theme="light"]){
     color-scheme:dark;
     --bg:#0c1219; --surface:#131c26; --surface-2:#18232f; --ink:#e3e9f0; --muted:#8594a6; --line:#243140;
-    --accent:#38bdd8; --accent-soft:#12303a; --ach-bg:var(--accent-soft); --gold:#e0a93b; --pos:#4ade80; --neg:#f87171; --grid:#1d2834;
+    --accent:#38bdd8; --accent-soft:#12303a; --gold:#e0a93b; --pos:#4ade80; --neg:#f87171; --grid:#1d2834;
     --p1:#38bdd8; --p2:#e0a93b; --p3:#a78bfa;
   }
 }
 :root[data-theme="dark"]{
   color-scheme:dark;
   --bg:#0c1219; --surface:#131c26; --surface-2:#18232f; --ink:#e3e9f0; --muted:#8594a6; --line:#243140;
-  --accent:#38bdd8; --accent-soft:#12303a; --ach-bg:var(--accent-soft); --gold:#e0a93b; --pos:#4ade80; --neg:#f87171; --grid:#1d2834;
+  --accent:#38bdd8; --accent-soft:#12303a; --gold:#e0a93b; --pos:#4ade80; --neg:#f87171; --grid:#1d2834;
   --p1:#38bdd8; --p2:#e0a93b; --p3:#a78bfa;
 }
 /* 利用者が選ぶテーマ（data-skin。claude.ai が付ける data-theme とは別の印にして、選んだものを優先する） */
-:root[data-skin="light"]{color-scheme:light; --bg:#eef1f4; --surface:#ffffff; --surface-2:#ffffff; --ach-bg:#ffffff; --ink:#16202b; --muted:#5b6878; --line:#d5dce4; --accent:#0e7490; --accent-soft:#d8eef3; --gold:#9a5b00; --pos:#15803d; --neg:#b42318; --grid:#e3e8ee; --p1:#0e7490; --p2:#9a5b00; --p3:#6d28d9;}
-:root[data-skin="dark"]{color-scheme:dark; --bg:#0c1219; --surface:#131c26; --surface-2:#18232f; --ink:#e3e9f0; --muted:#8594a6; --line:#243140; --accent:#38bdd8; --accent-soft:#12303a; --ach-bg:var(--accent-soft); --gold:#e0a93b; --pos:#4ade80; --neg:#f87171; --grid:#1d2834; --p1:#38bdd8; --p2:#e0a93b; --p3:#a78bfa;}
+:root[data-skin="light"]{color-scheme:light; --bg:#eef1f4; --surface:#ffffff; --surface-2:#f5f7f9; --ink:#16202b; --muted:#5b6878; --line:#d5dce4; --accent:#0e7490; --accent-soft:#d8eef3; --gold:#9a5b00; --pos:#15803d; --neg:#b42318; --grid:#e3e8ee; --p1:#0e7490; --p2:#9a5b00; --p3:#6d28d9;}
+:root[data-skin="dark"]{color-scheme:dark; --bg:#0c1219; --surface:#131c26; --surface-2:#18232f; --ink:#e3e9f0; --muted:#8594a6; --line:#243140; --accent:#38bdd8; --accent-soft:#12303a; --gold:#e0a93b; --pos:#4ade80; --neg:#f87171; --grid:#1d2834; --p1:#38bdd8; --p2:#e0a93b; --p3:#a78bfa;}
 :root[data-skin="paper"]{color-scheme:light; --bg:#efe9dd; --surface:#f8f4ea; --surface-2:#f2ecdf; --ink:#2b2722; --muted:#6f665a; --line:#ddd3c2; --accent:#2f6f73; --accent-soft:#dde9e4; --gold:#8a5a12; --pos:#4d7a2e; --neg:#a3412f; --grid:#e6decf; --p1:#2f6f73; --p2:#8a5a12; --p3:#6b4f8a;}
 :root[data-skin="dusk"]{color-scheme:dark; --bg:#2a2d31; --surface:#33373c; --surface-2:#3a3e44; --ink:#d9dcdf; --muted:#9aa0a7; --line:#454a50; --accent:#7fb3c0; --accent-soft:#34474c; --gold:#d8b06a; --pos:#8fc99a; --neg:#e09a8f; --grid:#3c4046; --p1:#7fb3c0; --p2:#d8b06a; --p3:#b9a3d6;}
 :root[data-skin="navy"]{color-scheme:dark; --bg:#141b26; --surface:#1b2431; --surface-2:#212c3a; --ink:#cfd8e3; --muted:#8796a8; --line:#2b3747; --accent:#6fb7c9; --accent-soft:#1f3540; --gold:#d4a65a; --pos:#7dc79a; --neg:#e08e86; --grid:#243041; --p1:#6fb7c9; --p2:#d4a65a; --p3:#a99bd6;}
@@ -74,8 +74,7 @@ header{display:grid;grid-template-columns:auto minmax(0,1fr);align-items:center;
 .hbtns{display:flex;flex-direction:column;align-items:flex-end;gap:6px}
 .hrow{display:flex;flex-wrap:wrap;gap:6px;justify-content:flex-end;align-items:center}
 .hrow>*{height:32px}
-.hrow .skinsel{padding:0 8px;border-color:var(--line);color:var(--accent);font-size:13px;background:var(--surface)}
-.hrow .btn.ghost{background:var(--surface)}
+.hrow .skinsel{padding:0 8px;border-color:var(--line);color:var(--accent);font-size:13px;background:transparent}
 @media (max-width:640px){header{grid-template-columns:minmax(0,1fr)} .brand{white-space:normal;font-size:22px} .hbtns{align-items:flex-start} .hrow{justify-content:flex-start}}
 .hbtns .btn{padding:6px 14px;font-size:13px}
 .hbtns .iconbtn{padding:6px 9px;display:inline-flex;align-items:center;position:relative}
@@ -129,7 +128,7 @@ button.peer{font:inherit;cursor:pointer}
 .ach svg{width:22px;height:22px;grid-row:1/span 2}
 .ach b{font-weight:500;font-size:13px}
 .ach small{font-size:11px}
-.ach.on{border-style:solid;border-color:var(--accent);color:var(--ink);background:var(--ach-bg, var(--accent-soft))}
+.ach.on{border-style:solid;border-color:var(--accent);color:var(--ink);background:var(--accent-soft)}
 .ach.on svg{color:var(--gold)}
 @media (prefers-reduced-motion: reduce){.ent.fresh,.fxbanner,.fxbanner::after,.celebrate .card,.qt,.qt i{animation-duration:.01s}}
 button.pav{cursor:pointer}
@@ -576,14 +575,14 @@ code{font-family:var(--f-mono);font-size:12px;background:var(--surface-2);border
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
-<script src="config.js?v=3.9.3"></script>
-<script src="web_backend.js?v=3.9.3"></script>
+<script src="config.js?v=3.9.4"></script>
+<script src="web_backend.js?v=3.9.4"></script>
 <script>
 /* 'solo' = 個人用, 'shared' = claude.ai で共有, 'web' = GitHub Pages + Firebase で共有（web_backend.js） */
 const MODE = 'web';
 /* 変更して公開するたびに上げる（表示はフッター） */
-const APP_VERSION = '3.9.3';
-const APP_UPDATED = '2026-10-06 03:57';   // 日本時間
+const APP_VERSION = '3.9.4';
+const APP_UPDATED = '2026-10-06 03:58';   // 日本時間
 const SHARED = MODE !== 'solo';
 
 const TYPES = [
