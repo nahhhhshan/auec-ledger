@@ -74,7 +74,7 @@ function scCount(){ var gc = window.goatcounter; if(!gc || !gc.url || gc.filter(
 :root[data-skin="rain"] .brand,:root[data-skin="rain"] .sub{text-shadow:0 1px 3px rgba(0,0,0,.7)}
 @media (prefers-reduced-motion: reduce){:root[data-skin="rain"]::after{animation:none}}
 :root[data-skin="anthro"]{color-scheme:dark; --bg:#160d29; --surface:#21143d; --surface-2:#2b1a4f; --ink:#f7ecff; --muted:#b3a8ee; --line:#4e44a0; --accent:#ff1493; --accent-soft:#4a1640; --gold:#ff00ff; --pos:#00ff00; --neg:#ff6fa8; --grid:#33215c; --p1:#ff1493; --p2:#00ff00; --p3:#6a5acd;}   /* アンスロさんの好きな色: #ff1493 #00ff00 #ff00ff #6a5acd */
-:root[data-skin="anthro-light"]{color-scheme:light; --bg:#fff0f8; --surface:#ffffff; --surface-2:#f7f2ff; --ink:#2a1640; --muted:#6a5acd; --line:#dcd2f6; --accent:#ff1493; --accent-soft:#ffe1f1; --gold:#d100d1; --pos:#00a300; --neg:#c2185b; --grid:#efe7fb; --p1:#ff1493; --p2:#00c800; --p3:#6a5acd;}   /* 明るいバージョン: 白地で読めるよう、文字に使う緑・マゼンタだけ少し濃く */
+:root[data-skin="anthro-light"]{color-scheme:light; --bg:#faf6f9; --surface:#fffdfe; --surface-2:#f7f4fa; --ink:#2a1640; --muted:#6a5acd; --line:#dcd2f6; --accent:#ff1493; --accent-soft:#fbeaf3; --gold:#d100d1; --pos:#00a300; --neg:#c2185b; --grid:#f1edf6; --p1:#ff1493; --p2:#00c800; --p3:#6a5acd;}   /* 明るいバージョン: 白地で読めるよう、文字に使う緑・マゼンタだけ少し濃く */
 :root[data-skin="abyss"]{color-scheme:dark; --bg:#020c18; --surface:rgba(4,24,40,.86); --surface-2:rgba(8,36,56,.86); --ink:#d8f4ff; --muted:#86b8cf; --line:rgba(90,180,220,.24);
   --accent:#3fd6e8; --accent-soft:rgba(63,214,232,.16); --gold:#7dfbd8; --pos:#62f7b4; --neg:#ff7d9c; --grid:rgba(90,180,220,.13); --p1:#3fd6e8; --p2:#ffb870; --p3:#b694ff;}
 /* 深海（画像なし・CSS で描く）: 上はかすかに光の届く青緑 → 下は真っ暗。光の筋が揺れ、マリンスノーが沈み、泡が浮かぶ。
@@ -83,31 +83,31 @@ function scCount(){ var gc = window.goatcounter; if(!gc || !gc.url || gc.filter(
 /* さらに軽く（v3.15.0）: 絶えず動くもの（光の筋の揺れ・マリンスノー・泡）はやめ、すべて止まった絵にした。
    背景は画面に固定した層に1回描くだけ（body の background-attachment:fixed はスクロールのたびに全面を描き直すので使わない）。
    スクロールで暗くなるのは、専用の暗幕 #abyssShade の opacity を JS で変えるだけ（ページ全体のスタイル再計算を起こさない） */
-:root[data-skin="abyss"]::before,:root[data-skin="abyss"] body::before,:root[data-skin="abyss"] body::after{content:"";position:fixed;inset:0;pointer-events:none;z-index:-1}
+:root[data-skin="abyss"]::before,:root[data-skin="abyss"] body::before{content:"";position:fixed;inset:0;pointer-events:none;z-index:-1}
 /* 海の色（上はかすかに光の届く青緑 → 下は真っ暗）。一番奥の層 */
-:root[data-skin="abyss"]::before{background:linear-gradient(180deg,#0b4561 0%,#063049 18%,#03192d 48%,#010a16 78%,#00050b 100%)}
-/* 止まった光の筋: 下へ行くほど自然に消えるよう、上から下へ薄くなるマスクをかける（途中で切れて見えないように） */
-:root[data-skin="abyss"] body::before{background:repeating-linear-gradient(100deg,rgba(150,230,255,0) 0 60px,rgba(150,230,255,.08) 80px,rgba(150,230,255,0) 120px,rgba(150,230,255,0) 190px);
-  -webkit-mask-image:linear-gradient(180deg,#000 0%,rgba(0,0,0,.5) 30%,transparent 75%);mask-image:linear-gradient(180deg,#000 0%,rgba(0,0,0,.5) 30%,transparent 75%)}
-/* マリンスノー（止まっている）。暗幕より手前に描くので、深く潜っても粒だけは見える */
-:root[data-skin="abyss"] body::after{background-image:radial-gradient(2px 2px at 12% 18%,rgba(220,245,255,.85),transparent 70%),radial-gradient(1.5px 1.5px at 33% 72%,rgba(220,245,255,.7),transparent 70%),
+/* 海の色（上はかすかに光の届く青緑 → 下は真っ暗）とマリンスノー（止まっている）。暗幕より奥なので、深く潜ると粒も見えなくなる */
+:root[data-skin="abyss"]::before{background-image:radial-gradient(2px 2px at 12% 18%,rgba(220,245,255,.85),transparent 70%),radial-gradient(1.5px 1.5px at 33% 72%,rgba(220,245,255,.7),transparent 70%),
     radial-gradient(2.2px 2.2px at 58% 36%,rgba(220,245,255,.75),transparent 70%),radial-gradient(1.5px 1.5px at 77% 84%,rgba(220,245,255,.65),transparent 70%),
     radial-gradient(1.8px 1.8px at 91% 9%,rgba(220,245,255,.75),transparent 70%),radial-gradient(1.4px 1.4px at 46% 54%,rgba(220,245,255,.6),transparent 70%),
     radial-gradient(1.2px 1.2px at 22% 44%,rgba(200,240,255,.5),transparent 70%),radial-gradient(1px 1px at 68% 12%,rgba(200,240,255,.45),transparent 70%),
-    radial-gradient(1.1px 1.1px at 84% 58%,rgba(200,240,255,.5),transparent 70%),radial-gradient(1px 1px at 6% 88%,rgba(200,240,255,.45),transparent 70%);
-  background-size:300px 300px,300px 300px,300px 300px,300px 300px,300px 300px,300px 300px,180px 180px,180px 180px,180px 180px,180px 180px}
-/* 泡（v3.16.2）: 直径 6〜12px の小さな粒を4つだけ、下から上へ昇らせる。動くのは粒の小さな範囲だけなので、描き直しはごく狭い。
-   1回昇ったら（全体の約4割の時間）、残りは見えないまま休む */
+    radial-gradient(1.1px 1.1px at 84% 58%,rgba(200,240,255,.5),transparent 70%),radial-gradient(1px 1px at 6% 88%,rgba(200,240,255,.45),transparent 70%),
+    linear-gradient(180deg,#0b4561 0%,#063049 18%,#03192d 48%,#010a16 78%,#00050b 100%);
+  background-size:300px 300px,300px 300px,300px 300px,300px 300px,300px 300px,300px 300px,180px 180px,180px 180px,180px 180px,180px 180px,100% 100%}
+/* 止まった光の筋: 下へ行くほど自然に消えるよう、上から下へ薄くなるマスクをかける（途中で切れて見えないように） */
+:root[data-skin="abyss"] body::before{background:repeating-linear-gradient(100deg,rgba(150,230,255,0) 0 60px,rgba(150,230,255,.08) 80px,rgba(150,230,255,0) 120px,rgba(150,230,255,0) 190px);
+  -webkit-mask-image:linear-gradient(180deg,#000 0%,rgba(0,0,0,.5) 30%,transparent 75%);mask-image:linear-gradient(180deg,#000 0%,rgba(0,0,0,.5) 30%,transparent 75%)}
+/* 泡（v3.16.2）: 直径 5〜12px の小さな粒を12個、下から上へ昇らせる。動くのは粒の小さな範囲だけなので、描き直しはごく狭い。
+   1回昇ったら（全体の約3/4の時間）、残りは見えないまま少し休む。暗幕より奥なので深く潜ると見えなくなる */
 #abyssBubbles{display:none}
 :root[data-skin="abyss"] #abyssBubbles{display:block;position:fixed;inset:0;pointer-events:none;z-index:-1;overflow:hidden}
 #abyssBubbles i{position:absolute;bottom:-20px;border-radius:50%;opacity:0;
   background:radial-gradient(circle at 35% 30%,rgba(255,255,255,.75) 0 12%,transparent 18%),radial-gradient(circle,transparent 52%,rgba(170,235,255,.55) 64%,transparent 72%);
   animation:abyssbub var(--d) linear var(--w) infinite}
-@keyframes abyssbub{0%{transform:translate3d(0,0,0);opacity:0}3%{opacity:.9}38%{transform:translate3d(var(--x),-110vh,0);opacity:.5}38.1%,100%{transform:translate3d(var(--x),-110vh,0);opacity:0}}
+@keyframes abyssbub{0%{transform:translate3d(0,0,0);opacity:0}4%{opacity:.9}75%{transform:translate3d(var(--x),-110vh,0);opacity:.5}75.1%,100%{transform:translate3d(var(--x),-110vh,0);opacity:0}}
 @media (prefers-reduced-motion: reduce){#abyssBubbles i{animation:none}}
 #abyssShade{display:none}
-:root[data-skin="abyss"] #abyssShade{display:block;position:fixed;inset:0;pointer-events:none;z-index:-1;opacity:.3;
-  background:radial-gradient(ellipse at 50% 35%,rgba(0,3,9,.55) 0%,rgba(0,2,7,.9) 70%,#000106 100%)}
+:root[data-skin="abyss"] #abyssShade{display:block;position:fixed;inset:0;pointer-events:none;z-index:-1;opacity:.2;
+  background:radial-gradient(ellipse at 50% 35%,rgba(0,2,7,.86) 0%,rgba(0,2,7,.96) 70%,#000106 100%)}
 :root[data-skin="mobiglas"]{color-scheme:dark; --bg:#071219; --surface:#0b1a24; --surface-2:#0f2230; --ink:#cdeef8; --muted:#6fa3b6; --line:#1d4a5e; --accent:#4fd1f0; --accent-soft:#0f3442; --gold:#7fe3ff; --pos:#5ee0a8; --neg:#ff8a7a; --grid:#123444; --p1:#4fd1f0; --p2:#f0c060; --p3:#b79cff;}
 /* mobiGlas 風の飾り: 枠の角に括弧、見出しは字間を広げる */
 :root[data-skin="mobiglas"] .panel,:root[data-skin="mobiglas"] .tiles,:root[data-skin="mobiglas"] .pcard{position:relative;border-radius:2px;border-color:var(--line)}
@@ -394,8 +394,8 @@ code{font-family:var(--f-mono);font-size:12px;background:var(--surface-2);border
 </head>
 <body>
 
+<div id="abyssBubbles" aria-hidden="true"><i style="left:6%;width:9px;height:9px;--d:15s;--w:-2s;--x:10px"></i><i style="left:14%;width:11px;height:11px;--d:19s;--w:-9s;--x:14px"></i><i style="left:22%;width:6px;height:6px;--d:14s;--w:-5s;--x:-6px"></i><i style="left:31%;width:8px;height:8px;--d:17s;--w:-12s;--x:8px"></i><i style="left:41%;width:6px;height:6px;--d:13s;--w:-1s;--x:-8px"></i><i style="left:49%;width:10px;height:10px;--d:18s;--w:-7s;--x:12px"></i><i style="left:58%;width:7px;height:7px;--d:16s;--w:-14s;--x:-10px"></i><i style="left:67%;width:12px;height:12px;--d:21s;--w:-4s;--x:10px"></i><i style="left:74%;width:6px;height:6px;--d:14s;--w:-10s;--x:-6px"></i><i style="left:82%;width:9px;height:9px;--d:17s;--w:-3s;--x:-12px"></i><i style="left:90%;width:7px;height:7px;--d:15s;--w:-8s;--x:8px"></i><i style="left:96%;width:5px;height:5px;--d:12s;--w:-6s;--x:-4px"></i></div>
 <div id="abyssShade" aria-hidden="true"></div>
-<div id="abyssBubbles" aria-hidden="true"><i style="left:14%;width:10px;height:10px;--d:26s;--w:-3s;--x:14px"></i><i style="left:41%;width:6px;height:6px;--d:21s;--w:-11s;--x:-8px"></i><i style="left:67%;width:12px;height:12px;--d:31s;--w:-19s;--x:10px"></i><i style="left:86%;width:7px;height:7px;--d:24s;--w:-7s;--x:-12px"></i></div>
 <div class="wrap">
   <header>
     <div>
@@ -638,14 +638,14 @@ code{font-family:var(--f-mono);font-size:12px;background:var(--surface-2);border
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
-<script src="config.js?v=3.16.2"></script>
-<script src="web_backend.js?v=3.16.2"></script>
+<script src="config.js?v=3.16.3"></script>
+<script src="web_backend.js?v=3.16.3"></script>
 <script>
 /* 'solo' = 個人用, 'shared' = claude.ai で共有, 'web' = GitHub Pages + Firebase で共有（web_backend.js） */
 const MODE = 'web';
 /* 変更して公開するたびに上げる（表示はフッター） */
-const APP_VERSION = '3.16.2';
-const APP_UPDATED = '2026-10-06 06:48';   // 日本時間
+const APP_VERSION = '3.16.3';
+const APP_UPDATED = '2026-10-06 06:55';   // 日本時間
 const SHARED = MODE !== 'solo';
 
 const TYPES = [
@@ -2258,7 +2258,7 @@ try{ applySkin(localStorage.getItem(SKIN_KEY) || ''); }catch(e){ applySkin(''); 
 let abyssTick = false, abyssLast = -1;
 const abyssDepth = ()=>{ abyssTick = false; if(document.documentElement.dataset.skin !== 'abyss') return;
   const v = Math.round(Math.min(1, Math.max(0, scrollY / 1400)) * 40) / 40;
-  if(v !== abyssLast){ abyssLast = v; $('abyssShade').style.opacity = (.3 + v * .68).toFixed(3); } };
+  if(v !== abyssLast){ abyssLast = v; $('abyssShade').style.opacity = (.2 + v * .8).toFixed(3); } };
 addEventListener('scroll', ()=>{ if(!abyssTick){ abyssTick = true; requestAnimationFrame(abyssDepth); } }, {passive:true});
 abyssDepth();
 $('skinSel').onchange = ()=>{ const v = $('skinSel').value; applySkin(v); try{ localStorage.setItem(SKIN_KEY, v); }catch(e){} abyssLast = -1; abyssDepth(); render(); };
