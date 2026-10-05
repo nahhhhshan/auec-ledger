@@ -275,7 +275,6 @@ code{font-family:var(--f-mono);font-size:12px;background:var(--surface-2);border
   <div class="grid2">
     <section class="panel">
       <h2><span>収支の内訳<small class="scopetag" id="scope1"></small></span> <span class="range" id="range1"></span></h2>
-      <div class="subtabs range" id="groupTabs"></div>
       <div class="bars" id="bars"></div>
     </section>
 
@@ -445,14 +444,14 @@ code{font-family:var(--f-mono);font-size:12px;background:var(--surface-2);border
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
-<script src="config.js?v=2.2.20"></script>
-<script src="web_backend.js?v=2.2.20"></script>
+<script src="config.js?v=2.2.21"></script>
+<script src="web_backend.js?v=2.2.21"></script>
 <script>
 /* 'solo' = 個人用, 'shared' = claude.ai で共有, 'web' = GitHub Pages + Firebase で共有（web_backend.js） */
 const MODE = 'web';
 /* 変更して公開するたびに上げる（表示はフッター） */
-const APP_VERSION = '2.2.20';
-const APP_UPDATED = '2026-10-05 19:02';   // 日本時間
+const APP_VERSION = '2.2.21';
+const APP_UPDATED = '2026-10-05 19:06';   // 日本時間
 const SHARED = MODE !== 'solo';
 
 const TYPES = [
@@ -496,7 +495,7 @@ function parseAmount(s){
 let entries = [], settings = {startBalance:0};
 /* 帳簿の設定ドキュメント全体（開始額・人ごとの開始額・ゲーム内の名前）。一部だけ書くと他が消えるので必ずこれで書く */
 const sdoc = (o={}) => ({startBalance:settings.startBalance||0, starts:settings.starts||{}, handles:settings.handles||{}, avatars:settings.avatars||{}, ...o});
-let group = 'type', selType = 'delivery', dir = 1;
+let selType = 'delivery', dir = 1;
 /* 日別の収支のまとめ方: day（日別）/ week（週別・月曜〜日曜）/ month（月別）。このブラウザで覚える */
 const UNITS = {day:{label:'日別', one:'日', cnt:'日'}, week:{label:'週別', one:'週', cnt:'週'}, month:{label:'月別', one:'月', cnt:'か月'}};
 let unit = 'day';
@@ -940,16 +939,15 @@ function periodLabel(){
 function renderTabs(){
   const pl = periodLabel();
   for(const id of ['scope1','scope2','scope3']) $(id).textContent = `（${pl}）`;
-  const gs = [['type','種別ごと'],['ship','船ごと']].concat(SHARED?[['by','人ごと']]:[]);
-  $('groupTabs').innerHTML = gs.map(([v,l])=>`<button type="button" data-g="${v}" aria-pressed="${group===v}">${l}</button>`).join('');
   $('unitTabs').innerHTML = Object.entries(UNITS).map(([v,u])=>`<button type="button" data-unit="${v}" aria-pressed="${unit===v}">${u.label}</button>`).join('');
   $('dailyTitle').textContent = UNITS[unit].label + 'の収支';
 }
 
 function renderBars(list){
   const by = new Map();
-  const keyOf = e => group==='ship' ? (e.ship||'（船の指定なし）') : group==='by' ? (e.by||'') : e.type;
-  const labelOf = k => group==='ship' ? esc(k) : group==='by' ? esc(nameOf(k)) + (k===me?'（あなた）':'') : typeOf(k).label;
+  // 収支の内訳は種別ごと（v2.2.21 で船ごと・人ごとの切り替えはやめた）
+  const keyOf = e => e.type;
+  const labelOf = k => typeOf(k).label;
   for(const e of list){ if(isInternal(e)) continue; const k=keyOf(e); by.set(k,(by.get(k)||0)+e.amount); }
   const rows = [...by.entries()].sort((a,b)=>b[1]-a[1]);
   if(!rows.length){ $('bars').innerHTML = '<div class="empty">この期間の記録はありません。</div>'; return; }
@@ -957,7 +955,7 @@ function renderBars(list){
   const tot = rows.reduce((a,r)=>a+r[1],0);
   $('bars').innerHTML = rows.map(([k,v])=>`
     <div class="bar"><span>${labelOf(k)}</span>
-      <div class="track"><div class="fill ${v<0?'out':''}" style="width:${(Math.abs(v)/max*100).toFixed(1)}%${group==='by'&&v>=0?';background:'+colorOf(k):''}"></div></div>
+      <div class="track"><div class="fill ${v<0?'out':''}" style="width:${(Math.abs(v)/max*100).toFixed(1)}%"></div></div>
       <span class="amt num ${cls(v)}">${sfmt(v)}</span></div>`).join('')
     + `<div class="bar" style="border-top:1px solid var(--line);padding-top:8px"><span><b>合計</b></span><span></span><span class="amt num ${cls(tot)}"><b>${sfmt(tot)}</b></span></div>`;
 }
@@ -1621,8 +1619,6 @@ document.addEventListener('click', ev=>{
   if(ev.target.id==='unpick'){ unpick(); return; }
   const c = ev.target.closest('[data-type]');
   if(c){ selType = c.dataset.type; setDir(typeOf(selType).dir); renderChips(); return; }
-  const g = ev.target.closest('[data-g]');
-  if(g){ group = g.dataset.g; render(); return; }
   const un = ev.target.closest('[data-unit]');
   if(un){ unit = un.dataset.unit; try{ localStorage.setItem('auec-ledger-unit', unit); }catch(e){} render(); return; }
   const del = ev.target.closest('[data-del]');
