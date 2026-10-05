@@ -573,14 +573,14 @@ code{font-family:var(--f-mono);font-size:12px;background:var(--surface-2);border
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
-<script src="config.js?v=3.8.2"></script>
-<script src="web_backend.js?v=3.8.2"></script>
+<script src="config.js?v=3.8.3"></script>
+<script src="web_backend.js?v=3.8.3"></script>
 <script>
 /* 'solo' = 個人用, 'shared' = claude.ai で共有, 'web' = GitHub Pages + Firebase で共有（web_backend.js） */
 const MODE = 'web';
 /* 変更して公開するたびに上げる（表示はフッター） */
-const APP_VERSION = '3.8.2';
-const APP_UPDATED = '2026-10-05 20:39';   // 日本時間
+const APP_VERSION = '3.8.3';
+const APP_UPDATED = '2026-10-05 20:42';   // 日本時間
 const SHARED = MODE !== 'solo';
 
 const TYPES = [
@@ -628,17 +628,27 @@ const odoPrev = new Map();
 function odo(key, value){
   const prev = odoPrev.has(key) ? odoPrev.get(key) : value;
   odoPrev.set(key, value);
-  const to = fmt(value), from = fmt(prev).padStart(to.length, ' ').slice(-to.length);
+  const to = fmt(value);
+  // 額が変わらないときは普通の文字（回す帯は止まると桁ごとに高さが1px未満ずれて、数字がガタガタに見えるため）
+  if(prev === value) return `<span class="odo-done">${to}</span>`;
+  const from = fmt(prev).padStart(to.length, ' ').slice(-to.length);
   const digits = '0123456789'.split('').map(d=>`<span>${d}</span>`).join('');
   return `<span class="odo"><span class="sr-only">${to}</span><span aria-hidden="true" class="odo">` + [...to].map((ch, i)=>
     /\d/.test(ch) ? `<span class="odo-d"><span class="odo-col" style="transform:translateY(-${(/\d/.test(from[i]) ? +from[i] : 0)*10}%)" data-to="${ch}">${digits}</span></span>` : `<span class="odo-d">${ch}</span>`   // カンマも数字と同じ高さの枠に入れて、並びの高さを揃える
   ).join('') + '</span></span>';
 }
+let odoTurn = 0;
 function odoRun(){
+  const turn = ++odoTurn;
   // 表示した直後は前の額のまま。次の描画で新しい額へ回し始める
   requestAnimationFrame(()=>requestAnimationFrame(()=>{
     for(const c of document.querySelectorAll('.odo-col[data-to]')){ c.style.transform = `translateY(-${c.dataset.to*10}%)`; c.removeAttribute('data-to'); }
   }));
+  // 回り終わったら普通の文字に置き換える（そのあいだに次の描画があれば、そちらに任せる）
+  setTimeout(()=>{
+    if(turn !== odoTurn) return;
+    for(const t of document.querySelectorAll('span.odo > .sr-only')) t.parentElement.outerHTML = `<span class="odo-done">${t.textContent}</span>`;
+  }, 1150);
 }
 
 /* 収入・支出の集計に入れない記録（残高補正、メンバー間の送金） */
