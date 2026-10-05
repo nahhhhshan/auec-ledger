@@ -466,14 +466,14 @@ code{font-family:var(--f-mono);font-size:12px;background:var(--surface-2);border
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
-<script src="config.js?v=2.2.24"></script>
-<script src="web_backend.js?v=2.2.24"></script>
+<script src="config.js?v=2.2.25"></script>
+<script src="web_backend.js?v=2.2.25"></script>
 <script>
 /* 'solo' = 個人用, 'shared' = claude.ai で共有, 'web' = GitHub Pages + Firebase で共有（web_backend.js） */
 const MODE = 'web';
 /* 変更して公開するたびに上げる（表示はフッター） */
-const APP_VERSION = '2.2.24';
-const APP_UPDATED = '2026-10-05 19:19';   // 日本時間
+const APP_VERSION = '2.2.25';
+const APP_UPDATED = '2026-10-05 19:21';   // 日本時間
 const SHARED = MODE !== 'solo';
 
 const TYPES = [
@@ -897,7 +897,7 @@ function render(){
   periods = findPeriods(D.entries);
   const sc = balScope(), sname = scopeName();
   const {balance, days} = compute(D.entries.filter(e=>inScope(sc, e.date)), totalStart(sc));
-  $('tBalLabel').textContent = (SHARED ? '共有の所持金（二人の合計）' : '現在の所持金') + (sname ? `・${sname}` : '');
+  $('tBalLabel').textContent = (SHARED ? '共有の所持金' : '現在の所持金') + (sname ? `・${sname}` : '');
   $('startLabel').textContent = sname ? `${sname}の開始時の所持金 (aUEC)` : '記録開始時の所持金 (aUEC)';
   $('actualLabel').textContent = SHARED ? '選んだ人の実際の所持金に合わせる (aUEC)' : '実際の所持金に合わせる (aUEC)';
 
@@ -1813,7 +1813,7 @@ function toast(msg){ const t=$('toast'); t.textContent=msg; t.hidden=false; clea
 if(SHARED){
   document.title = 'aUEC 共有収支帳';
   $('brand').innerHTML = 'StarCitizen <span>SHARED LEDGER</span>';
-  $('subtitle').textContent = 'STAR CITIZEN ・ 二人の共有口座';
+  $('subtitle').textContent = 'STAR CITIZEN ・ 共有口座';
 }
 if(!SHARED) $('soloAdj').hidden = false;
 $('verTag').textContent = 'v' + APP_VERSION;
