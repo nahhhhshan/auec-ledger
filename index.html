@@ -62,8 +62,8 @@ function scCount(){ var gc = window.goatcounter; if(!gc || !gc.url || gc.filter(
 :root[data-skin="rain"]::before{inset:0;background:linear-gradient(180deg,rgba(10,14,20,.45),rgba(10,14,20,.18) 30%,rgba(10,14,20,.30)),url(rain-bg.jpg) center/cover no-repeat,#1a1d22}
 /* 筋を残して流れ落ちる水滴 */
 :root[data-skin="rain"]::after{left:0;right:0;top:-520px;height:calc(100vh + 520px);
-  background-image:radial-gradient(circle 5px at 7px 200px,rgba(255,255,255,.8) 0,rgba(210,232,252,.34) 2.0px,rgba(120,150,180,.12) 3.6px,rgba(4,10,18,.5) 4.7px,transparent 5px),linear-gradient(180deg,transparent 40px,rgba(200,225,250,0.3) 195px,transparent 196px),radial-gradient(circle 4px at 7px 430px,rgba(255,255,255,.8) 0,rgba(210,232,252,.34) 1.6px,rgba(120,150,180,.12) 2.9px,rgba(4,10,18,.5) 3.7px,transparent 4px),linear-gradient(180deg,transparent 270px,rgba(200,225,250,0.26) 425px,transparent 426px),radial-gradient(circle 4.5px at 7px 90px,rgba(255,255,255,.8) 0,rgba(210,232,252,.34) 1.8px,rgba(120,150,180,.12) 3.2px,rgba(4,10,18,.5) 4.2px,transparent 4.5px),linear-gradient(180deg,transparent -70px,rgba(200,225,250,0.26) 85px,transparent 86px);
-  background-size:14px 520px,1px 520px,14px 520px,1px 520px,14px 520px,1px 520px;background-repeat:repeat-y;background-position:23% 0,calc(23% + 7px) 0,61% 0,calc(61% + 7px) 0,86% 0,calc(86% + 7px) 0;
+  background-image:radial-gradient(circle 5px at 7px 200px,rgba(255,255,255,.8) 0,rgba(210,232,252,.34) 2.0px,rgba(120,150,180,.12) 3.6px,rgba(4,10,18,.5) 4.7px,transparent 5px),linear-gradient(180deg,transparent 40px,rgba(200,225,250,0.3) 198.5px,transparent 199.5px),radial-gradient(circle 4px at 7px 430px,rgba(255,255,255,.8) 0,rgba(210,232,252,.34) 1.6px,rgba(120,150,180,.12) 2.9px,rgba(4,10,18,.5) 3.7px,transparent 4px),linear-gradient(180deg,transparent 270px,rgba(200,225,250,0.26) 428.8px,transparent 429.8px),radial-gradient(circle 4.5px at 7px 90px,rgba(255,255,255,.8) 0,rgba(210,232,252,.34) 1.8px,rgba(120,150,180,.12) 3.2px,rgba(4,10,18,.5) 4.2px,transparent 4.5px),linear-gradient(180deg,transparent -70px,rgba(200,225,250,0.26) 88.7px,transparent 89.7px);
+  background-size:14px 520px,1px 520px,14px 520px,1px 520px,14px 520px,1px 520px;background-repeat:repeat-y;background-position:23% 0,calc(23% + 3.51px) 0,61% 0,calc(61% + -1.43px) 0,86% 0,calc(86% + -4.68px) 0;
   animation:raindrip 11s linear infinite}
 @keyframes raindrip{from{transform:translate3d(0,0,0)}to{transform:translate3d(0,520px,0)}}
 /* 欄は濡れたガラス板のように: 上辺がうっすら光り、縁が明るい */
@@ -105,6 +105,16 @@ function scCount(){ var gc = window.goatcounter; if(!gc || !gc.url || gc.filter(
   animation:abyssbub var(--d) linear var(--w) infinite}
 @keyframes abyssbub{0%{transform:translate3d(0,0,0);opacity:0}4%{opacity:.9}75%{transform:translate3d(var(--x),-110vh,0);opacity:.5}75.1%,100%{transform:translate3d(var(--x),-110vh,0);opacity:0}}
 @media (prefers-reduced-motion: reduce){#abyssBubbles i{animation:none}}
+/* 海の底（v3.17.0）: ページの一番下に、ドット絵（make_seabed.py → embed_seabed.py）を3倍に拡大して置く。止まった絵。
+   光の届かない深さなので暗い色。チョウチンアンコウの灯りのまわりだけ淡く照らす（小さな範囲がゆっくり明滅するだけ） */
+#seabed{display:none}
+:root[data-skin="abyss"] #seabed{display:block;position:relative;height:288px;margin:24px -16px -48px;pointer-events:none;
+  background:/*SEABED*/url('data:image/png;base64,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') center bottom/960px 288px no-repeat,linear-gradient(180deg,transparent 210px,#1d2b33 210px)}
+#seabed .lure{position:absolute;left:calc(50% + 288px);top:69px;width:160px;height:160px;margin:-80px 0 0 -80px;border-radius:50%;
+  background:radial-gradient(circle,rgba(160,240,255,.28) 0,rgba(110,210,240,.10) 35%,transparent 70%);animation:abysslure 5s ease-in-out infinite alternate}
+@keyframes abysslure{from{opacity:.55}to{opacity:1}}
+:root[data-skin="abyss"] #seabed{image-rendering:pixelated}
+@media (prefers-reduced-motion: reduce){#seabed .lure{animation:none}}
 #abyssShade{display:none}
 :root[data-skin="abyss"] #abyssShade{display:block;position:fixed;inset:0;pointer-events:none;z-index:-1;opacity:.2;
   background:radial-gradient(ellipse at 50% 35%,rgba(0,2,7,.86) 0%,rgba(0,2,7,.96) 70%,#000106 100%)}
@@ -592,6 +602,7 @@ code{font-family:var(--f-mono);font-size:12px;background:var(--surface-2);border
   </section>
   <footer class="appfoot" id="appFoot"></footer>
 </div>
+<div id="seabed" aria-hidden="true"><i class="lure"></i></div>
 <div class="avatarpop" id="avatarPop" role="dialog" aria-label="アイコンの設定" hidden>
   <div class="avhead"><b>アイコンの設定</b><button type="button" class="btn ghost" id="avClose" style="padding:2px 10px;font-size:12px">閉じる</button></div>
   <div class="avbody">
@@ -638,14 +649,14 @@ code{font-family:var(--f-mono);font-size:12px;background:var(--surface-2);border
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
-<script src="config.js?v=3.16.3"></script>
-<script src="web_backend.js?v=3.16.3"></script>
+<script src="config.js?v=3.17.0"></script>
+<script src="web_backend.js?v=3.17.0"></script>
 <script>
 /* 'solo' = 個人用, 'shared' = claude.ai で共有, 'web' = GitHub Pages + Firebase で共有（web_backend.js） */
 const MODE = 'web';
 /* 変更して公開するたびに上げる（表示はフッター） */
-const APP_VERSION = '3.16.3';
-const APP_UPDATED = '2026-10-06 06:55';   // 日本時間
+const APP_VERSION = '3.17.0';
+const APP_UPDATED = '2026-10-06 07:01';   // 日本時間
 const SHARED = MODE !== 'solo';
 
 const TYPES = [
