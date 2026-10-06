@@ -965,14 +965,14 @@ window.I18N_EN = {exact, html, re, words};
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
-<script src="config.js?v=4.0.5"></script>
-<script src="web_backend.js?v=4.0.5"></script>
+<script src="config.js?v=4.0.6"></script>
+<script src="web_backend.js?v=4.0.6"></script>
 <script>
 /* 'solo' = 個人用, 'shared' = claude.ai で共有, 'web' = GitHub Pages + Firebase で共有（web_backend.js） */
 const MODE = 'web';
 /* 変更して公開するたびに上げる（表示はフッター） */
-const APP_VERSION = '4.0.5';
-const APP_UPDATED = '2026-10-06 13:07';   // 日本時間
+const APP_VERSION = '4.0.6';
+const APP_UPDATED = '2026-10-06 13:11';   // 日本時間
 const SHARED = MODE !== 'solo';
 /* 一般公開版（make_public.py で作る。このブラウザ内に保存、手入力欄とバックアップを出す） */
 const PUBLIC = false;
@@ -1106,6 +1106,9 @@ function odoRun(){
 
 /* 収入・支出の集計に入れない記録（残高補正、メンバー間の送金） */
 const isInternal = e => e.type==='adjust' || e.type==='transfer';
+/* 収支（今日・直近7日・期の収支、収支の内訳、日別の収支）に入れない記録: メンバー間の送金だけ。残高補正は収支に入れる（v4.0.6）。
+   実績の「稼ぎ」はゲームで稼いだ額なので、今までどおり isInternal（残高補正も除く）で数える */
+const notInNet = e => e.type==='transfer';
 const $ = id => document.getElementById(id);
 const fmt = n => Math.round(n).toLocaleString('ja-JP');
 const sfmt = n => (n>0?'+':n<0?'−':'±') + fmt(Math.abs(n));
@@ -1459,7 +1462,7 @@ function compute(list, start){
     bal += e.amount;
     let d = days.get(e.date);
     if(!d){ d = {date:e.date, inc:0, out:0, items:[], end:0}; days.set(e.date,d); }
-    if(!isInternal(e)){ if(e.amount>=0) d.inc+=e.amount; else d.out+=e.amount; }
+    if(!notInNet(e)){ if(e.amount>=0) d.inc+=e.amount; else d.out+=e.amount; }
     d.items.push({...e, after:bal}); d.end = bal;
   }
   return {balance:bal, days:[...days.values()]};
@@ -1712,8 +1715,8 @@ function render(){
   $('tBal').innerHTML = odo('total', balance)+'<span class="u">aUEC</span>';
   odoRun();
   const td = days.find(d=>d.date===today());
-  const tdNet = td ? td.items.filter(i=>!isInternal(i)).reduce((a,b)=>a+b.amount,0) : 0;
-  const wk = D.entries.filter(e=>!isInternal(e) && dayNum(e.date)>dayNum(today())-7).reduce((a,b)=>a+b.amount,0);
+  const tdNet = td ? td.items.filter(i=>!notInNet(i)).reduce((a,b)=>a+b.amount,0) : 0;
+  const wk = D.entries.filter(e=>!notInNet(e) && dayNum(e.date)>dayNum(today())-7).reduce((a,b)=>a+b.amount,0);
   $('tToday').textContent = sfmt(tdNet); $('tToday').className='v '+cls(tdNet);
   $('tWeek').textContent = sfmt(wk); $('tWeek').className='v '+cls(wk);
   renderPeriods();
@@ -1722,7 +1725,7 @@ function render(){
     $('tCountLabel').textContent = '記録件数';
     $('tCount').textContent = fmt(D.entries.length); $('tCount').className = 'v';
   } else {
-    const net = D.entries.filter(e=>inP(e) && !isInternal(e)).reduce((a,b)=>a+b.amount,0);
+    const net = D.entries.filter(e=>inP(e) && !notInNet(e)).reduce((a,b)=>a+b.amount,0);
     $('tCountLabel').textContent = periodLabel() + 'の収支';   // 第2期の収支 など
     $('tCount').textContent = sfmt(net); $('tCount').className = 'v '+cls(net);
   }
@@ -1820,7 +1823,7 @@ function renderBars(list){
   // 収支の内訳は種別ごと（v2.2.21 で船ごと・人ごとの切り替えはやめた）
   const keyOf = e => e.type;
   const labelOf = k => icon(k) + typeOf(k).label;
-  for(const e of list){ if(isInternal(e)) continue; const k=keyOf(e); by.set(k,(by.get(k)||0)+e.amount); }
+  for(const e of list){ if(notInNet(e)) continue; const k=keyOf(e); by.set(k,(by.get(k)||0)+e.amount); }
   const rows = [...by.entries()].filter(r=>r[1] !== 0).sort((a,b)=>b[1]-a[1]);   // Wikelo との交換など 0 の種類は出さない
   if(!rows.length){ $('bars').innerHTML = '<div class="empty">この期間の記録はありません。</div>'; return; }
   const max = Math.max(...rows.map(r=>Math.abs(r[1]))) || 1;
@@ -1914,7 +1917,7 @@ function renderDaily(days){
   for(const d of days){
     const k = unitKey(d.date);
     const r = agg.get(k) || {date:k, inc:0, out:0};
-    for(const e of d.items){ if(isInternal(e)) continue; if(e.amount >= 0) r.inc += e.amount; else r.out += e.amount; }
+    for(const e of d.items){ if(notInNet(e)) continue; if(e.amount >= 0) r.inc += e.amount; else r.out += e.amount; }
     agg.set(k, r);
   }
   const rows = [...agg.values()].map(r=>({...r, net:r.inc+r.out})).filter(r=>r.inc || r.out).sort((a,b)=>a.date<b.date?-1:1);
