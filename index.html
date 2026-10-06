@@ -320,6 +320,7 @@ input:focus-visible,button:focus-visible{outline:2px solid var(--accent);outline
 .bars{display:grid;gap:8px}
 .dstats{display:flex;flex-wrap:wrap;gap:6px 22px;margin-top:10px;font-size:12px;color:var(--muted)}
 .dstats .dbreak{flex-basis:100%;height:0}
+.dstats b.pos{color:var(--pos)} .dstats b.neg{color:var(--neg)}
 .dstats b{font-family:var(--f-mono);font-variant-numeric:tabular-nums;font-weight:500;color:var(--ink);font-size:14px;margin-left:6px}
 .bar{display:grid;grid-template-columns:8.5em 1fr 7.5em;gap:10px;align-items:center;font-size:13px}
 .bar>span:first-child{overflow-wrap:anywhere}
@@ -964,14 +965,14 @@ window.I18N_EN = {exact, html, re, words};
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
-<script src="config.js?v=4.0.3"></script>
-<script src="web_backend.js?v=4.0.3"></script>
+<script src="config.js?v=4.0.4"></script>
+<script src="web_backend.js?v=4.0.4"></script>
 <script>
 /* 'solo' = 個人用, 'shared' = claude.ai で共有, 'web' = GitHub Pages + Firebase で共有（web_backend.js） */
 const MODE = 'web';
 /* 変更して公開するたびに上げる（表示はフッター） */
-const APP_VERSION = '4.0.3';
-const APP_UPDATED = '2026-10-06 13:02';   // 日本時間
+const APP_VERSION = '4.0.4';
+const APP_UPDATED = '2026-10-06 13:05';   // 日本時間
 const SHARED = MODE !== 'solo';
 /* 一般公開版（make_public.py で作る。このブラウザ内に保存、手入力欄とバックアップを出す） */
 const PUBLIC = false;
@@ -1862,7 +1863,7 @@ function renderChart(days, start, allDays){
   let g='';
   for(let v=ymin; v<=ymax+1e-6; v+=step){
     g+=`<line x1="${L}" x2="${W-R}" y1="${Y(v)}" y2="${Y(v)}" stroke="var(--grid)" stroke-width="1"/>`;
-    g+=`<text x="${L-8}" y="${Y(v)+4}" text-anchor="end"${v < 0 ? ' style="fill:var(--neg)"' : ''}>${v < 0 ? '−' + fmt(-v) : fmt(v)}</text>`;
+    g+=`<text x="${L-8}" y="${Y(v)+4}" text-anchor="end">${v < 0 ? '−' + fmt(-v) : fmt(v)}</text>`;
   }
   const every = Math.max(1, Math.ceil(days.length/6));
   days.forEach((d,i)=>{ if(i%every===0 || i===days.length-1){
@@ -1929,7 +1930,7 @@ function renderDaily(days){
   let g = '';
   for(let v = ymin; v <= ymax + 1e-6; v += step){
     g += `<line x1="${L}" x2="${W-R}" y1="${Y(v)}" y2="${Y(v)}" stroke="${v===0?'var(--muted)':'var(--grid)'}" stroke-width="1"/>`;
-    g += `<text x="${L-8}" y="${Y(v)+4}" text-anchor="end"${v < 0 ? ' style="fill:var(--neg)"' : ''}>${v < 0 ? '−' + fmt(-v) : fmt(v)}</text>`;
+    g += `<text x="${L-8}" y="${Y(v)+4}" text-anchor="end">${v < 0 ? '−' + fmt(-v) : fmt(v)}</text>`;
   }
   const every = Math.max(1, Math.ceil(rows.length/8));
   // いちばん稼いだ日・週・月（差引が最大でプラス）の棒の上に王冠
@@ -1942,7 +1943,7 @@ function renderDaily(days){
     const tip = `<title>${unit==='day' ? r.date : unitLabel(r.date, true)}  収入 ${sfmt(r.inc)} / 支出 ${sfmt(r.out)} / 差引 ${sfmt(r.net)}</title>`;
     if(r.inc) g += `<rect x="${X(i)-bw/2}" y="${Y(r.inc)}" width="${bw}" height="${Y(0)-Y(r.inc)}" rx="2" fill="var(--pos)" fill-opacity=".75">${tip}</rect>`;
     if(r.out) g += `<rect x="${X(i)-bw/2}" y="${Y(0)}" width="${bw}" height="${Y(r.out)-Y(0)}" rx="2" fill="var(--neg)" fill-opacity=".7">${tip}</rect>`;
-    g += `<circle cx="${X(i)}" cy="${Y(r.net)}" r="3.5" fill="${r.net < 0 ? 'var(--neg)' : 'var(--gold)'}" stroke="var(--surface)" stroke-width="1.5">${tip}</circle>`;
+    g += `<circle cx="${X(i)}" cy="${Y(r.net)}" r="3.5" fill="var(--gold)" stroke="var(--surface)" stroke-width="1.5">${tip}</circle>`;
     if(i % every === 0 || i === rows.length-1) g += `<text x="${X(i)}" y="${H-8}" text-anchor="middle">${unitLabel(r.date)}</text>`;
   });
   el.innerHTML = `<svg viewBox="0 0 ${W} ${H}" role="img" aria-label="${U.one}ごとの収入と支出">${g}</svg>
