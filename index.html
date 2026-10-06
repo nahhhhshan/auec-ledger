@@ -133,6 +133,9 @@ body{background:var(--bg);color:var(--ink);font-family:var(--f-body);font-size:1
 .wrap{max-width:1040px;margin:0 auto;display:grid;gap:18px}
 .num{font-family:var(--f-mono);font-variant-numeric:tabular-nums}
 .pos{color:var(--pos)} .neg{color:var(--neg)}
+.bar.barstart .amt{color:var(--ink)}
+.bar.barstart.total{border-top:3px double var(--line);padding-top:8px}
+.bar.barstart .u{font-size:11px;color:var(--muted);font-weight:400}
 header{display:grid;grid-template-columns:auto minmax(0,1fr);align-items:center;gap:4px 16px}   /* 見出しは折り返さず、ボタンの方を折り返す */
 .brand{font-family:var(--f-disp);font-weight:600;font-size:26px;letter-spacing:.04em;margin:0;white-space:nowrap}
 .brand span{color:var(--accent)}
@@ -774,6 +777,7 @@ const exact = {
   'この状態では記録を保存できません。ページを読み込み直しても直らないときは、広告ブロックなどの拡張機能を一時的に止めて試してください。':'Records cannot be saved right now. If reloading does not help, try temporarily disabling ad blockers or similar extensions.',
   '共有帳簿の記録は Supabase に保存され、URL を知っている人だけが読み書きできます。':'Shared ledger records are stored in Supabase; only people with the URL can read or write them.',
   'フォルダを選ぶ':'Choose folder', 'ブラウザに「アップロード」と聞かれますが、どこにも送信しません。':'Your browser will ask about "uploading", but nothing is sent anywhere.',
+  '開始時の所持金':'Starting balance', '所持金の合計':'Total balance',
   // 実績の名前
   'はじめの一歩':'First Step', '書き始め':'Getting Started', '記録係':'Record Keeper', '几帳面':'Meticulous', '帳簿番':'Bookkeeper', '記録魔':'Record Fanatic', '千の記録':'A Thousand Records', '航海日誌':"Captain's Log",
   '10日目':'Day 10', '30日目':'Day 30', '100日目':'Day 100', '200日目':'Day 200', '三日坊主卒業':'Past Day Three', '皆勤賞':'Perfect Attendance', '二週間連続':'Two-Week Streak', '一か月連続':'One-Month Streak',
@@ -844,6 +848,7 @@ const re = [
   [/^合計・(.+)$/, (m, a) => 'Total · ' + T(a)],
   [/^(.+)の開始時の所持金 \(aUEC\)$/, (m, a) => 'Balance at the start of ' + T(a) + ' (aUEC)'],
   [/^指定した期間$/, 'Selected period'],
+  [/^(.+)の開始時の所持金$/, (m, a) => 'Balance at the start of ' + T(a)],
   [/^（(.+)）$/, (m, a) => ' (' + T(a) + ')'],
   [/^(.+) ([\d,]+) \/ ([\d,]+)$/, (m, a, b, c) => T(a) + ` ${b} / ${c}`],
   [/^実績・(.+) ([\d,]+)\/([\d,]+)$/, 'Achievements $2/$3'],
@@ -965,14 +970,14 @@ window.I18N_EN = {exact, html, re, words};
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
-<script src="config.js?v=4.0.6"></script>
-<script src="web_backend.js?v=4.0.6"></script>
+<script src="config.js?v=4.0.7"></script>
+<script src="web_backend.js?v=4.0.7"></script>
 <script>
 /* 'solo' = 個人用, 'shared' = claude.ai で共有, 'web' = GitHub Pages + Firebase で共有（web_backend.js） */
 const MODE = 'web';
 /* 変更して公開するたびに上げる（表示はフッター） */
-const APP_VERSION = '4.0.6';
-const APP_UPDATED = '2026-10-06 13:11';   // 日本時間
+const APP_VERSION = '4.0.7';
+const APP_UPDATED = '2026-10-06 13:17';   // 日本時間
 const SHARED = MODE !== 'solo';
 /* 一般公開版（make_public.py で作る。このブラウザ内に保存、手入力欄とバックアップを出す） */
 const PUBLIC = false;
@@ -1832,7 +1837,17 @@ function renderBars(list){
     <div class="bar"><span>${labelOf(k)}</span>
       <div class="track"><div class="fill ${v<0?'out':''}" style="width:${(Math.abs(v)/max*100).toFixed(1)}%"></div></div>
       <span class="amt num ${cls(v)}">${sfmt(v)}</span></div>`).join('')
-    + `<div class="bar" style="border-top:1px solid var(--line);padding-top:8px"><span><b>合計</b></span><span></span><span class="amt num ${cls(tot)}"><b>${sfmt(tot)}</b></span></div>`;
+    + `<div class="bar" style="border-top:1px solid var(--line);padding-top:8px"><span><b>合計</b></span><span></span><span class="amt num ${cls(tot)}"><b>${sfmt(tot)}</b></span></div>`
+    + barsStartRows(tot);
+}
+/* 収支の内訳の下に「開始時の所持金」と「所持金」を足し、所持金の合計と同じ額で終わるようにする（v4.0.7）。
+   日付を指定した範囲では、その範囲の開始時の所持金が決まらないので出さない */
+function barsStartRows(tot){
+  if(period.kind === 'custom') return '';
+  const sc = balScope(), sname = scopeName(), start = totalStart(sc);
+  const row = (label, v, strong) => `<div class="bar barstart"><span>${strong ? `<b>${label}</b>` : label}</span><span></span><span class="amt num">${strong ? `<b>${fmt(v)}</b>` : fmt(v)}</span></div>`;
+  return row(sname ? `${sname}の開始時の所持金` : '開始時の所持金', start)
+    + `<div class="bar barstart total"><span><b>${SHARED ? '所持金の合計' : '現在の所持金'}</b></span><span></span><span class="amt num"><b>${fmt(start + tot)}</b><span class="u"> aUEC</span></span></div>`;
 }
 
 function niceStep(span, n){
