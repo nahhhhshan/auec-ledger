@@ -402,7 +402,8 @@ code{font-family:var(--f-mono);font-size:12px;background:var(--surface-2);border
 .appfoot .fanote{flex-basis:100%}
 .appfoot{display:flex;flex-wrap:wrap;justify-content:space-between;gap:4px 16px;font-size:12px;color:var(--muted);border-top:1px solid var(--line);padding-top:12px}
 .danger{border-top:1px solid var(--line);padding-top:14px;display:grid;gap:10px}
-.backup{border-top:1px solid var(--line);padding-top:14px;display:grid;gap:8px}
+.backup{border-top:1px solid var(--line);padding-top:14px;margin-top:14px;display:grid;gap:8px}
+.grid2:has(> .settings[hidden]){grid-template-columns:1fr}
 .impdlg{background:var(--surface);color:var(--ink);border:1px solid var(--line);border-radius:8px;padding:18px 20px;max-width:min(460px,calc(100% - 32px));box-shadow:0 12px 40px rgba(0,0,0,.35)}
 .impdlg::backdrop{background:rgba(0,0,0,.45)}
 .impdlg .t{font-size:15px;margin:0 0 8px}
@@ -508,9 +509,17 @@ code{font-family:var(--f-mono);font-size:12px;background:var(--surface-2);border
     <section class="panel">
       <h2>日別の記録 <button type="button" class="btn ghost" id="csvBtn" style="padding:4px 12px;font-size:12px">CSVをコピー</button></h2>
       <div id="days"></div>
+      <div class="backup" id="backupBox" hidden>
+        <p class="hint">記録はこのブラウザの中にだけ保存されています。ブラウザのデータを消すと記録も消えるので、ときどきバックアップを保存してください。</p>
+        <div class="row">
+          <button class="btn ghost" type="button" id="bkSave">バックアップを保存</button>
+          <label class="btn ghost" for="bkFile" style="display:inline-block">バックアップから復元</label>
+          <input type="file" id="bkFile" accept=".json,application/json" hidden>
+        </div>
+      </div>
     </section>
 
-    <section class="panel settings">
+    <section class="panel settings" hidden>   <!-- 所持金の設定: 表示しない（残高補正は所持金の横のボタンで。仕組みは残す） -->
       <h2>所持金の設定</h2>
       <label id="whoWrap" class="whowrap" hidden><span class="lab">対象の人</span><select id="who"></select></label>
       <div class="persontools" id="personTools" hidden>
@@ -533,14 +542,6 @@ code{font-family:var(--f-mono);font-size:12px;background:var(--surface-2);border
         <button class="btn ghost" type="button" id="saveActual">補正を記録</button>
       </div>
       <p class="hint">記録し忘れや死亡時の損失などでズレたときに使います。差額を「残高補正」として今日の日付で記録します。</p>
-      <div class="backup" id="backupBox" hidden>
-        <p class="hint">記録はこのブラウザの中にだけ保存されています。ブラウザのデータを消すと記録も消えるので、ときどきバックアップを保存してください。</p>
-        <div class="row">
-          <button class="btn ghost" type="button" id="bkSave">バックアップを保存</button>
-          <label class="btn ghost" for="bkFile" style="display:inline-block">バックアップから復元</label>
-          <input type="file" id="bkFile" accept=".json,application/json" hidden>
-        </div>
-      </div>
       <div class="danger">
         <button class="btn ghost danger-btn" type="button" id="clearBtn">すべての記録を削除</button>
         <div id="clearConfirm" class="confirm" hidden>
@@ -963,14 +964,14 @@ window.I18N_EN = {exact, html, re, words};
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
-<script src="config.js?v=4.0.2"></script>
-<script src="web_backend.js?v=4.0.2"></script>
+<script src="config.js?v=4.0.3"></script>
+<script src="web_backend.js?v=4.0.3"></script>
 <script>
 /* 'solo' = 個人用, 'shared' = claude.ai で共有, 'web' = GitHub Pages + Firebase で共有（web_backend.js） */
 const MODE = 'web';
 /* 変更して公開するたびに上げる（表示はフッター） */
-const APP_VERSION = '4.0.2';
-const APP_UPDATED = '2026-10-06 12:59';   // 日本時間
+const APP_VERSION = '4.0.3';
+const APP_UPDATED = '2026-10-06 13:02';   // 日本時間
 const SHARED = MODE !== 'solo';
 /* 一般公開版（make_public.py で作る。このブラウザ内に保存、手入力欄とバックアップを出す） */
 const PUBLIC = false;
@@ -1861,7 +1862,7 @@ function renderChart(days, start, allDays){
   let g='';
   for(let v=ymin; v<=ymax+1e-6; v+=step){
     g+=`<line x1="${L}" x2="${W-R}" y1="${Y(v)}" y2="${Y(v)}" stroke="var(--grid)" stroke-width="1"/>`;
-    g+=`<text x="${L-8}" y="${Y(v)+4}" text-anchor="end">${fmt(v)}</text>`;
+    g+=`<text x="${L-8}" y="${Y(v)+4}" text-anchor="end"${v < 0 ? ' style="fill:var(--neg)"' : ''}>${v < 0 ? '−' + fmt(-v) : fmt(v)}</text>`;
   }
   const every = Math.max(1, Math.ceil(days.length/6));
   days.forEach((d,i)=>{ if(i%every===0 || i===days.length-1){
@@ -1928,7 +1929,7 @@ function renderDaily(days){
   let g = '';
   for(let v = ymin; v <= ymax + 1e-6; v += step){
     g += `<line x1="${L}" x2="${W-R}" y1="${Y(v)}" y2="${Y(v)}" stroke="${v===0?'var(--muted)':'var(--grid)'}" stroke-width="1"/>`;
-    g += `<text x="${L-8}" y="${Y(v)+4}" text-anchor="end">${fmt(v)}</text>`;
+    g += `<text x="${L-8}" y="${Y(v)+4}" text-anchor="end"${v < 0 ? ' style="fill:var(--neg)"' : ''}>${v < 0 ? '−' + fmt(-v) : fmt(v)}</text>`;
   }
   const every = Math.max(1, Math.ceil(rows.length/8));
   // いちばん稼いだ日・週・月（差引が最大でプラス）の棒の上に王冠
@@ -1941,14 +1942,14 @@ function renderDaily(days){
     const tip = `<title>${unit==='day' ? r.date : unitLabel(r.date, true)}  収入 ${sfmt(r.inc)} / 支出 ${sfmt(r.out)} / 差引 ${sfmt(r.net)}</title>`;
     if(r.inc) g += `<rect x="${X(i)-bw/2}" y="${Y(r.inc)}" width="${bw}" height="${Y(0)-Y(r.inc)}" rx="2" fill="var(--pos)" fill-opacity=".75">${tip}</rect>`;
     if(r.out) g += `<rect x="${X(i)-bw/2}" y="${Y(0)}" width="${bw}" height="${Y(r.out)-Y(0)}" rx="2" fill="var(--neg)" fill-opacity=".7">${tip}</rect>`;
-    g += `<circle cx="${X(i)}" cy="${Y(r.net)}" r="3.5" fill="var(--gold)" stroke="var(--surface)" stroke-width="1.5">${tip}</circle>`;
+    g += `<circle cx="${X(i)}" cy="${Y(r.net)}" r="3.5" fill="${r.net < 0 ? 'var(--neg)' : 'var(--gold)'}" stroke="var(--surface)" stroke-width="1.5">${tip}</circle>`;
     if(i % every === 0 || i === rows.length-1) g += `<text x="${X(i)}" y="${H-8}" text-anchor="middle">${unitLabel(r.date)}</text>`;
   });
   el.innerHTML = `<svg viewBox="0 0 ${W} ${H}" role="img" aria-label="${U.one}ごとの収入と支出">${g}</svg>
     <div class="legend"><span><i style="background:var(--pos)"></i>収入</span><span><i style="background:var(--neg)"></i>支出</span><span><i style="background:var(--gold)"></i>差引</span></div>`;
   const tot = rows.reduce((a,r)=>a+r.net, 0), best = rows.reduce((a,r)=>r.net>a.net?r:a, rows[0]);
-  // 1行目: 記録のある日数など・いちばん稼いだ日。2行目: 収入と支出の合計（週別は「1週あたりの差引」を出さない）
-  $('dailyStats').innerHTML = `<span>記録のある${U.one}<b>${rows.length}${U.cnt}</b></span>` + (unit === 'week' ? '' : `<span>1${U.cnt}あたりの差引<b class="${cls(tot)}">${sfmt(Math.round(tot/rows.length))}</b></span>`)
+  // 1行目: 記録のある日数など・いちばん稼いだ日。2行目: 収入と支出の合計（「1日あたりの差引」などは出さない）
+  $('dailyStats').innerHTML = `<span>記録のある${U.one}<b>${rows.length}${U.cnt}</b></span>`
     + `<span>いちばん稼いだ${U.one}<b class="${cls(best.net)}">${best.net > 0 ? '<svg viewBox="0 0 18 13" width="16" height="12" aria-hidden="true" style="vertical-align:-1px;margin-right:4px"><path d="M1 12h16l-1.6-8.5-4 3.8-2.4-6.3-2.4 6.3-4-3.8z" fill="#e8a92a"/></svg>' : ''}${unitLabel(best.date, true)} ${sfmt(best.net)}</b></span>`
     + `<i class="dbreak"></i><span>収入の合計<b class="pos">${sfmt(rows.reduce((a,r)=>a+r.inc,0))}</b></span><span>支出の合計<b class="neg">${sfmt(rows.reduce((a,r)=>a+r.out,0))}</b></span>`;
 }
