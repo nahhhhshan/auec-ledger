@@ -508,7 +508,11 @@ code{font-family:var(--f-mono);font-size:12px;background:var(--surface-2);border
 
   <div class="grid2">
     <section class="panel">
-      <h2>日別の記録 <button type="button" class="btn ghost" id="csvBtn" style="padding:4px 12px;font-size:12px">CSVをコピー</button></h2>
+      <h2>日別の記録 <span class="row" style="gap:6px"><button type="button" class="btn ghost danger-btn" id="logDelBtn" style="padding:4px 12px;font-size:12px">取り込んだ記録を削除</button><button type="button" class="btn ghost" id="csvBtn" style="padding:4px 12px;font-size:12px">CSVをコピー</button></span></h2>
+      <div id="logDelConfirm" class="confirm" hidden style="margin-bottom:12px">
+        <p id="logDelMsg"></p>
+        <div class="row"><button class="btn danger-go" type="button" id="logDelGo">削除する</button><button class="btn ghost" type="button" id="logDelCancel">やめる</button></div>
+      </div>
       <div id="days"></div>
       <div class="backup" id="backupBox" hidden>
         <p class="hint">記録はこのブラウザの中にだけ保存されています。ブラウザのデータを消すと記録も消えるので、ときどきバックアップを保存してください。</p>
@@ -775,6 +779,7 @@ const exact = {
   '共有帳簿の記録は Supabase に保存され、URL を知っている人だけが読み書きできます。':'Shared ledger records are stored in Supabase; only people with the URL can read or write them.',
   'フォルダを選ぶ':'Choose folder', 'ブラウザに「アップロード」と聞かれますが、どこにも送信しません。':'Your browser will ask about "uploading", but nothing is sent anywhere.',
   '開始時の所持金':'Starting balance', '所持金の合計':'Total balance',
+  '取り込んだ記録を削除':'Delete imported records', '取り込んだ記録はありません':'There are no imported records',
   // 実績の名前
   'はじめの一歩':'First Step', '書き始め':'Getting Started', '記録係':'Record Keeper', '几帳面':'Meticulous', '帳簿番':'Bookkeeper', '記録魔':'Record Fanatic', '千の記録':'A Thousand Records', '航海日誌':"Captain's Log",
   '10日目':'Day 10', '30日目':'Day 30', '100日目':'Day 100', '200日目':'Day 200', '三日坊主卒業':'Past Day Three', '皆勤賞':'Perfect Attendance', '二週間連続':'Two-Week Streak', '一か月連続':'One-Month Streak',
@@ -916,6 +921,9 @@ const re = [
   [/^([\d,]+)件の記録をバックアップに保存しました$/, 'Saved $1 records to a backup'],
   [/^([\d,]+)件の記録を復元しました$/, 'Restored $1 records'],
   [/^([\d,]+)件の記録を削除しました$/, 'Deleted $1 records'],
+  [/^取り込んだ記録 ([\d,]+)件を削除しました$/, 'Deleted $1 imported records'],
+  [/^ログから取り込んだ$/, 'All'],
+  [/^の記録をすべて削除します。(メンバー全員が.*)?元に戻せないので.*残高補正は残ります。$/, (m, sh) => ' imported from logs will be deleted.' + (sh ? ' This removes imports by every member, also from their screens.' : '') + ' This cannot be undone, so copy the CSV first if you need it. Balance adjustments are kept.'],
   [/^CSVをコピーしました（([\d,]+)件）$/, 'Copied CSV ($1 records)'],
   [/^の記録をすべて削除します。(.*)$/, (m, rest) => ' records will all be deleted.' + (rest.includes('共有') ? ' They will also disappear for the people you share with.' : '') + ' This cannot be undone, so copy the CSV first if you need it. The starting balance setting is kept.'],
   [/^(.+) のゲーム内最安値 (\S+) aUEC を入れました（UEX調べ）$/, 'Filled in the lowest in-game price of $1: $2 aUEC (via UEX)'],
@@ -967,14 +975,14 @@ window.I18N_EN = {exact, html, re, words};
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
-<script src="config.js?v=4.0.8"></script>
-<script src="web_backend.js?v=4.0.8"></script>
+<script src="config.js?v=4.1.0"></script>
+<script src="web_backend.js?v=4.1.0"></script>
 <script>
 /* 'solo' = 個人用, 'shared' = claude.ai で共有, 'web' = GitHub Pages + Firebase で共有（web_backend.js） */
 const MODE = 'web';
 /* 変更して公開するたびに上げる（表示はフッター） */
-const APP_VERSION = '4.0.8';
-const APP_UPDATED = '2026-10-06 13:20';   // 日本時間
+const APP_VERSION = '4.1.0';
+const APP_UPDATED = '2026-10-06 13:39';   // 日本時間
 const SHARED = MODE !== 'solo';
 /* 一般公開版（make_public.py で作る。このブラウザ内に保存、手入力欄とバックアップを出す） */
 const PUBLIC = false;
@@ -2622,6 +2630,28 @@ $('clearBtn').onclick = ()=>{
   $('clearConfirm').hidden = false; $('clearBtn').hidden = true; $('clearCancel').focus();
 };
 $('clearCancel').onclick = ()=>{ $('clearConfirm').hidden = true; $('clearBtn').hidden = false; };
+/* 取り込んだ記録（ログから取り込んだもの。src が log- で始まる）をまとめて削除。手入力・残高補正・スクリーンショットの補正は残す。
+   削除したあとは同じログをもう一度取り込める */
+const logEntries = () => entries.filter(e => String(e.src || '').startsWith('log-'));
+$('logDelBtn').onclick = ()=>{
+  const n = logEntries().length;
+  if(!n){ toast('取り込んだ記録はありません'); return; }
+  $('logDelMsg').innerHTML = `ログから取り込んだ <b>${fmt(n)}件</b>の記録をすべて削除します。${SHARED ? 'メンバー全員が取り込んだ記録が消え、ほかの人の画面からも消えます。' : ''}元に戻せないので、必要なら先に「CSVをコピー」で控えを取ってください。残高補正は残ります。`;
+  $('logDelConfirm').hidden = false;
+};
+$('logDelCancel').onclick = ()=>{ $('logDelConfirm').hidden = true; };
+$('logDelGo').onclick = async ()=>{
+  const ids = logEntries().map(e => e.id);
+  $('logDelGo').disabled = true;
+  try{
+    if(store.removeMany) await store.removeMany(ids);
+    else if(store.db){ for(const id of ids) await store.remove(id); }
+    else { const del = new Set(ids); entries = entries.filter(e => !del.has(e.id)); store.saveLocal(); render(); }
+    toast(`取り込んだ記録 ${fmt(ids.length)}件を削除しました`);
+    $('logDelConfirm').hidden = true;
+  }catch(e){ toast('削除できませんでした（' + (e.code || e.message || e) + '）'); }
+  $('logDelGo').disabled = false;
+};
 $('clearGo').onclick = async ()=>{
   const n = entries.length;
   $('clearGo').disabled = true;
