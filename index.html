@@ -320,7 +320,7 @@ input:focus-visible,button:focus-visible{outline:2px solid var(--accent);outline
 .bars{display:grid;gap:8px}
 .dstats{display:flex;flex-wrap:wrap;gap:6px 22px;margin-top:10px;font-size:12px;color:var(--muted)}
 .dstats .dbreak{flex-basis:100%;height:0}
-.dstats b.pos{color:var(--pos)} .dstats b.neg{color:var(--neg)}
+.dstats b.pos{color:var(--pos)} .dstats b.neg{color:var(--neg)} .dstats b .dlabel{color:var(--ink)}   /* いちばん稼いだ日の日付は普通の文字色、金額だけ色付き */
 .dstats b{font-family:var(--f-mono);font-variant-numeric:tabular-nums;font-weight:500;color:var(--ink);font-size:14px;margin-left:6px}
 .bar{display:grid;grid-template-columns:8.5em 1fr 7.5em;gap:10px;align-items:center;font-size:13px}
 .bar>span:first-child{overflow-wrap:anywhere}
@@ -965,14 +965,14 @@ window.I18N_EN = {exact, html, re, words};
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
-<script src="config.js?v=4.0.4"></script>
-<script src="web_backend.js?v=4.0.4"></script>
+<script src="config.js?v=4.0.5"></script>
+<script src="web_backend.js?v=4.0.5"></script>
 <script>
 /* 'solo' = 個人用, 'shared' = claude.ai で共有, 'web' = GitHub Pages + Firebase で共有（web_backend.js） */
 const MODE = 'web';
 /* 変更して公開するたびに上げる（表示はフッター） */
-const APP_VERSION = '4.0.4';
-const APP_UPDATED = '2026-10-06 13:05';   // 日本時間
+const APP_VERSION = '4.0.5';
+const APP_UPDATED = '2026-10-06 13:07';   // 日本時間
 const SHARED = MODE !== 'solo';
 /* 一般公開版（make_public.py で作る。このブラウザ内に保存、手入力欄とバックアップを出す） */
 const PUBLIC = false;
@@ -1951,7 +1951,7 @@ function renderDaily(days){
   const tot = rows.reduce((a,r)=>a+r.net, 0), best = rows.reduce((a,r)=>r.net>a.net?r:a, rows[0]);
   // 1行目: 記録のある日数など・いちばん稼いだ日。2行目: 収入と支出の合計（「1日あたりの差引」などは出さない）
   $('dailyStats').innerHTML = `<span>記録のある${U.one}<b>${rows.length}${U.cnt}</b></span>`
-    + `<span>いちばん稼いだ${U.one}<b class="${cls(best.net)}">${best.net > 0 ? '<svg viewBox="0 0 18 13" width="16" height="12" aria-hidden="true" style="vertical-align:-1px;margin-right:4px"><path d="M1 12h16l-1.6-8.5-4 3.8-2.4-6.3-2.4 6.3-4-3.8z" fill="#e8a92a"/></svg>' : ''}${unitLabel(best.date, true)} ${sfmt(best.net)}</b></span>`
+    + `<span>いちばん稼いだ${U.one}<b class="${cls(best.net)}">${best.net > 0 ? '<svg viewBox="0 0 18 13" width="16" height="12" aria-hidden="true" style="vertical-align:-1px;margin-right:4px"><path d="M1 12h16l-1.6-8.5-4 3.8-2.4-6.3-2.4 6.3-4-3.8z" fill="#e8a92a"/></svg>' : ''}<span class="dlabel">${unitLabel(best.date, true)}</span> ${sfmt(best.net)}</b></span>`
     + `<i class="dbreak"></i><span>収入の合計<b class="pos">${sfmt(rows.reduce((a,r)=>a+r.inc,0))}</b></span><span>支出の合計<b class="neg">${sfmt(rows.reduce((a,r)=>a+r.out,0))}</b></span>`;
 }
 
