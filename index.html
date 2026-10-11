@@ -368,6 +368,7 @@ input:focus-visible,button:focus-visible{outline:2px solid var(--accent);outline
 .del:hover{border-color:var(--line)}
 .del.arm{color:var(--neg);border-color:var(--neg)}
 
+.pubnote b{font-weight:600}
 .demo{background:var(--accent-soft);border:1px dashed var(--accent);border-radius:6px;padding:10px 14px;font-size:13px}
 .settings{display:grid;gap:14px}
 .settings .row{align-items:end}
@@ -456,6 +457,7 @@ code{font-family:var(--f-mono);font-size:12px;background:var(--surface-2);border
     </div>
   </header>
 
+  <div class="demo pubnote" id="pubNote" hidden><b>ゲームのログだけでは、収支を100%把握することはできません（ログに残らない取引や、ゲームが落ちたときの記録漏れなど）。</b><br>所持金がゲーム内と合わないときは、所持金の横の「残高補正」からゲーム内の所持金を入れて合わせてください。</div>
   <div class="demo" id="roNote" hidden>このアプリは閲覧のみの権限で開かれています。記録を追加するには、持ち主に「編集可能」以上で共有してもらってください。</div>
 
   <section class="exealert" id="exeAlert" role="alert" hidden>
@@ -780,6 +782,8 @@ const exact = {
   'フォルダを選ぶ':'Choose folder', 'ブラウザに「アップロード」と聞かれますが、どこにも送信しません。':'Your browser will ask about "uploading", but nothing is sent anywhere.',
   '開始時の所持金':'Starting balance', '所持金の合計':'Total balance',
   '取り込んだ記録を削除':'Delete imported records', '取り込んだ記録はありません':'There are no imported records',
+  'ゲームのログだけでは、収支を100%把握することはできません（ログに残らない取引や、ゲームが落ちたときの記録漏れなど）。':"Game logs alone can't capture 100% of your income and expenses (some transactions never appear in the log, and records can be lost when the game crashes).",
+  '所持金がゲーム内と合わないときは、所持金の横の「残高補正」からゲーム内の所持金を入れて合わせてください。':'If your balance doesn\'t match the game, enter your in-game balance with "Balance Adjustment" next to your balance.',
   // 実績の名前
   'はじめの一歩':'First Step', '書き始め':'Getting Started', '記録係':'Record Keeper', '几帳面':'Meticulous', '帳簿番':'Bookkeeper', '記録魔':'Record Fanatic', '千の記録':'A Thousand Records', '航海日誌':"Captain's Log",
   '10日目':'Day 10', '30日目':'Day 30', '100日目':'Day 100', '200日目':'Day 200', '三日坊主卒業':'Past Day Three', '皆勤賞':'Perfect Attendance', '二週間連続':'Two-Week Streak', '一か月連続':'One-Month Streak',
@@ -982,7 +986,7 @@ window.I18N_EN = {exact, html, re, words};
 const MODE = 'web';
 /* 変更して公開するたびに上げる（表示はフッター） */
 const APP_VERSION = '4.1.2';
-const APP_UPDATED = '2026-10-11 18:11';   // 日本時間
+const APP_UPDATED = '2026-10-11 18:16';   // 日本時間
 const SHARED = MODE !== 'solo';
 /* 一般公開版（make_public.py で作る。このブラウザ内に保存、手入力欄とバックアップを出す） */
 const PUBLIC = false;
@@ -2682,6 +2686,7 @@ $('verTag').textContent = 'v' + APP_VERSION;
 
 /* ---------- 公開版: バックアップ、ファン作品の表記 ---------- */
 if(PUBLIC){
+  $('pubNote').hidden = false;   // ログだけでは収支を全部は拾えないこと、合わないときは残高補正で合わせることを上部に出す
   // 「ログを取り込む」: どのフォルダを選ぶかを短く伝えてからフォルダ選択を開き、選んだら新しい記録を自動で取り込む
   $('hdrImport').onclick = ()=> $('impDlg').showModal();
   $('impGo').onclick = ()=>{ $('impDlg').close(); autoNext = true; $('logDir').click(); };
