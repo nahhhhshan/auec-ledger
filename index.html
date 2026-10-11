@@ -754,7 +754,7 @@ const exact = {
   '日ごとの終了時所持金の推移':'Daily closing balance history', '日ごとの収入と支出':'Daily income and expenses', '週ごとの収入と支出':'Weekly income and expenses', '月ごとの収入と支出':'Monthly income and expenses',
   '報酬変動':'variable', '違法':'Illegal', 'ミッションデータがありません':'No mission data', '見つかりません。種別と金額を手入力してください':'Not found. Enter the type and amount manually.',
   '共有':'Shared', '仕事':'Work', '稼ぎ':'Earnings', '記録':'Records', '所持金':'Balance', '買い物':'Shopping', '時間':'Time', '実績解除:':'Unlocked:',
-  '更新日時':'Updated', '（公開版）':' (public)', '（個人用）':' (personal)', '（共有用）':' (shared)', '（共有用・Web）':' (shared, web)',
+  '更新日時':'Updated', 'GitHub（ソースコード・不具合の報告）':'GitHub (source code and bug reports)', '（公開版）':' (public)', '（個人用）':' (personal)', '（共有用）':' (shared)', '（共有用・Web）':' (shared, web)',
   '非公式のファン作品です。Cloud Imperium Games とは関係ありません。Star Citizen® は Cloud Imperium Rights LLC の商標です。記録はこのブラウザ内に保存され、どこにも送信されません。':
     'Unofficial fan-made tool, not affiliated with Cloud Imperium Games. Star Citizen® is a trademark of Cloud Imperium Rights LLC. Your records are stored in this browser and never sent anywhere.',
   '非公式のファン作品です。Cloud Imperium Games とは関係ありません。Star Citizen® は Cloud Imperium Rights LLC の商標です。共有帳簿の記録は Supabase に保存され、URL を知っている人だけが読み書きできます。':
@@ -975,14 +975,14 @@ window.I18N_EN = {exact, html, re, words};
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
-<script src="config.js?v=4.1.1"></script>
-<script src="web_backend.js?v=4.1.1"></script>
+<script src="config.js?v=4.1.2"></script>
+<script src="web_backend.js?v=4.1.2"></script>
 <script>
 /* 'solo' = 個人用, 'shared' = claude.ai で共有, 'web' = GitHub Pages + Firebase で共有（web_backend.js） */
 const MODE = 'web';
 /* 変更して公開するたびに上げる（表示はフッター） */
-const APP_VERSION = '4.1.1';
-const APP_UPDATED = '2026-10-07 00:17';   // 日本時間
+const APP_VERSION = '4.1.2';
+const APP_UPDATED = '2026-10-11 18:11';   // 日本時間
 const SHARED = MODE !== 'solo';
 /* 一般公開版（make_public.py で作る。このブラウザ内に保存、手入力欄とバックアップを出す） */
 const PUBLIC = false;
@@ -2773,6 +2773,7 @@ if(MODE === 'web' || PUBLIC){
 }
 $('verTag').title = '更新日時 ' + APP_UPDATED.replace(/-/g,'.');
 $('appFoot').innerHTML = `<span>aUEC Ledger <b class="num">v${APP_VERSION}</b>（${PUBLIC ? '公開版' : {solo:'個人用',shared:'共有用',web:'共有用・Web'}[MODE]}）</span><span>更新日時 <span class="num">${APP_UPDATED.replace(/-/g,'.')}</span></span>`
+  + (MODE === 'web' || PUBLIC ? `<span><a href="https://github.com/nahhhhshan/${PUBLIC ? 'sc-ledger' : 'auec-ledger'}" target="_blank" rel="noopener">GitHub（ソースコード・不具合の報告）</a></span>` : '')
   + (PUBLIC ? `<span class="fanote">非公式のファン作品です。Cloud Imperium Games とは関係ありません。Star Citizen® は Cloud Imperium Rights LLC の商標です。${MODE === 'web' ? '共有帳簿の記録は Supabase に保存され、URL を知っている人だけが読み書きできます。' : '記録はこのブラウザ内に保存され、どこにも送信されません。'}</span>` : '');
 $('date').value = today();
 renderChips(); setDir(1);
